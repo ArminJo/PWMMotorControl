@@ -1,0 +1,54 @@
+#######################################
+# Syntax Coloring Map for PWMMotorControl
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+PWMDcMotor	KEYWORD1
+EncoderMotor	KEYWORD1
+CarMotorControl	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+init	KEYWORD2
+setMotorDriverMode	KEYWORD2
+setSpeed	KEYWORD2
+setSpeedCompensated	KEYWORD2
+stop	KEYWORD2
+setStopMode	KEYWORD2
+initGoDistanceCount	KEYWORD2
+updateMotor	KEYWORD2
+setEepromMotorValuesDefaults	KEYWORD2
+readMotorValuesFromEeprom	KEYWORD2
+writeMotorvaluesToEeprom	KEYWORD2
+initGoDistanceCount	KEYWORD2
+synchronizeMotor	KEYWORD2
+resetControlValues	KEYWORD2
+initGoDistanceCentimeter	KEYWORD2
+goDistanceCentimeter	KEYWORD2
+stopMotors	KEYWORD2
+setDefaultsForFixedDistanceDriving	KEYWORD2
+updateMotors	KEYWORD2
+startCarAndWaitForFullSpeed	KEYWORD2
+stopCarAndWaitForIt	KEYWORD2
+waitUntilCarStopped	KEYWORD2
+isStopped	KEYWORD2
+initRotateCar	KEYWORD2
+rotateCar	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+DIRECTION_FORWARD	LITERAL1
+DIRECTION_BACKWARD	LITERAL1
+TURN_FORWARD	LITERAL1
+TURN_BACKWARD	LITERAL1
+TURN_IN_PLACE	LITERAL1
+FACTOR_CENTIMETER_TO_COUNT	LITERAL1
+DEFAULT_MIN_SPEED	LITERAL1
+DEFAULT_MAX_SPEED	LITERAL1
+VELOCITY_SCALE_VALUE	LITERAL1
+MOTOR_BRAKE	LITERAL1
+MOTOR_RELEASE	LITERAL1
