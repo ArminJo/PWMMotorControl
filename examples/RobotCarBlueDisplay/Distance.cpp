@@ -124,10 +124,6 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
      * Delay
      */
     if (doDelay) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-// Synchronize before doing delay
-        rightCarMotor.synchronizeMotor(&leftCarMotor, MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
-#endif
 // Datasheet says: SG90 Micro Servo needs 100 millis per 60 degrees angle => 300 ms per 180
 // I measured: SG90 Micro Servo needs 400 per 180 degrees and 400 per 2*90 degree, but 540 millis per 9*20 degree
 // 60-80 ms for 20 degrees
@@ -213,7 +209,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
              */
-            RobotCarMotorControl.stopCarAndWaitForIt();
+            RobotCarMotorControl.stopMotors();
         }
 
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
@@ -280,10 +276,11 @@ void postProcessDistances() {
     }
 }
 
-void checkAndShowDistancePeriodically(uint16_t aPeriodMillis) {
+void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
+    static long sLastUSMeasurementMillis;
+
     // Do not show distanced during (time critical) acceleration or deceleration
     if (!RobotCarMotorControl.needsFastUpdates()) {
-        static long sLastUSMeasurementMillis;
         long tMillis = millis();
         if (sLastUSMeasurementMillis + aPeriodMillis < tMillis) {
             sLastUSMeasurementMillis = tMillis;

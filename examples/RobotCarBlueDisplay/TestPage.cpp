@@ -65,12 +65,12 @@ void doStoreSpeed(float aValue) {
     uint16_t tValue = aValue;
     if (tValue > 10 && tValue < 256) {
         // must use value for compensation not compensated value
-        rightCarMotor.DriveSpeed = tValue;
-        rightCarMotor.writeMotorvaluesToEeprom();
+        RobotCarMotorControl.rightCarMotor.DriveSpeed = tValue;
+        RobotCarMotorControl.rightCarMotor.writeMotorvaluesToEeprom();
 
         // use the same value here !
-        leftCarMotor.DriveSpeed = tValue;
-        leftCarMotor.writeMotorvaluesToEeprom();
+        RobotCarMotorControl.leftCarMotor.DriveSpeed = tValue;
+        RobotCarMotorControl.leftCarMotor.writeMotorvaluesToEeprom();
     }
     printMotorValues();
 }

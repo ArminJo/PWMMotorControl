@@ -68,11 +68,13 @@ void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMP
 }
 #endif
 
-/*
- * If motor is still running, add aDistanceCount to current target distance
- */
-void EncoderMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
-    aRequestedDirection &= DIRECTION_MASK;
+void EncoderMotor::initRampUp(uint8_t aRequestedDirection) {
+    checkAndHandleDirectionChange(aRequestedDirection);
+    CurrentDriveSpeed = DriveSpeed - SpeedCompensation;
+    doOnlyRampUp = true;
+}
+
+bool EncoderMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
     if (CurrentDirection != aRequestedDirection) {
         CurrentDirection = aRequestedDirection;
         if (State != MOTOR_STATE_STOPPED) {
@@ -84,32 +86,55 @@ void EncoderMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequest
              * Direction change requested but motor still running-> first stop motor
              */
             stop(MOTOR_BRAKE);
-            LastTargetDistanceCount = EncoderCount; // Reset LastTargetDistanceCount on direction change
+            delay(200); // give the motor a chance to stop TODO take last speed into account
+//            LastTargetDistanceCount = EncoderCount; // Reset LastTargetDistanceCount on direction change
+            return true;
         }
     }
+    return false;
+}
+
+/*
+ * If motor is still running, add aDistanceCount to current target distance
+ */
+void EncoderMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
+//    if (aDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
+//        PanicWithLed(200, 10);
+//    }
+    aRequestedDirection &= DIRECTION_MASK;
+    checkAndHandleDirectionChange(aRequestedDirection);
 
     if (State == MOTOR_STATE_STOPPED) {
         CurrentDriveSpeed = DriveSpeed - SpeedCompensation;
-        /*
-         * Start the motor and compensate for last distance delta
-         * Compensation is only valid if direction does not change.
-         */
-        // Positive if driven too far, negative if driven too short
-        int8_t tLastDelta = (int) EncoderCount - (int) LastTargetDistanceCount;
-        if (abs(tLastDelta) <= MAX_DISTANCE_DELTA && (int) aDistanceCount >= tLastDelta) {
-            TargetDistanceCount = (int) aDistanceCount - tLastDelta;
-        } else {
-            TargetDistanceCount = aDistanceCount;
-        }
-        EncoderCount = 0;
+//        /*
+//         * Start the motor and compensate for last distance delta
+//         * Compensation is only valid if direction does not change.
+//         */
+//        // Positive if driven too far, negative if driven too short
+//        int8_t tLastDelta = (int) EncoderCount - (int) LastTargetDistanceCount;
+//        if (abs(tLastDelta) <= MAX_DISTANCE_DELTA && (int) aDistanceCount >= tLastDelta) {
+//            // compensate with last delta
+//            TargetDistanceCount = (int) aDistanceCount - tLastDelta;
+//        } else {
+        TargetDistanceCount = aDistanceCount;
+//        }
+
     } else {
         /*
-         * Increase the distance to go for running motor
+         * prolong values for the new distance
          */
-        TargetDistanceCount += aDistanceCount;
-        NextChangeMaxTargetCount += aDistanceCount;
+        State = MOTOR_STATE_FULL_SPEED;
+        PWMDcMotor::setSpeed(CurrentDriveSpeed, CurrentDirection);
+        TargetDistanceCount = EncoderCount + aDistanceCount;
+        uint8_t tDistanceCountForRampDown = DistanceCountAfterRampUp;
+        // guarantee minimal ramp down length
+        if (tDistanceCountForRampDown < 3 && TargetDistanceCount > 6) {
+            tDistanceCountForRampDown = 3;
+        }
+        NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
     }
     LastTargetDistanceCount = TargetDistanceCount;
+    doOnlyRampUp = false;
 }
 
 /*
@@ -133,50 +158,48 @@ bool EncoderMotor::updateMotor() {
     unsigned long tMillis = millis();
 
     if (State == MOTOR_STATE_STOPPED) {
-        if (TargetDistanceCount > 0) {
+        if (TargetDistanceCount > 0 || doOnlyRampUp) {
             //  --> RAMP_UP
             State = MOTOR_STATE_RAMP_UP;
             LastRideEncoderCount = 0;
+            EncoderCount = 0;
             /*
              * Start motor
              */
             NextRampChangeMillis = tMillis + RAMP_UP_UPDATE_INTERVAL_MILLIS;
-            CurrentSpeed = StartSpeed;
-            // not really needed here since output is disabled during ramps
-            MotorValuesHaveChanged = true;
-
             NextChangeMaxTargetCount = TargetDistanceCount / 2;
             // initialize for timeout detection
             EncoderTickLastMillis = tMillis - ENCODER_SENSOR_MASK_MILLIS - 1;
 
-            RampDelta = RAMP_UP_VALUE_DELTA;
+            RampDelta = RAMP_UP_VALUE_DELTA; // 16 steps a 16 millis for ramp up => 256 milliseconds
             if (RampDelta < 2) {
                 RampDelta = 2;
             }
             DebugCount = 0;
             Debug = 0;
 
-            PWMDcMotor::setSpeed(CurrentSpeed, CurrentDirection);
+            PWMDcMotor::setSpeed(StartSpeed, CurrentDirection);
         }
 
     } else if (State == MOTOR_STATE_RAMP_UP) {
         /*
-         * Increase motor speed
+         * Increase motor speed RAMP_UP_UPDATE_INTERVAL_STEPS (16) times every RAMP_UP_UPDATE_INTERVAL_MILLIS (16) milliseconds
+         * or until more than half of distance is done
+         * Distance required for ramp is 0 to 10 or more, increasing with increasing CurrentDriveSpeed
          */
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis += RAMP_UP_UPDATE_INTERVAL_MILLIS;
-            CurrentSpeed += RampDelta;
+            uint8_t tCurrentSpeed = CurrentSpeed + RampDelta;
             // Clip value and check for 8 bit overflow
-            if (CurrentSpeed > CurrentDriveSpeed || CurrentSpeed <= RampDelta) {
-                CurrentSpeed = CurrentDriveSpeed;
+            if (tCurrentSpeed > CurrentDriveSpeed || tCurrentSpeed <= RampDelta) {
+                tCurrentSpeed = CurrentDriveSpeed;
             }
-            MotorValuesHaveChanged = true;
 
             /*
              * Transition criteria is:
              * Max Speed reached or more than half of distance is done
              */
-            if (CurrentSpeed == CurrentDriveSpeed || EncoderCount >= NextChangeMaxTargetCount) {
+            if (tCurrentSpeed == CurrentDriveSpeed || (!doOnlyRampUp && EncoderCount >= NextChangeMaxTargetCount)) {
                 //  --> FULL_SPEED
                 State = MOTOR_STATE_FULL_SPEED;
 
@@ -188,7 +211,7 @@ bool EncoderMotor::updateMotor() {
                 }
                 NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
             }
-            PWMDcMotor::setSpeed(CurrentSpeed, CurrentDirection);
+            PWMDcMotor::setSpeed(tCurrentSpeed, CurrentDirection);
         }
     }
 
@@ -197,25 +220,19 @@ bool EncoderMotor::updateMotor() {
         /*
          * Wait until ramp down count is reached
          */
-        if (EncoderCount >= NextChangeMaxTargetCount) {
-            NextChangeMaxTargetCount++;
+        if (!doOnlyRampUp && EncoderCount >= NextChangeMaxTargetCount) {
             //  --> RAMP_DOWN
             State = MOTOR_STATE_RAMP_DOWN;
             /*
              * Ramp to reach StartSpeed after 1/2 of remaining distance
+             * TODO reduce speed just here? e.g. to 1.5 of start speed?
              */
             RampDeltaPerDistanceCount = ((CurrentSpeed - StartSpeed) * 2) / ((TargetDistanceCount - EncoderCount)) + 1;
-            // brake
-            if (CurrentSpeed > RampDeltaPerDistanceCount) {
-                CurrentSpeed -= RampDeltaPerDistanceCount;
-            } else {
-                CurrentSpeed = StartSpeed;
-            }
-            MotorValuesHaveChanged = true;
-            PWMDcMotor::setSpeed(CurrentSpeed, CurrentDirection);
         }
+    }
 
-    } else if (State == MOTOR_STATE_RAMP_DOWN) {
+    // do not use else if since state can be changed in code before
+    if (State == MOTOR_STATE_RAMP_DOWN) {
         DebugCount++;
 
         /*
@@ -361,6 +378,7 @@ void EncoderMotor::stop(uint8_t aStopMode) {
      */
     State = MOTOR_STATE_STOPPED;
     TargetDistanceCount = 0;
+    doOnlyRampUp = false;
 
     PWMDcMotor::stop(aStopMode);
 }
@@ -408,14 +426,15 @@ void EncoderMotor::handleEncoderInterrupt() {
 void EncoderMotor::enableINT0AndINT1Interrupts() {
 
 // interrupt on any logical change
-    EICRA |= (1 << ISC00 | 1 << ISC10);
+    EICRA |= (_BV(ISC00) | _BV(ISC10));
 // clear interrupt bit
-    EIFR |= (1 << INTF0 | 1 << INTF1);
+    EIFR |= (_BV(INTF0) | _BV(INTF1));
 // enable interrupt on next change
-    EIMSK |= (1 << INT0 | 1 << INT1);
+    EIMSK |= (_BV(INT0) | _BV(INT1));
 }
 
 /*
+ * Enable only one interrupt
  * aIntPinNumber can be one of INT0/D2 or INT1/D3 for Atmega328
  */
 void EncoderMotor::enableInterruptOnBothEdges(uint8_t aIntPinNumber) {
@@ -425,15 +444,15 @@ void EncoderMotor::enableInterruptOnBothEdges(uint8_t aIntPinNumber) {
 
     if (aIntPinNumber == 0) {
 // interrupt on any logical change
-        EICRA |= (1 << ISC00);
+        EICRA |= (_BV(ISC00));
 // clear interrupt bit
-        EIFR |= 1 << INTF0;
+        EIFR |= _BV(INTF0);
 // enable interrupt on next change
-        EIMSK |= 1 << INT0;
+        EIMSK |= _BV(INT0);
     } else {
-        EICRA |= (1 << ISC10);
-        EIFR |= 1 << INTF1;
-        EIMSK |= 1 << INT1;
+        EICRA |= (_BV(ISC10));
+        EIFR |= _BV(INTF1);
+        EIMSK |= _BV(INT1);
     }
 }
 

@@ -28,15 +28,16 @@
  * 3 ms means 2.1 to 3.0 ms depending on the Arduino ms trigger.
  */
 #define ENCODER_SENSOR_MASK_MILLIS 3
-#define VELOCITY_SCALE_VALUE 500
+#define VELOCITY_SCALE_VALUE 500 // for computing of CurrentVelocity
 
 /*
  * Motor Control
  */
 // the smaller the value the steeper the ramp
 #define RAMP_UP_UPDATE_INTERVAL_MILLIS 16
+#define RAMP_UP_UPDATE_INTERVAL_STEPS  16
 // gives 16 steps a 16 millis for ramp up => 256 milliseconds
-#define RAMP_UP_VALUE_DELTA ((CurrentDriveSpeed - StartSpeed) / 16)
+#define RAMP_UP_VALUE_DELTA ((CurrentDriveSpeed - StartSpeed) / RAMP_UP_UPDATE_INTERVAL_STEPS)
 
 // timeout after ramp down was finished to switch off motor
 #define RAMP_DOWN_TIMEOUT_MILLIS 500
@@ -46,8 +47,6 @@
 
 // Safety net. If difference between targetCount and current distanceCount is less than, adjust new targetCount
 #define MAX_DISTANCE_DELTA 8
-
-#define INFINITE_DISTANCE_COUNT (32000) // we have an int that is multiplied with FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT and
 
 #define MOTOR_STATE_STOPPED 0
 #define MOTOR_STATE_RAMP_UP 1
@@ -73,6 +72,8 @@ public:
 #endif
 //    virtual ~EncoderMotor();
 
+    bool checkAndHandleDirectionChange(uint8_t aRequestedDirection);
+    void initRampUp(uint8_t aRequestedDirection);
     /*
      * Functions for going a fixed distance
      */
@@ -145,9 +146,10 @@ public:
      * Reset() resets all members from CurrentDriveSpeed to (including) Debug to 0
      */
     uint8_t CurrentDriveSpeed; // DriveSpeed - SpeedCompensation; The DriveSpeed used for current movement. Can be set for eg. turning which better performs with reduced DriveSpeed
-    volatile int16_t CurrentVelocity;
+    volatile int16_t CurrentVelocity; // VELOCITY_SCALE_VALUE / tDeltaMillis
 
     uint8_t State; // MOTOR_STATE_STOPPED, MOTOR_STATE_RAMP_UP, MOTOR_STATE_FULL_SPEED, MOTOR_STATE_RAMP_DOWN
+    bool doOnlyRampUp;
     uint16_t TargetDistanceCount;
     uint16_t LastTargetDistanceCount;
 
@@ -155,7 +157,8 @@ public:
      * Distance optocoupler impulse counter. It is reset at initGoDistanceCount if motor was stopped.
      */
     volatile uint16_t EncoderCount;
-    uint16_t LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
+    volatile uint16_t LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
+    // The next value is volatile, but volatile increases the code size by 20 bites without any logical improvement
     unsigned long EncoderTickLastMillis; // used for debouncing and lock/timeout detection
 
     /*

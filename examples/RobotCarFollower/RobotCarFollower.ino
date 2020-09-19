@@ -84,7 +84,8 @@ void setup() {
     tone(PIN_SPEAKER, 2200, 100);
 
     delay(5000);
-    RobotCarMotorControl.startCarAndWaitForDriveSpeed(DIRECTION_FORWARD);
+    RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_FORWARD);
+    delay(1000);
 }
 
 bool sFoundPerson = false;
@@ -99,12 +100,12 @@ void loop() {
 #ifndef PLOTTER_OUTPUT
         Serial.println(F("Go forward"));
 #endif
-        RobotCarMotorControl.startCarAndWaitForDriveSpeed(DIRECTION_FORWARD);
+        RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_FORWARD);
     } else if (tCentimeter < 22) {
 #ifndef PLOTTER_OUTPUT
         Serial.println(F("Go backward"));
 #endif
-        RobotCarMotorControl.startCarAndWaitForDriveSpeed(DIRECTION_BACKWARD);
+        RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_BACKWARD);
     } else {
         sFoundPerson = true;
 #ifndef PLOTTER_OUTPUT

@@ -83,50 +83,52 @@ void delayAndLoopGUI(uint16_t aDelayMillis) {
 
 void loopGUI(void) {
 
-    // do not show anything during motor speed ramps
-    if (RobotCarMotorControl.isStopped() || RobotCarMotorControl.isState(MOTOR_STATE_FULL_SPEED)) {
+    if (BlueDisplay1.isConnectionEstablished()) {
+        // do not show anything during motor speed ramps
+        if (RobotCarMotorControl.isStopped() || RobotCarMotorControl.isState(MOTOR_STATE_FULL_SPEED)) {
 
-        if (sCurrentPage == PAGE_HOME) {
-            loopHomePage();
-        } else if (sCurrentPage == PAGE_TEST) {
-            loopTestPage();
-        } else if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-            loopAutonomousDrivePage();
-        } else if (sCurrentPage == PAGE_SHOW_PATH) {
-            loopPathInfoPage();
-        }
+            if (sCurrentPage == PAGE_HOME) {
+                loopHomePage();
+            } else if (sCurrentPage == PAGE_TEST) {
+                loopTestPage();
+            } else if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
+                loopAutonomousDrivePage();
+            } else if (sCurrentPage == PAGE_SHOW_PATH) {
+                loopPathInfoPage();
+            }
 
-        // for all but PathInfo page
-        if (sCurrentPage != PAGE_SHOW_PATH) {
-            readCheckAndPrintVinPeriodically();
+            // for all but PathInfo page
+            if (sCurrentPage != PAGE_SHOW_PATH) {
+#if defined(MONITOR_LIPO_VOLTAGE)
+                readCheckAndPrintVinPeriodically();
+#endif
+                // For Home and Test page
+                if (sCurrentPage != PAGE_AUTOMATIC_CONTROL) {
+                    readAndShowDistancePeriodically(DISTANCE_DISPLAY_PERIOD_MILLIS);
 
-            // For Home and Test page
-            if (sCurrentPage != PAGE_AUTOMATIC_CONTROL) {
-                checkAndShowDistancePeriodically(DISTANCE_DISPLAY_PERIOD_MILLIS);
-
-                if (PWMDcMotor::MotorValuesHaveChanged) {
-                    PWMDcMotor::MotorValuesHaveChanged = false;
-                    printMotorValues();
+                    if (PWMDcMotor::MotorValuesHaveChanged) {
+                        PWMDcMotor::MotorValuesHaveChanged = false;
+                        printMotorValues();
 #ifdef USE_ENCODER_MOTOR_CONTROL
-                    if (sShowDebug && sCurrentPage == PAGE_TEST) {
-                        printMotorDebugValues();
+                        if (sShowDebug && sCurrentPage == PAGE_TEST) {
+                            printMotorDebugValues();
+                        }
+#endif
+                    }
+#ifdef USE_ENCODER_MOTOR_CONTROL
+                    displayVelocitySliderValues();
+                    /*
+                     * Print changed tick values
+                     */
+                    if (EncoderMotor::EncoderTickCounterHasChanged) {
+                        EncoderMotor::EncoderTickCounterHasChanged = false;
+                        printMotorDistanceValues();
                     }
 #endif
                 }
-#ifdef USE_ENCODER_MOTOR_CONTROL
-                displayVelocitySliderValues();
-                /*
-                 * Print changed tick values
-                 */
-                if (EncoderMotor::EncoderTickCounterHasChanged) {
-                    EncoderMotor::EncoderTickCounterHasChanged = false;
-                    printMotorDistanceValues();
-                }
-#endif
             }
         }
     }
-
     /*
      * Check if receive buffer contains an event
      * Do it at end since it may change the condition for calling this function and its printing
@@ -137,12 +139,10 @@ void loopGUI(void) {
 /*
  * Handle Start/Stop
  */
-void startStopRobotCar(bool aRobotCarIsMoving) {
-    // set button in the case we are called by another than Stop button callback
-    TouchButtonRobotCarStartStop.setValue(aRobotCarIsMoving, sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST);
+void startStopRobotCar(bool aDoStart) {
 
     uint8_t tSpeedSliderValue;
-    if (aRobotCarIsMoving) {
+    if (aDoStart) {
         if (sLastSpeedSliderValue > 0) {
             /*
              * Start car to last speed slider value
@@ -161,15 +161,18 @@ void startStopRobotCar(bool aRobotCarIsMoving) {
         tSpeedSliderValue = 0;
     }
 
-    if (sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST) {
+    bool tShowValues = sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST;
+    // set button in the case we are called by another than Stop button callback
+    TouchButtonRobotCarStartStop.setValue(!RobotCarMotorControl.isStopped(), tShowValues);
+    if (tShowValues) {
         SliderSpeed.setValueAndDrawBar(tSpeedSliderValue);
     }
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-void doRobotCarStartStop(BDButton * aTheTouchedButton, int16_t aRobotCarIsMoving) {
-    startStopRobotCar(aRobotCarIsMoving);
+void doRobotCarStartStop(BDButton * aTheTouchedButton, int16_t aDoStart) {
+    startStopRobotCar(aDoStart);
 }
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
@@ -205,14 +208,14 @@ void doUSServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue) {
  * Display velocity as slider values
  */
 void displayVelocitySliderValues() {
-    EncoderMotor * tMotorInfo = &leftCarMotor;
+    EncoderMotor * tMotorInfo = &RobotCarMotorControl.leftCarMotor;
     BDSlider * tSliderPtr = &SliderSpeedLeft;
     uint16_t tXPos = 0;
     for (int i = 0; i < 2; ++i) {
         if (EncoderMotor::EncoderTickCounterHasChanged) {
             tSliderPtr->setValueAndDrawBar(tMotorInfo->CurrentVelocity);
         }
-        tMotorInfo = &rightCarMotor;
+        tMotorInfo = &RobotCarMotorControl.rightCarMotor;
         tSliderPtr = &SliderSpeedRight;
         tXPos += BUTTON_WIDTH_16 + 4;
     }
@@ -295,7 +298,8 @@ void GUISwitchPages(BDButton * aTheTouchedButton, int16_t aValue) {
 
 void initRobotCarDisplay(void) {
 // Stop any demo movement.
-    startStopRobotCar(false);
+    RobotCarMotorControl.stopMotors();
+    sRuningAutonomousDrive = false;
 
     BlueDisplay1.setFlagsAndSize(BD_FLAG_FIRST_RESET_ALL | BD_FLAG_TOUCH_BASIC_DISABLE | BD_FLAG_USE_MAX_SIZE, DISPLAY_WIDTH,
     DISPLAY_HEIGHT);
@@ -453,6 +457,7 @@ void drawCommonGui(void) {
     COLOR_NO_BACKGROUND);
 }
 
+#if defined(MONITOR_LIPO_VOLTAGE)
 /*
  * Print VIN (used as motor supply) periodically
  * returns true if voltage was printed
@@ -532,22 +537,27 @@ void readCheckAndPrintVinPeriodically() {
         checkForLowVoltage();
     }
 }
+#endif
 
 void printMotorValues() {
 // position below caption of speed slider
     uint16_t tYPos = SPEED_SLIDER_SIZE / 2 + 25 + TEXT_SIZE_11_HEIGHT;
-    sprintf_P(sStringBuffer, PSTR("min. %3d %3d"), leftCarMotor.StartSpeed, rightCarMotor.StartSpeed);
+    sprintf_P(sStringBuffer, PSTR("min. %3d %3d"), RobotCarMotorControl.leftCarMotor.StartSpeed,
+            RobotCarMotorControl.rightCarMotor.StartSpeed);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_WHITE);
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("max. %3d %3d"), leftCarMotor.DriveSpeed, rightCarMotor.DriveSpeed);
+    sprintf_P(sStringBuffer, PSTR("max. %3d %3d"), RobotCarMotorControl.leftCarMotor.DriveSpeed,
+            RobotCarMotorControl.rightCarMotor.DriveSpeed);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("comp. %2d  %2d"), leftCarMotor.SpeedCompensation, rightCarMotor.SpeedCompensation);
+    sprintf_P(sStringBuffer, PSTR("comp. %2d  %2d"), RobotCarMotorControl.leftCarMotor.SpeedCompensation,
+            RobotCarMotorControl.rightCarMotor.SpeedCompensation);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("speed%3d %3d"), leftCarMotor.CurrentSpeed, rightCarMotor.CurrentSpeed);
+    sprintf_P(sStringBuffer, PSTR("speed%3d %3d"), RobotCarMotorControl.leftCarMotor.CurrentSpeed,
+            RobotCarMotorControl.rightCarMotor.CurrentSpeed);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 #endif
 }
@@ -561,19 +571,24 @@ void printMotorDebugValues() {
      * Debug info
      */
     uint16_t tYPos = SPEED_SLIDER_SIZE / 2 + 25 + TEXT_SIZE_11_HEIGHT + (4 * TEXT_SIZE_11);
-    sprintf_P(sStringBuffer, PSTR("ramp1%3d %3d"), leftCarMotor.DistanceCountAfterRampUp, rightCarMotor.DistanceCountAfterRampUp);
+    sprintf_P(sStringBuffer, PSTR("ramp1%3d %3d"), RobotCarMotorControl.leftCarMotor.DistanceCountAfterRampUp,
+            RobotCarMotorControl.rightCarMotor.DistanceCountAfterRampUp);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("endSp%3d %3d"), leftCarMotor.SpeedAtTargetCountReached, rightCarMotor.SpeedAtTargetCountReached);
+    sprintf_P(sStringBuffer, PSTR("endSp%3d %3d"), RobotCarMotorControl.leftCarMotor.SpeedAtTargetCountReached,
+            RobotCarMotorControl.rightCarMotor.SpeedAtTargetCountReached);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("debug%3d %3d"), leftCarMotor.Debug, rightCarMotor.Debug);
+    sprintf_P(sStringBuffer, PSTR("debug%3d %3d"), RobotCarMotorControl.leftCarMotor.Debug,
+            RobotCarMotorControl.rightCarMotor.Debug);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("dcnt %3d %3d"), leftCarMotor.DebugCount, rightCarMotor.DebugCount);
+    sprintf_P(sStringBuffer, PSTR("dcnt %3d %3d"), RobotCarMotorControl.leftCarMotor.DebugCount,
+            RobotCarMotorControl.rightCarMotor.DebugCount);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), leftCarMotor.LastTargetDistanceCount, rightCarMotor.LastTargetDistanceCount);
+    sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCarMotorControl.leftCarMotor.LastTargetDistanceCount,
+            RobotCarMotorControl.rightCarMotor.LastTargetDistanceCount);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 }
 
@@ -584,7 +599,8 @@ void printMotorDistanceValues() {
     } else {
         tYPos = SPEED_SLIDER_SIZE / 2 + 25;
     }
-    sprintf_P(sStringBuffer, PSTR("cnt.%4d%4d"), leftCarMotor.EncoderCount, rightCarMotor.EncoderCount);
+    sprintf_P(sStringBuffer, PSTR("cnt.%4d%4d"), RobotCarMotorControl.leftCarMotor.EncoderCount,
+            RobotCarMotorControl.rightCarMotor.EncoderCount);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_WHITE);
 }
 #endif

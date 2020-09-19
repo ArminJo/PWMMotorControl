@@ -54,14 +54,6 @@
 #define MAX_SPEED   255
 
 /*
- * The factor used to convert distance in 5mm steps to motor on time in milliseconds. I depends on motor supply voltage.
- * Currently formula is:
- * computedMillisOfMotorStopForDistance = 50 + DistanceCount * (DriveSpeed - StartSpeed) * SPEED_DISTANCE_FACTOR;
- *
- */
-#define DEFAULT_SPEED_DISTANCE_FACTOR 1.4 // for 2 x LIPO batteries (7.4 volt).
-
-/*
  * This values are chosen to be compatible with 20 slot encoder discs, giving 20 on and 20 off counts per full rotation.
  * At a circumference of around 20 cm (21.5 cm actual) this gives 5 mm per count.
  */
@@ -69,10 +61,35 @@
 #define DEFAULT_MILLIMETER_PER_COUNT         5
 
 /*
- * Default values - used if EEPROM values are invalid
+ * DEFAULT_DISTANCE_TO_TIME_FACTOR is the factor used to convert distance in 5mm steps to motor on time in milliseconds. I depends on motor supply voltage.
+ * Currently formula is:
+ * computedMillisOfMotorStopForDistance = 30 + ((aDistanceCount * DistanceToTimeFactor * 10) / (DriveSpeed - StartSpeed));
+ *
+ * DEFAULT_START_SPEED is the speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 3,6 volt (USB supply) is appr. 70 to 100
  */
-#define DEFAULT_START_SPEED   45 // Speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 4.3 volt (USB supply) is appr. 90 to 100
-#define DEFAULT_DRIVE_SPEED   80
+#define DEFAULT_START_SPEED_7_4_VOLT                45
+#define DEFAULT_DRIVE_SPEED_7_4_VOLT                80
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT    50 // for 2 x LIPO batteries (7.4 volt).
+
+#define DEFAULT_START_SPEED_6_VOLT                  150
+#define DEFAULT_DRIVE_SPEED_6_VOLT                  255
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT      80 // for 4 x AA batteries (6 volt).
+
+// Default values - used if EEPROM values are invalid
+#if defined(VIN_2_LIPO)
+#define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_7_4_VOLT
+#define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_7_4_VOLT
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT
+
+#elif defined(VIN_4_AA)
+#define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_6_VOLT
+#define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_6_VOLT
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT
+#else
+#define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_6_VOLT
+#define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_6_VOLT
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT
+#endif
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_FORWARD   0
@@ -164,7 +181,7 @@ public:
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
 #ifndef USE_ENCODER_MOTOR_CONTROL
-    void setSpeedDistanceFactorForFixedDistanceDriving(float aSpeedDistanceFactor);
+    void setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor);
     void initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection);
     void goDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection);
     // Signed distance count
@@ -212,10 +229,12 @@ public:
 
 #ifndef USE_ENCODER_MOTOR_CONTROL
     bool MotorMovesFixedDistance; // if true, stop if computedMillisOfMotorStopForDistance are reached
-    uint32_t computedMillisOfMotorStopForDistance; // since we have no distance sensing, we must estimate a duration instead
-    float SpeedDistanceFactor;
+    uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
+    uint16_t DistanceToTimeFactor; // Required for non encoder motors to estimate duration for a fixed distance
 #endif
 
 };
+
+void PanicWithLed(uint16_t aDelay, uint8_t aCount);
 
 #endif /* PWMDCMOTOR_H_ */

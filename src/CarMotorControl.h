@@ -33,10 +33,9 @@
  * Some factors depending on wheel diameter and encoder resolution
  */
 #define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  2 // value is 1.86, but integer saves program space and time
-// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm
+// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm, Distance between two wheels is around 13 cm
 #define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.4277777
 #define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.8 // estimated, with slip
-#define INFINITE_DISTANCE_CM (INFINITE_DISTANCE_COUNT / FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT)
 
 class CarMotorControl {
 public:
@@ -45,24 +44,30 @@ public:
 //    virtual ~CarMotorControl();
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    void init(bool aReadFromEeprom);
+    void init(bool aReadFromEeprom = false);
 #else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
             uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, bool aReadFromEeprom = false);
 #endif
     void setDefaultsForFixedDistanceDriving();
-    void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation);
-
+    void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
+#ifdef USE_ENCODER_MOTOR_CONTROL
     void calibrate();
+    void waitForDriveSpeed();
+#else
+    // makes no sense for encoder motor
+    void setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor);
+#endif
+
+    void initRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
+    void initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD,  void (*aLoopCallback)(void) = NULL);
 
     /*
      * Functions for moving a fixed distance
      */
-    bool updateMotors();
-
     void initGoDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection); // only setup values
     void goDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilCarStopped
-
+    // With signed distance
     void initGoDistanceCentimeter(int aDistanceCentimeter); // only setup values
     void goDistanceCentimeter(int aDistanceCentimeter, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilCarStopped
 
@@ -74,10 +79,11 @@ public:
     void rotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
             void (*aLoopCallback)(void) = NULL);
 
+    bool updateMotors();
+
     /*
      * Start/Stop functions for infinite distance
      */
-    void startCarAndWaitForDriveSpeed(uint8_t aDriveDirection = DIRECTION_FORWARD);
     void stopCarAndWaitForIt(); // uses waitUntilCarStopped()
 
     void waitUntilCarStopped(void (*aLoopCallback)(void) = NULL);
@@ -103,14 +109,17 @@ public:
     void setSpeedCompensated(int aRequestedSpeed);
 
     float FactorDegreeToCount;
-};
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
-extern EncoderMotor rightCarMotor;
-extern EncoderMotor leftCarMotor;
+    EncoderMotor rightCarMotor; // 40 bytes RAM
+    EncoderMotor leftCarMotor;
 #else
-extern PWMDcMotor rightCarMotor;
-extern PWMDcMotor leftCarMotor;
+    PWMDcMotor rightCarMotor;
+    PWMDcMotor leftCarMotor;
 #endif
+};
+
+// Pointer to the last and only! instance for use by ISR
+extern CarMotorControl * sCarMotorControlPointerForISR;
 
 #endif /* CARMOTORCONTROL_H_ */

@@ -23,16 +23,19 @@ Maximal speed is the PWM value to use for driving a fixed distance. For encoder 
 - `initGoDistanceCount(uint8_t Unsigned_DistanceCount,uint8_tDirection)` or `setSpeed(intSigned_DistanceCount)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
 - `updateMotor()` - call this in your loop if you use the start* functions.
 
-# Compile options for library
-To customize the library to different requirements, there are some compile options available.
+# Compile options for this library
+# Compile options / macros for this library
+To customize the library to different requirements, there are some compile options / makros available.<br/>
+Modify it by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for gobal compile (the latter is not possible with the Arduino IDE, so consider to use [sloeber](https://eclipse.baeyens.it).
+Some options which are enabed by default can be disabled also by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
 
-| Option | Default | File | Description |
-|-|-|-|-|
-| `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use fork light barrier and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
-| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>
+| Macro | Default | File | Disable macro | Description |
+|-|-|-|-|-|
+| `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | | Use fork light barrier and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
+| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>
 This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bride.<br/>
 For full bride, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
-| `USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Saves 694 bytes program memory |
+| `USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD` | Saves 694 bytes program memory |
 
 # Compile options for examples
 To customize the Robot Car example to cover different extensions, there are some compile options available.

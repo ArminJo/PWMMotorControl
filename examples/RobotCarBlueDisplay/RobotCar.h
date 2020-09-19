@@ -22,6 +22,8 @@
 #include <Arduino.h>
 #include <Servo.h>
 
+//#define CAR_HAS_4_WHEELS
+
 // Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger.
 //#define USE_US_SENSOR_1_PIN_MODE // Comment it out, if you use modified HC-SR04 modules or HY-SRF05 ones.
 
@@ -64,13 +66,13 @@ extern CarMotorControl RobotCarMotorControl;
  *   9  O   Servo US distance - Servo Nr. 2 on Adafruit Motor Shield
  *   10 O   Servo laser pan   - Servo Nr. 1 on Adafruit Motor Shield
  *   11 O   Servo laser tilt / Speaker for UNO board
- *   12 O   Right motor back / Two wheel detection / Input Pullup for UNO board
+ *   12 O   Right motor back / NC for UNO board
  *   13 O   Laser power
  *
  *   A0 O   US trigger (and echo in 1 pin US sensor mode)
  *   A1 I   IR distance (needs 1 pin US sensor mode) / US echo
  *   A2 I   VIN/11, 1MOhm to VIN, 100kOhm to ground.
- *   A3 IP  Two wheel detection with input pullup
+ *   A3 IP  NC
  *   A4 SDA NC for Nano / I2C for UNO board motor shield
  *   A5 SCL NC for Nano / I2C for UNO board motor shield
  *   A6 O   Speaker for Nano board / not available on UNO board
@@ -103,9 +105,11 @@ extern CarMotorControl RobotCarMotorControl;
 #define PIN_TILT_SERVO          11
 #endif
 
+#if defined(MONITOR_LIPO_VOLTAGE)
 // Pin A0 for VCC monitoring - ADC channel 2
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_11TH_IN_CHANNEL      2 // = A2
+#endif
 
 /*
  * Pins for US HC-SR04 distance sensor
@@ -115,8 +119,6 @@ extern CarMotorControl RobotCarMotorControl;
 #define PIN_ECHO_IN             A1 // used by Sharp IR distance sensor
 #endif
 
-// if connected to ground we have a 2 WD CAR
-#define PIN_TWO_WD_DETECTION    A3
 
 #ifdef CAR_HAS_LASER
 #define PIN_LASER_OUT           LED_BUILTIN
@@ -153,8 +155,8 @@ extern CarMotorControl RobotCarMotorControl;
  * Servo timing correction.
  * Values are for my SG90 servo. Servo is mounted head down, so values must be swapped!
  */
-#define DISTANCE_SERVO_2WD_MIN_PULSE_WIDTH    (MIN_PULSE_WIDTH - 40) // Value for 180 degree
-#define DISTANCE_SERVO_2WD_MAX_PULSE_WIDTH    (MAX_PULSE_WIDTH - 40) // Value for 0 degree, since servo is mounted head down.
+#define DISTANCE_SERVO_MIN_PULSE_WIDTH    (MIN_PULSE_WIDTH - 40) // Value for 180 degree
+#define DISTANCE_SERVO_MAX_PULSE_WIDTH    (MAX_PULSE_WIDTH - 40) // Value for 0 degree, since servo is mounted head down.
 #ifdef CAR_HAS_PAN_SERVO
 extern Servo PanServo;
 #endif
@@ -174,19 +176,23 @@ extern Servo TiltServo;
 #define MINIMUM_DISTANCE_TO_SIDE 21
 #define MINIMUM_DISTANCE_TO_FRONT 35
 
+#if defined(MONITOR_LIPO_VOLTAGE)
+#include "ADCUtils.h"
+
 extern float sVINVoltage;
+#if defined(MONITOR_LIPO_VOLTAGE)
 #define VOLTAGE_LOW_THRESHOLD 6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
 #define VOLTAGE_USB_THRESHOLD 5.5
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // hack, better use another (new) symbol
-#define VOLTAGE_CORRECTION 0.8 // For serial diode (needs 0.8 volt) between LIPO and VIN
+#else
 #endif
 #define VOLTAGE_TOO_LOW_DELAY_ONLINE 3000 // display VIN every 500 ms for 4 seconds
 #define VOLTAGE_TOO_LOW_DELAY_OFFLINE 1000 // wait for 1 seconds after double beep
 
-extern bool is2WDCar;
+void readVINVoltage();
+#endif
+
 
 void resetServos();
-void readVINVoltage();
 int doUserCollisionDetection();
 
 #endif /* SRC_ROBOTCAR_H_ */

@@ -136,11 +136,10 @@ void startCurrentPage();
  */
 extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
-void startStopRobotCar(bool aNewStartedValue);
-void doRobotCarStartStop(BDButton * aTheTochedButton, int16_t aValue);
+void startStopRobotCar(bool aDoStart);
+void doRobotCarStartStop(BDButton * aTheTochedButton, int16_t aDoStart);
 
 extern BDButton TouchButtonDirection;
-void doChangeDirection(BDButton * aTheTouchedButton, int16_t aValue);
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
 extern BDButton TouchButtonCalibrate;
@@ -179,7 +178,7 @@ void setupGUI(void);
 void loopGUI(void);
 
 void initRobotCarDisplay(void);
-void checkAndShowDistancePeriodically(uint16_t aPeriodMillis);
+void readAndShowDistancePeriodically(uint16_t aPeriodMillis);
 void rotate(int16_t aRotationDegrees, bool inPlace = true);
 void showDistance(int aCentimeter);
 
@@ -189,8 +188,11 @@ void printMotorDebugValues();
 void printMotorDistanceValues();
 #endif
 
+#if defined(MONITOR_LIPO_VOLTAGE)
 void readAndPrintVin();
 void readCheckAndPrintVinPeriodically();
+#endif
+
 void delayAndLoopGUI(uint16_t aDelayMillis);
 
 /*

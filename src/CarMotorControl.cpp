@@ -24,15 +24,10 @@
 #include <Arduino.h>
 #include "CarMotorControl.h"
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
-EncoderMotor rightCarMotor;
-EncoderMotor leftCarMotor;
-#else
-PWMDcMotor rightCarMotor;
-PWMDcMotor leftCarMotor;
-#endif
+CarMotorControl * sCarMotorControlPointerForISR;
 
 CarMotorControl::CarMotorControl() { // @suppress("Class members should be properly initialized")
+    sCarMotorControlPointerForISR = this;
 }
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
@@ -40,7 +35,11 @@ void CarMotorControl::init(bool aReadFromEeprom) {
     leftCarMotor.init(1, aReadFromEeprom);
     rightCarMotor.init(2, aReadFromEeprom);
 
+#if defined(CAR_HAS_4_WHEELS)
+    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT;
+#else
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT;
+#endif
 
 #  ifdef USE_ENCODER_MOTOR_CONTROL
     /*
@@ -49,6 +48,7 @@ void CarMotorControl::init(bool aReadFromEeprom) {
     EncoderMotor::enableINT0AndINT1Interrupts();
 #  endif
 }
+
 #else
 void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
         uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, bool aReadFromEeprom) {
@@ -60,14 +60,18 @@ void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBac
         rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
     }
 
+#  if defined(CAR_HAS_4_WHEELS)
+    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT;
+#  else
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT;
+#  endif
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#  ifdef USE_ENCODER_MOTOR_CONTROL
     /*
      * For slot type optocoupler interrupts on pin PD2 + PD3
      */
     EncoderMotor::enableINT0AndINT1Interrupts();
-#endif
+#  endif
 }
 #endif
 
@@ -79,9 +83,17 @@ void CarMotorControl::setDefaultsForFixedDistanceDriving() {
     leftCarMotor.setDefaultsForFixedDistanceDriving();
 }
 
-void CarMotorControl::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation) {
-    rightCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, aSpeedCompensation);
-    leftCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, aSpeedCompensation);
+/**
+ * @param aSpeedCompensationRight if positive, this value is subtracted from the speed of the right motor, if negative, -value is subtracted from the left speed.
+ */
+void CarMotorControl::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight) {
+    if (aSpeedCompensationRight > 0) {
+        rightCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, aSpeedCompensationRight);
+        leftCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, 0);
+    } else {
+        rightCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, 0);
+        leftCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, -aSpeedCompensationRight);
+    }
 }
 
 /*
@@ -166,6 +178,36 @@ bool CarMotorControl::updateMotors() {
     return tMotorsNotStopped;
 }
 
+void CarMotorControl::initRampUp(uint8_t aRequestedDirection) {
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    rightCarMotor.initRampUp(aRequestedDirection);
+    leftCarMotor.initRampUp(aRequestedDirection);
+#else
+    rightCarMotor.setSpeedCompensated(rightCarMotor.DriveSpeed, aRequestedDirection);
+    leftCarMotor.setSpeedCompensated(leftCarMotor.DriveSpeed, aRequestedDirection);
+#endif
+}
+
+void CarMotorControl::initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    rightCarMotor.initRampUp(aRequestedDirection);
+    leftCarMotor.initRampUp(aRequestedDirection);
+    /*
+     * blocking wait for MOTOR_STATE_FULL_SPEED, 256 milliseconds
+     */
+    bool tMotorsNotStopped; // to check if motors are not stopped by aLoopCallback
+    do {
+        tMotorsNotStopped = rightCarMotor.updateMotor();
+        tMotorsNotStopped |= leftCarMotor.updateMotor();
+        if (aLoopCallback != NULL) {
+            aLoopCallback(); // this may stop motors
+        }
+    } while (tMotorsNotStopped && (rightCarMotor.State != MOTOR_STATE_FULL_SPEED || leftCarMotor.State != MOTOR_STATE_FULL_SPEED));
+#else
+    rightCarMotor.setSpeedCompensated(rightCarMotor.DriveSpeed, aRequestedDirection);
+    leftCarMotor.setSpeedCompensated(leftCarMotor.DriveSpeed, aRequestedDirection);
+#endif
+}
 /*
  * initialize motorInfo fields DirectionForward, CurrentDriveSpeed, DistanceTickCounter and optional NextChangeMaxTargetCount.
  */
@@ -197,38 +239,6 @@ void CarMotorControl::goDistanceCentimeter(int aDistanceCentimeter, void (*aLoop
 }
 
 /*
- * Start motor for "infinite" distance and then blocking wait until both motors are at drive speed
- * If motor is still running, just update motor.
- */
-void CarMotorControl::startCarAndWaitForDriveSpeed(uint8_t aDriveDirection) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    if (rightCarMotor.State == MOTOR_STATE_STOPPED || leftCarMotor.State == MOTOR_STATE_STOPPED
-            || rightCarMotor.CurrentDirection != aDriveDirection) {
-        /*
-         * Start only if not already started or direction changed
-         */
-        initGoDistanceCentimeter(INFINITE_DISTANCE_CM, aDriveDirection);
-
-#  ifdef DEBUG
-        Serial.print(F("Start car dir="));
-        Serial.println(aDriveDirection);
-#  endif
-    }
-    /*
-     * blocking wait for start
-     */
-    bool tMotorsNotStopped;
-    do {
-        tMotorsNotStopped = rightCarMotor.updateMotor();
-        tMotorsNotStopped |= leftCarMotor.updateMotor();
-    } while (tMotorsNotStopped && (rightCarMotor.State != MOTOR_STATE_FULL_SPEED || leftCarMotor.State != MOTOR_STATE_FULL_SPEED));
-#else
-    rightCarMotor.setSpeedCompensated(rightCarMotor.DriveSpeed, aDriveDirection);
-    leftCarMotor.setSpeedCompensated(leftCarMotor.DriveSpeed, aDriveDirection);
-#endif
-}
-
-/*
  * Stop car with ramp and give DistanceCountAfterRampUp counts for braking.
  *
  * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_FULL_SPEED to MOTOR_STATE_RAMP_DOWN
@@ -240,15 +250,20 @@ void CarMotorControl::stopCarAndWaitForIt() {
         return;
     }
 #ifdef USE_ENCODER_MOTOR_CONTROL
+    rightCarMotor.doOnlyRampUp = false;
     rightCarMotor.NextChangeMaxTargetCount = rightCarMotor.EncoderCount;
     rightCarMotor.TargetDistanceCount = rightCarMotor.EncoderCount + rightCarMotor.DistanceCountAfterRampUp;
+    leftCarMotor.doOnlyRampUp = false;
     leftCarMotor.NextChangeMaxTargetCount = leftCarMotor.EncoderCount;
     leftCarMotor.TargetDistanceCount = leftCarMotor.EncoderCount + leftCarMotor.DistanceCountAfterRampUp;
-#endif
     /*
      * blocking wait for stop
      */
     waitUntilCarStopped();
+#else
+    rightCarMotor.stop();
+    leftCarMotor.stop();
+#endif
 }
 
 /*
@@ -268,6 +283,7 @@ bool CarMotorControl::isState(uint8_t aState) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
     return (rightCarMotor.State == aState && leftCarMotor.State == aState);
 #else
+    (void) aState;
     return false;
 #endif
 }
@@ -284,39 +300,47 @@ void CarMotorControl::setFactorDegreeToCount(float aFactorDegreeToCount) {
  * Set distances and speed for 2 motors to turn the requested angle
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
- * @param  if aUseSlowSpeed is true then use slower speed (1.5 times StartSpeed) for rotation to be more exact
+ * @param  aUseSlowSpeed true -> use slower speed (1.5 times StartSpeed) instead of DriveSpeed for rotation to be more exact
  */
 void CarMotorControl::initRotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed) {
     int tDistanceCountRight;
     int tDistanceCountLeft;
-    int tDistanceCount;
+    uint16_t tDistanceCount;
 
     uint8_t tTurnDirectionRightMotor = aTurnDirection; // set turn direction as start direction
     uint8_t tTurnDirectionLeftMotor = aTurnDirection;
     if (aTurnDirection == TURN_BACKWARD) {
-        // swap turn sign / (left / right) to enable other motor
+        // swap turn sign / (left / right) to move other motor
         aRotationDegrees = -aRotationDegrees;
     }
-
-    tDistanceCount = (aRotationDegrees * FactorDegreeToCount) + 0.5;
 
     /*
      * Here aRotationDegrees is modified for TURN_FORWARD
      */
     if (aRotationDegrees > 0) {
-        // turn left, compute values for TURN_FORWARD
+        tDistanceCount = (aRotationDegrees * FactorDegreeToCount) + 0.5;
+        /*
+         * Move right motor (except for TURN_IN_PLACE)
+         * Here we have a left turn and a direction TURN_FORWARD or TURN_IN_PLACE
+         * OR a right turn and a direction TURN_BACKWARD
+         */
         tDistanceCountRight = tDistanceCount;
         tDistanceCountLeft = 0;
+
         if (aTurnDirection == TURN_IN_PLACE) {
             tDistanceCountRight /= 2;
             tDistanceCountLeft = tDistanceCountRight;
-            // The other motor has turn direction TURN_IN_PLACE which is masked to TURN_FORWARD by initGoDistanceCount()
+            // The right motor has turn direction TURN_IN_PLACE which is masked to TURN_FORWARD by initGoDistanceCount()
             tTurnDirectionLeftMotor = TURN_BACKWARD;
         }
     } else {
-        // turn right, compute values for TURN_FORWARD
+        tDistanceCount = (-aRotationDegrees * FactorDegreeToCount) + 0.5;
+        /*
+         * Move left motor (except for TURN_IN_PLACE)
+         * Here we have a right turn and a direction TURN_FORWARD or TURN_IN_PLACE
+         * OR a left turn and a direction TURN_BACKWARD
+         */
         tDistanceCountLeft = tDistanceCount;
-        tDistanceCountLeft = -tDistanceCountLeft;
         tDistanceCountRight = 0;
         if (aTurnDirection == TURN_IN_PLACE) {
             tDistanceCountLeft /= 2;
@@ -340,8 +364,10 @@ void CarMotorControl::initRotateCar(int16_t aRotationDegrees, uint8_t aTurnDirec
     }
 }
 
-/*
+/**
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
+ * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE (default)
+ * @param  aUseSlowSpeed true (default) -> use slower speed (1.5 times StartSpeed) instead of DriveSpeed for rotation to be more exact
  * @param  aLoopCallback avoid blocking and call aLoopCallback on waiting for stop
  */
 void CarMotorControl::rotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed, void (*aLoopCallback)(void)) {
@@ -351,13 +377,33 @@ void CarMotorControl::rotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection
     }
 }
 
+#ifndef USE_ENCODER_MOTOR_CONTROL
+void CarMotorControl::setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor) {
+    rightCarMotor.setDistanceToTimeFactorForFixedDistanceDriving(aDistanceToTimeFactor);
+    leftCarMotor.setDistanceToTimeFactorForFixedDistanceDriving(aDistanceToTimeFactor);
+}
+#else
+/*
+ * Start motor for "infinite" distance and then blocking wait until both motors are at drive speed
+ * If motor is still running, just update motor.
+ */
+void CarMotorControl::waitForDriveSpeed() {
+    /*
+     * blocking wait for MOTOR_STATE_FULL_SPEED
+     */
+    bool tMotorsNotStopped;
+    do {
+        tMotorsNotStopped = rightCarMotor.updateMotor();
+        tMotorsNotStopped |= leftCarMotor.updateMotor();
+    } while (tMotorsNotStopped && (rightCarMotor.State != MOTOR_STATE_FULL_SPEED || leftCarMotor.State != MOTOR_STATE_FULL_SPEED));
+}
+
 /*
  * generates a rising ramp and detects the first movement -> this sets dead band / minimum Speed
  */
 void CarMotorControl::calibrate() {
     stopMotors();
     resetControlValues();
-#ifdef USE_ENCODER_MOTOR_CONTROL
 
     rightCarMotor.StartSpeed = 0;
     leftCarMotor.StartSpeed = 0;
@@ -405,17 +451,15 @@ void CarMotorControl::calibrate() {
     leftCarMotor.writeMotorvaluesToEeprom();
 
     stopMotors();
-#endif
 }
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
 // ISR for PIN PD2 / RIGHT
 ISR(INT0_vect) {
-    rightCarMotor.handleEncoderInterrupt();
+    sCarMotorControlPointerForISR->rightCarMotor.handleEncoderInterrupt();
 }
 
 // ISR for PIN PD3 / LEFT
 ISR(INT1_vect) {
-    leftCarMotor.handleEncoderInterrupt();
+    sCarMotorControlPointerForISR->leftCarMotor.handleEncoderInterrupt();
 }
-#endif
+#endif // USE_ENCODER_MOTOR_CONTROL

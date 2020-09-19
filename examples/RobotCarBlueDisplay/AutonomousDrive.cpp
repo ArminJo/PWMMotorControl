@@ -69,6 +69,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         clearPrintedForwardDistancesInfos();
         sDoStep = true; // enable next step
         sDriveMode = aDriveMode;
+
         // decide which button called us
         if (aDriveMode == MODE_AUTONOMOUS_DRIVE_USER) {
             /*
@@ -77,8 +78,9 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             setStepMode(MODE_SINGLE_STEP);
         } else if (aDriveMode == MODE_FOLLOWER) {
             DistanceServoWriteAndDelay(90); // reset Servo
-            SliderUSDistance.drawSlider();
             sSearchFollowerTarget = true;
+            // Show distance sliders
+            SliderUSDistance.drawSlider();
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
             SliderIRDistance.drawSlider();
 #  endif
@@ -91,14 +93,17 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
         if (sStepMode != MODE_SINGLE_STEP) {
             // add last driven distance to path
-            insertToPath(rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+            insertToPath(RobotCarMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
         }
 #endif
         DistanceServoWriteAndDelay(90);
         sDriveMode = MODE_MANUAL_DRIVE;
+        RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
     }
+
+    // manage on off buttons
     handleAutomomousDriveRadioButtons();
-    startStopRobotCar(aDoStart);
+    TouchButtonRobotCarStartStop.setValue(aDoStart, false);
 }
 
 int postProcessAndCollisionDetection() {
@@ -140,7 +145,8 @@ void driveAutonomousOneStep() {
                 RobotCarMotorControl.goDistanceCentimeter(10, DIRECTION_BACKWARD, &loopGUI);
             } else {
                 // rotate and go
-                RobotCarMotorControl.rotateCar(sNextDegreesToTurn, sTurnMode);
+                RobotCarMotorControl.rotateCar(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
+//                RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_FORWARD, true, &loopGUI);
                 // wait to really stop after turning
                 delay(100);
                 sLastDegreesTurned = sNextDegreesToTurn;
@@ -158,7 +164,7 @@ void driveAutonomousOneStep() {
              * Continuous mode, start car or let it run
              */
             if (tCarIsStopped) {
-                RobotCarMotorControl.startCarAndWaitForDriveSpeed();
+                RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_FORWARD, &loopGUI);
             }
         }
 
@@ -166,7 +172,7 @@ void driveAutonomousOneStep() {
          * Here car is moving
          */
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        uint16_t tStepStartDistanceCount = rightCarMotor.EncoderCount; // get count before distance scanning
+        uint16_t tStepStartDistanceCount = RobotCarMotorControl.rightCarMotor.EncoderCount; // get count before distance scanning
 #endif
         bool tCurrentPageIsAutomaticControl = (sCurrentPage == PAGE_AUTOMATIC_CONTROL);
 
@@ -192,7 +198,7 @@ void driveAutonomousOneStep() {
              * No stop here => distance is valid
              */
 #ifdef USE_ENCODER_MOTOR_CONTROL
-            sCentimeterPerScanTimesTwo = rightCarMotor.EncoderCount - tStepStartDistanceCount;
+            sCentimeterPerScanTimesTwo = RobotCarMotorControl.rightCarMotor.EncoderCount - tStepStartDistanceCount;
             sCentimeterPerScan = sCentimeterPerScanTimesTwo / 2;
 #endif
             if (tCurrentPageIsAutomaticControl) {
@@ -219,14 +225,15 @@ void driveAutonomousOneStep() {
                 insertToPath(CENTIMETER_PER_RIDE * 2, sLastDegreesTurned, true);
             } else {
                 // add last driven distance to path
-                insertToPath(rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+                insertToPath(RobotCarMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
             }
         } else {
             /*
              * No stop, just continue => overwrite last path element with current riding distance and try to synchronize motors
              */
-            insertToPath(rightCarMotor.EncoderCount, sLastDegreesTurned, false);
-            rightCarMotor.synchronizeMotor(&leftCarMotor, MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
+            insertToPath(RobotCarMotorControl.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
+            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
+            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
 #endif
         }
 
@@ -650,11 +657,11 @@ void driveFollowerModeOneStep() {
 
     if (tCentimeter > FOLLOWER_MAX_DISTANCE) {
 //        Serial.println(F("Go forward"));
-        RobotCarMotorControl.startCarAndWaitForDriveSpeed(DIRECTION_FORWARD);
+        RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_FORWARD, &loopGUI);
 
     } else if (tCentimeter < FOLLOWER_MIN_DISTANCE) {
 //        Serial.println(F("Go backward"));
-        RobotCarMotorControl.startCarAndWaitForDriveSpeed(DIRECTION_BACKWARD);
+        RobotCarMotorControl.initRampUpAndWaitForDriveSpeed(DIRECTION_BACKWARD, &loopGUI);
 
     } else {
         // Target found here :-)

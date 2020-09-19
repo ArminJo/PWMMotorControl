@@ -296,7 +296,7 @@ void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
     DriveSpeed = DEFAULT_DRIVE_SPEED;
     SpeedCompensation = 0;
 #ifndef USE_ENCODER_MOTOR_CONTROL
-    SpeedDistanceFactor = DEFAULT_SPEED_DISTANCE_FACTOR;
+    DistanceToTimeFactor = DEFAULT_DISTANCE_TO_TIME_FACTOR;
 #endif
 }
 
@@ -307,19 +307,25 @@ void PWMDcMotor::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t a
 }
 
 #ifndef USE_ENCODER_MOTOR_CONTROL
-void PWMDcMotor::setSpeedDistanceFactorForFixedDistanceDriving(float aSpeedDistanceFactor) {
-    SpeedDistanceFactor = aSpeedDistanceFactor;
+/*
+ * Required for non encoder motors to estimate duration for a fixed distance
+ */
+void PWMDcMotor::setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor) {
+    DistanceToTimeFactor = aDistanceToTimeFactor;
 }
 
 /*
  * @param aDistanceCount distance in 5mm resolution (to be compatible with 20 slot encoder discs and 20 cm wheel circumference)
  */
 void PWMDcMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
+//    if (aDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
+//        PanicWithLed(400, 22);
+//    }
     setSpeedCompensated(DriveSpeed, aRequestedDirection);
     /*
      * Estimate duration
      */
-    computedMillisOfMotorStopForDistance = millis() + 50 + aDistanceCount * (DriveSpeed - StartSpeed) * SpeedDistanceFactor;
+    computedMillisOfMotorStopForDistance = millis() + 30 + ((aDistanceCount * DistanceToTimeFactor * 10) / (DriveSpeed - StartSpeed));
     MotorMovesFixedDistance = true;
 }
 
@@ -349,7 +355,7 @@ void PWMDcMotor::goDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDire
  */
 bool PWMDcMotor::updateMotor() {
     if (MotorMovesFixedDistance && CurrentSpeed != 0 && millis() > computedMillisOfMotorStopForDistance) {
-        stop(StopMode);
+        stop(StopMode); // resets MotorMovesFixedDistance
         return false;
     }
     return true;
@@ -391,5 +397,14 @@ void PWMDcMotor::writeMotorvaluesToEeprom() {
 
         eeprom_write_block((void*) &tEepromMotorInfo,
                 (void*) ((MotorValuesEepromStorageNumber - 1) * sizeof(EepromMotorInfoStruct)), sizeof(EepromMotorInfoStruct));
+    }
+}
+
+void PanicWithLed(uint16_t aDelay, uint8_t aCount) {
+    for (uint8_t i = 0; i < aCount; ++i) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(aDelay);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(aDelay);
     }
 }
