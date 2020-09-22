@@ -138,6 +138,8 @@ void drawHomePage(void) {
     TouchButtonDirection.drawButton();
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.drawButton();
+#else
+    TouchButtonCompensation.drawButton();
 #endif
 
     SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
@@ -168,6 +170,8 @@ void startHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4);
+#else
+    TouchButtonCompensation.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4);
 #endif
     TouchButtonNextPage.setCaption(F("Automatic\nControl"));
 
@@ -181,6 +185,8 @@ void stopHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_5);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
+#else
+    TouchButtonCompensation.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
     startStopRobotCar(false);
 }

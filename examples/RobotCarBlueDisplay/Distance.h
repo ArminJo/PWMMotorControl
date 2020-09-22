@@ -36,6 +36,11 @@ extern Servo DistanceServo;
 #define STEPS_PER_SCAN      (NUMBER_OF_DISTANCES - 1) // -> 162 degrees for 18 DEGREES_PER_STEP, 153 for 17 degrees
 #define START_DEGREES       ((180 - (DEGREES_PER_STEP * STEPS_PER_SCAN)) / 2) // 9 for 18, 13,5 for 17 - we need it symmetrical in the 180 degrees range
 
+// for future use maybe
+//#define SERVO_CURRENT_LOW_THRESHOLD 100
+//#define SERVO_INITIAL_DELAY 5
+//#define SERVO_CURRENT_LOW_MILLIS_FOR_SERVO_STOPPED 12
+
 /*
  * Index definitions for ForwardDistancesInfoStruct
  */
@@ -69,7 +74,7 @@ extern int sLastDegreesTurned;
 
 void initDistance();
 void DistanceServoWriteAndDelay(uint8_t aValue, bool doDelay = false);
-unsigned int getDistanceAsCentiMeter();
+unsigned int getDistanceAsCentiMeter(bool doShow = false);
 bool fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan = false);
 void postProcessDistances();
 

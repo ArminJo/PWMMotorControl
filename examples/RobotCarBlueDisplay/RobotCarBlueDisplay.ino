@@ -143,11 +143,6 @@ void setup() {
             PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true);
 #endif
 
-#if defined(VIN_4_AA)
-        // Hack for my simple car with different motors
-        RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, -10);
-#endif
-
     delay(100);
     tone(PIN_SPEAKER, 2200, 50); // motor initialized
 

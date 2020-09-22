@@ -37,6 +37,8 @@ BDButton TouchButtonBack;
 BDButton TouchButtonNextPage;
 #ifdef USE_ENCODER_MOTOR_CONTROL
 BDButton TouchButtonCalibrate;
+#else
+BDButton TouchButtonCompensation;
 #endif
 
 BDButton TouchButtonRobotCarStartStop;
@@ -85,7 +87,7 @@ void loopGUI(void) {
 
     if (BlueDisplay1.isConnectionEstablished()) {
         // do not show anything during motor speed ramps
-        if (RobotCarMotorControl.isStopped() || RobotCarMotorControl.isState(MOTOR_STATE_FULL_SPEED)) {
+        if (RobotCarMotorControl.isStopped() || RobotCarMotorControl.isState(MOTOR_STATE_DRIVE_SPEED)) {
 
             if (sCurrentPage == PAGE_HOME) {
                 loopHomePage();
@@ -192,6 +194,7 @@ void doSpeedSlider(BDSlider * aTheTouchedSlider, uint16_t aValue) {
         sLastSpeedSliderValue = aValue;
 
         if (RobotCarMotorControl.isStopped()) {
+            // handle GUI
             startStopRobotCar(true);
         } else {
             RobotCarMotorControl.setSpeedCompensated(aValue, sRobotCarDirection);
@@ -234,6 +237,21 @@ void doSetDirection(BDButton * aTheTouchedButton, int16_t aValue) {
     }
 // Stop direct movement by slider
     startStopRobotCar(false);
+}
+
+void doStoreRightMotorSpeedCompensation(float aRightMotorSpeedCompensation) {
+    int8_t tRightMotorSpeedCompensation = aRightMotorSpeedCompensation;
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(RobotCarMotorControl.rightCarMotor.StartSpeed,
+            RobotCarMotorControl.rightCarMotor.DriveSpeed, tRightMotorSpeedCompensation);
+    printMotorValues();
+}
+
+/*
+ * Request speed value as number
+ */
+void doGetRightMotorSpeedCompensationAsNumber(BDButton * aTheTouchedButton, int16_t aValue) {
+    BlueDisplay1.getNumberWithShortPrompt(&doStoreRightMotorSpeedCompensation, "Right speed compensation [-128 to 127]",
+            RobotCarMotorControl.rightCarMotor.SpeedCompensation);
 }
 
 void startCurrentPage() {
@@ -327,6 +345,9 @@ void initRobotCarDisplay(void) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_RED, F("CAL"),
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doCalibrate);
+#else
+    TouchButtonCompensation.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_RED, F("Comp"),
+            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doGetRightMotorSpeedCompensationAsNumber);
 #endif
 
 // Direction Button value true is forward, false is backward BUT 0 is DIRECTION_FORWARD!!!
@@ -386,8 +407,9 @@ void initRobotCarDisplay(void) {
      */
 #if defined(US_DISTANCE_SLIDER_IS_SMALL)
     // Small US distance slider with captions and without cm units
-    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, (BUTTON_WIDTH_10 / 2) - 2,
-    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
+    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
+            (BUTTON_WIDTH_10 / 2) - 2,
+            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
             FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW, 2, COLOR_BLACK,
     COLOR_WHITE);
@@ -410,8 +432,9 @@ void initRobotCarDisplay(void) {
      */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     // Small IR distance slider with captions and without cm units
-    SliderIRDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, (BUTTON_WIDTH_10 / 2) - 2,
-    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
+    SliderIRDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
+            (BUTTON_WIDTH_10 / 2) - 2,
+            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
             FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderIRDistance.setScaleFactor(2); // Slider is virtually 2 times larger, values were divided by 2
     SliderIRDistance.setBarThresholdColor(DISTANCE_TIMEOUT_COLOR);
@@ -571,21 +594,26 @@ void printMotorDebugValues() {
      * Debug info
      */
     uint16_t tYPos = SPEED_SLIDER_SIZE / 2 + 25 + TEXT_SIZE_11_HEIGHT + (4 * TEXT_SIZE_11);
+#ifdef SUPPORT_RAMP_UP
     sprintf_P(sStringBuffer, PSTR("ramp1%3d %3d"), RobotCarMotorControl.leftCarMotor.DistanceCountAfterRampUp,
             RobotCarMotorControl.rightCarMotor.DistanceCountAfterRampUp);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
+
     tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("endSp%3d %3d"), RobotCarMotorControl.leftCarMotor.SpeedAtTargetCountReached,
-            RobotCarMotorControl.rightCarMotor.SpeedAtTargetCountReached);
+    sprintf_P(sStringBuffer, PSTR("endSp%3d %3d"), RobotCarMotorControl.leftCarMotor.DebugSpeedAtTargetCountReached,
+            RobotCarMotorControl.rightCarMotor.DebugSpeedAtTargetCountReached);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
-    tYPos += TEXT_SIZE_11;
-    sprintf_P(sStringBuffer, PSTR("debug%3d %3d"), RobotCarMotorControl.leftCarMotor.Debug,
-            RobotCarMotorControl.rightCarMotor.Debug);
-    BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
+
     tYPos += TEXT_SIZE_11;
     sprintf_P(sStringBuffer, PSTR("dcnt %3d %3d"), RobotCarMotorControl.leftCarMotor.DebugCount,
             RobotCarMotorControl.rightCarMotor.DebugCount);
     BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
+    tYPos += TEXT_SIZE_11;
+#endif
+    sprintf_P(sStringBuffer, PSTR("debug%3d %3d"), RobotCarMotorControl.leftCarMotor.Debug,
+            RobotCarMotorControl.rightCarMotor.Debug);
+    BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
+
     tYPos += TEXT_SIZE_11;
     sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCarMotorControl.leftCarMotor.LastTargetDistanceCount,
             RobotCarMotorControl.rightCarMotor.LastTargetDistanceCount);

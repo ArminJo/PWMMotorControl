@@ -24,6 +24,8 @@
 
 //#define CAR_HAS_4_WHEELS
 
+//#define USE_LAYOUT_FOR_NANO
+
 // Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger.
 //#define USE_US_SENSOR_1_PIN_MODE // Comment it out, if you use modified HC-SR04 modules or HY-SRF05 ones.
 
@@ -85,14 +87,15 @@ extern CarMotorControl RobotCarMotorControl;
  * Pins 9 + 10 are reserved for Servo
  * 2 + 3 are reserved for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD      4
-#define PIN_LEFT_MOTOR_BACKWARD     7
-#define PIN_LEFT_MOTOR_PWM          5 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8
+#define PIN_LEFT_MOTOR_PWM          6 // Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     8
-#define PIN_RIGHT_MOTOR_BACKWARD   12 // Pin 9 is already reserved for distance servo
-#define PIN_RIGHT_MOTOR_PWM         6 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4
+#define PIN_RIGHT_MOTOR_BACKWARD    7
+#define PIN_RIGHT_MOTOR_PWM         5 // Must be PWM capable
 #endif
+
 
 /*
  * Servo pins
@@ -115,31 +118,40 @@ extern CarMotorControl RobotCarMotorControl;
  * Pins for US HC-SR04 distance sensor
  */
 #define PIN_TRIGGER_OUT         A0 // Connections on the Arduino Sensor Shield
-#ifndef USE_US_SENSOR_1_PIN_MODE
+#ifdef USE_US_SENSOR_1_PIN_MODE
+#define PIN_IR_DISTANCE_SENSOR  A1 // Otherwise available as US echo pin
+#else
 #define PIN_ECHO_IN             A1 // used by Sharp IR distance sensor
 #endif
-
 
 #ifdef CAR_HAS_LASER
 #define PIN_LASER_OUT           LED_BUILTIN
 #endif
 
 /*
- * Different pin layout for UNO and Nano (Nano hash full bridge) boards
+ * Different pin layout for UNO with Adafruit motor shield and Nano (Nano hash full bridge) boards
  */
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
-#  ifdef USE_US_SENSOR_1_PIN_MODE
-// Otherwise available as US echo pin
-#define PIN_IR_DISTANCE_SENSOR  A1
+#ifdef USE_LAYOUT_FOR_NANO
+/*
+ * Nano Layout
+ */
+#  ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#error "Adafruit motor shield makes no sense for a Nano board!"
 #  endif
-#define PIN_SPEAKER             11
-
-#else // USE_ADAFRUIT_MOTOR_SHIELD
-#ifdef CAR_HAS_CAMERA
+#  ifdef CAR_HAS_CAMERA
 #define PIN_CAMERA_SUPPLY_CONTROL A7 // Not available on UNO board
-#endif
+#  endif
 #define PIN_SPEAKER               A6 // Not available on UNO board
-#endif // USE_ADAFRUIT_MOTOR_SHIELD
+
+#else
+/*
+ * UNO Layout
+ */
+#  ifdef CAR_HAS_CAMERA
+#define PIN_CAMERA_SUPPLY_CONTROL  4
+#  endif
+#define PIN_SPEAKER               11
+#endif
 
 /**************************
  * End of pin definitions
@@ -150,6 +162,9 @@ extern CarMotorControl RobotCarMotorControl;
  */
 #define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
 #define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
+
+//#define MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS 500
+#define MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS 100
 
 /*
  * Servo timing correction.
@@ -190,7 +205,6 @@ extern float sVINVoltage;
 
 void readVINVoltage();
 #endif
-
 
 void resetServos();
 int doUserCollisionDetection();

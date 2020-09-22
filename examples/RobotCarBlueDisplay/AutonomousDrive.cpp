@@ -575,7 +575,7 @@ void driveFollowerModeOneStep() {
         RobotCarMotorControl.stopMotors();
 
         clearPrintedForwardDistancesInfos();
-        // show current distance
+        // show current distance (as US distance), which triggers the rescan
         showUSDistance(tCentimeter);
 
         /*
@@ -594,7 +594,7 @@ void driveFollowerModeOneStep() {
         }
         for (uint8_t i = 0; i < 3; ++i) {
             DistanceServoWriteAndDelay(tDegreeForSearch, true);
-            tCentimeter = getDistanceAsCentiMeter();
+            tCentimeter = getDistanceAsCentiMeter(false);
             if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
                 /*
                  * Determine color
@@ -669,9 +669,6 @@ void driveFollowerModeOneStep() {
 //        Serial.println(F("Stop"));
         RobotCarMotorControl.stopMotors();
     }
-
-    // show distance bars
-    showUSDistance(tCentimeter);
     delayAndLoopGUI(40); // the IR sensor takes 39 ms for one measurement
 }
 
@@ -679,7 +676,7 @@ unsigned int __attribute__((weak)) getDistanceAndPlayTone() {
     /*
      * Get distance; timeout is 1 meter
      */
-    unsigned int tCentimeter = getDistanceAsCentiMeter();
+    unsigned int tCentimeter = getDistanceAsCentiMeter(true);
     /*
      * play tone
      */

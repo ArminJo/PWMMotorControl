@@ -62,6 +62,7 @@ jobs:
                 -DUSE_STANDARD_SERIAL
                 -DUSE_US_SENSOR_1_PIN_MODE
                 -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+                -DENABLE_MOTOR_LIST_FUNCTIONS
 
 #          - arduino-boards-fqbn: arduino:avr:leonardo
 #            build-properties:

@@ -60,11 +60,7 @@ void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBac
         rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
     }
 
-#  if defined(CAR_HAS_4_WHEELS)
-    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT;
-#  else
-    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT;
-#  endif
+    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_DEFAULT;
 
 #  ifdef USE_ENCODER_MOTOR_CONTROL
     /*
@@ -161,9 +157,9 @@ void CarMotorControl::resetControlValues() {
  * Used to suppress time consuming display of motor values
  */
 bool CarMotorControl::needsFastUpdates() {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    return (rightCarMotor.State == MOTOR_STATE_RAMP_DOWN || rightCarMotor.State == MOTOR_STATE_RAMP_UP
-            || leftCarMotor.State == MOTOR_STATE_RAMP_DOWN || leftCarMotor.State == MOTOR_STATE_RAMP_UP);
+#ifdef SUPPORT_RAMP_UP
+    return (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP
+            || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP);
 #else
     return false;
 #endif
@@ -178,22 +174,34 @@ bool CarMotorControl::updateMotors() {
     return tMotorsNotStopped;
 }
 
+#ifdef SUPPORT_RAMP_UP
 void CarMotorControl::initRampUp(uint8_t aRequestedDirection) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
     rightCarMotor.initRampUp(aRequestedDirection);
     leftCarMotor.initRampUp(aRequestedDirection);
-#else
-    rightCarMotor.setSpeedCompensated(rightCarMotor.DriveSpeed, aRequestedDirection);
-    leftCarMotor.setSpeedCompensated(leftCarMotor.DriveSpeed, aRequestedDirection);
-#endif
 }
 
+/*
+ * Blocking wait until both motors are at drive speed.
+ */
+void CarMotorControl::waitForDriveSpeed() {
+    /*
+     * blocking wait for MOTOR_STATE_DRIVE_SPEED
+     */
+    bool tMotorsNotStopped;
+    do {
+        tMotorsNotStopped = rightCarMotor.updateMotor();
+        tMotorsNotStopped |= leftCarMotor.updateMotor();
+    } while (tMotorsNotStopped
+            && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE_SPEED || leftCarMotor.MotorRampState != MOTOR_STATE_DRIVE_SPEED));
+}
+#endif
+
 void CarMotorControl::initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#ifdef SUPPORT_RAMP_UP
     rightCarMotor.initRampUp(aRequestedDirection);
     leftCarMotor.initRampUp(aRequestedDirection);
     /*
-     * blocking wait for MOTOR_STATE_FULL_SPEED, 256 milliseconds
+     * blocking wait for MOTOR_STATE_DRIVE_SPEED, 256 milliseconds
      */
     bool tMotorsNotStopped; // to check if motors are not stopped by aLoopCallback
     do {
@@ -202,8 +210,10 @@ void CarMotorControl::initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection
         if (aLoopCallback != NULL) {
             aLoopCallback(); // this may stop motors
         }
-    } while (tMotorsNotStopped && (rightCarMotor.State != MOTOR_STATE_FULL_SPEED || leftCarMotor.State != MOTOR_STATE_FULL_SPEED));
+    } while (tMotorsNotStopped
+            && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE_SPEED || leftCarMotor.MotorRampState != MOTOR_STATE_DRIVE_SPEED));
 #else
+    (void) aLoopCallback;
     rightCarMotor.setSpeedCompensated(rightCarMotor.DriveSpeed, aRequestedDirection);
     leftCarMotor.setSpeedCompensated(leftCarMotor.DriveSpeed, aRequestedDirection);
 #endif
@@ -241,7 +251,7 @@ void CarMotorControl::goDistanceCentimeter(int aDistanceCentimeter, void (*aLoop
 /*
  * Stop car with ramp and give DistanceCountAfterRampUp counts for braking.
  *
- * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_FULL_SPEED to MOTOR_STATE_RAMP_DOWN
+ * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE_SPEED to MOTOR_STATE_RAMP_DOWN
  * Use DistanceCountAfterRampUp as ramp down count
  * Blocking wait for stop
  */
@@ -249,11 +259,9 @@ void CarMotorControl::stopCarAndWaitForIt() {
     if (isStopped()) {
         return;
     }
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    rightCarMotor.doOnlyRampUp = false;
+#if defined(USE_ENCODER_MOTOR_CONTROL) && defined(SUPPORT_RAMP_UP)
     rightCarMotor.NextChangeMaxTargetCount = rightCarMotor.EncoderCount;
     rightCarMotor.TargetDistanceCount = rightCarMotor.EncoderCount + rightCarMotor.DistanceCountAfterRampUp;
-    leftCarMotor.doOnlyRampUp = false;
     leftCarMotor.NextChangeMaxTargetCount = leftCarMotor.EncoderCount;
     leftCarMotor.TargetDistanceCount = leftCarMotor.EncoderCount + leftCarMotor.DistanceCountAfterRampUp;
     /*
@@ -280,8 +288,8 @@ void CarMotorControl::waitUntilCarStopped(void (*aLoopCallback)(void)) {
 }
 
 bool CarMotorControl::isState(uint8_t aState) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    return (rightCarMotor.State == aState && leftCarMotor.State == aState);
+#if defined(SUPPORT_RAMP_UP)
+    return (rightCarMotor.MotorRampState == aState && leftCarMotor.MotorRampState == aState);
 #else
     (void) aState;
     return false;
@@ -354,12 +362,23 @@ void CarMotorControl::initRotateCar(int16_t aRotationDegrees, uint8_t aTurnDirec
     leftCarMotor.initGoDistanceCount(tDistanceCountLeft, tTurnDirectionLeftMotor);
     if (aUseSlowSpeed) {
         // adjust CurrentDriveSpeed
-#ifdef USE_ENCODER_MOTOR_CONTROL
-        rightCarMotor.CurrentDriveSpeed = rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2;
-        leftCarMotor.CurrentDriveSpeed = leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2;
+#if defined(SUPPORT_RAMP_UP)
+        // avoid overflow, the reduced speed is almost max speed then.
+        if (rightCarMotor.StartSpeed < 160) {
+            rightCarMotor.CurrentDriveSpeed = rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2;
+        }
+        if (leftCarMotor.StartSpeed < 160) {
+            leftCarMotor.CurrentDriveSpeed = leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2;
+        }
 #else
-        rightCarMotor.setSpeedCompensated(rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2, rightCarMotor.CurrentDirection);
-        leftCarMotor.setSpeedCompensated(leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2, leftCarMotor.CurrentDirection);
+        if (tDistanceCountRight > 0) {
+            rightCarMotor.setSpeedCompensated(rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2,
+                    rightCarMotor.CurrentDirectionOrBrakeMode);
+        }
+        if (tDistanceCountLeft > 0) {
+            leftCarMotor.setSpeedCompensated(leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2,
+                    leftCarMotor.CurrentDirectionOrBrakeMode);
+        }
 #endif
     }
 }
@@ -384,21 +403,6 @@ void CarMotorControl::setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aD
 }
 #else
 /*
- * Start motor for "infinite" distance and then blocking wait until both motors are at drive speed
- * If motor is still running, just update motor.
- */
-void CarMotorControl::waitForDriveSpeed() {
-    /*
-     * blocking wait for MOTOR_STATE_FULL_SPEED
-     */
-    bool tMotorsNotStopped;
-    do {
-        tMotorsNotStopped = rightCarMotor.updateMotor();
-        tMotorsNotStopped |= leftCarMotor.updateMotor();
-    } while (tMotorsNotStopped && (rightCarMotor.State != MOTOR_STATE_FULL_SPEED || leftCarMotor.State != MOTOR_STATE_FULL_SPEED));
-}
-
-/*
  * generates a rising ramp and detects the first movement -> this sets dead band / minimum Speed
  */
 void CarMotorControl::calibrate() {
@@ -408,24 +412,24 @@ void CarMotorControl::calibrate() {
     rightCarMotor.StartSpeed = 0;
     leftCarMotor.StartSpeed = 0;
 
+    uint8_t tMotorMovingCount = 0;
+
     /*
      * increase motor speed by 1 until motor moves
      */
     for (uint8_t tSpeed = 20; tSpeed != 0xFF; ++tSpeed) {
         if (rightCarMotor.StartSpeed == 0) {
             rightCarMotor.setSpeed(tSpeed, DIRECTION_FORWARD);
-            rightCarMotor.CurrentSpeed = tSpeed;
         }
         if (leftCarMotor.StartSpeed == 0) {
             leftCarMotor.setSpeed(tSpeed, DIRECTION_FORWARD);
-            leftCarMotor.CurrentSpeed = tSpeed;
         }
 
         delay(100);
         /*
          * Check if wheel moved
          */
-        uint8_t tMotorMovingCount = 0;
+
         /*
          * Store speed after 6 counts (3cm)
          */

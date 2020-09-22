@@ -170,6 +170,8 @@ void drawTestPage(void) {
 #  endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.drawButton();
+#else
+    TouchButtonCompensation.drawButton();
 #endif
     PWMDcMotor::MotorValuesHaveChanged = true; // trigger drawing of values
 }

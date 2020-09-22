@@ -284,13 +284,7 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
         long tMillis = millis();
         if (sLastUSMeasurementMillis + aPeriodMillis < tMillis) {
             sLastUSMeasurementMillis = tMillis;
-#ifdef CAR_HAS_IR_DISTANCE_SENSOR
-            showIRDistance(getIRDistanceAsCentimeter());
-#elif CAR_HAS_TOF_DISTANCE_SENSOR
-            showIRDistance(getToFDistanceAsCentimeter());
-#endif
-            // feedback as slider length
-            showUSDistance(getUSDistanceAsCentiMeterWithCentimeterTimeout(300));
+            getDistanceAsCentiMeter(true);
         }
     }
 }
@@ -298,7 +292,7 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
 /*
  * Timeout is DISTANCE_TIMEOUT_CM (1 meter)
  */
-unsigned int getDistanceAsCentiMeter() {
+unsigned int getDistanceAsCentiMeter(bool doShow) {
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
     if (sScanMode != SCAN_MODE_US) {
         sToFDistanceSensor.VL53L1X_StartRanging();
@@ -306,16 +300,25 @@ unsigned int getDistanceAsCentiMeter() {
 #endif
 
     unsigned int tCentimeter = getUSDistanceAsCentiMeterWithCentimeterTimeout(DISTANCE_TIMEOUT_CM);
+    if (doShow) {
+        showUSDistance(tCentimeter);
+    }
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     unsigned int tIRCentimeter;
     if (sScanMode != SCAN_MODE_US) {
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
         if (sScanMode != SCAN_MODE_US) {
             tIRCentimeter = getIRDistanceAsCentimeter();
+            if (doShow) {
+                showIRDistance(tIRCentimeter);
+            }
         }
 #  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
         if (sScanMode != SCAN_MODE_US) {
             tIRCentimeter = readToFDistanceAsCentimeter();
+            if(doShow){
+                showIRDistance(tIRCentimeter);
+            }
         }
 #  endif
         if (sScanMode == SCAN_MODE_IR) {

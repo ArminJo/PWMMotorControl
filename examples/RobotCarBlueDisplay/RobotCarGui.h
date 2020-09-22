@@ -144,6 +144,8 @@ extern BDButton TouchButtonDirection;
 #ifdef USE_ENCODER_MOTOR_CONTROL
 extern BDButton TouchButtonCalibrate;
 void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue);
+#else
+extern BDButton TouchButtonCompensation;
 #endif
 
 extern BDSlider SliderSpeed;

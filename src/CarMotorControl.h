@@ -24,18 +24,28 @@
 #include "EncoderMotor.h"
 #include <stdint.h>
 
+/*
+ * Some factors depending on wheel diameter and encoder resolution
+ */
+#if ! defined(FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT)
+#define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  2 // Exact value is 1.86, but integer saves program space and time
+#endif
+// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm, Distance between two wheels is around 13 cm
+#define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.4277777
+#define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.8 // estimated, with slip
+
+#if ! defined(FACTOR_DEGREE_TO_COUNT_DEFAULT)
+#  if defined(CAR_HAS_4_WHEELS)
+#define FACTOR_DEGREE_TO_COUNT_DEFAULT  FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT
+#  else
+#define FACTOR_DEGREE_TO_COUNT_DEFAULT  FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT
+#  endif
+#endif
+
 // turn directions
 #define TURN_FORWARD    DIRECTION_FORWARD  // 0
 #define TURN_BACKWARD   DIRECTION_BACKWARD // 1
 #define TURN_IN_PLACE   2
-
-/*
- * Some factors depending on wheel diameter and encoder resolution
- */
-#define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  2 // value is 1.86, but integer saves program space and time
-// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm, Distance between two wheels is around 13 cm
-#define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.4277777
-#define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.8 // estimated, with slip
 
 class CarMotorControl {
 public:
@@ -53,14 +63,16 @@ public:
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     void calibrate();
-    void waitForDriveSpeed();
 #else
     // makes no sense for encoder motor
     void setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor);
 #endif
 
+#ifdef SUPPORT_RAMP_UP
     void initRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
-    void initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD,  void (*aLoopCallback)(void) = NULL);
+    void waitForDriveSpeed();
+#endif
+    void initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD, void (*aLoopCallback)(void) = NULL);
 
     /*
      * Functions for moving a fixed distance
