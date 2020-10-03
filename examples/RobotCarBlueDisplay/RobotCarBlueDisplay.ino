@@ -8,6 +8,9 @@
  *  Manual control is by a GUI implemented with a Bluetooth HC-05 Module and the BlueDisplay library.
  *  Just overwrite the 2 functions myOwnFillForwardDistancesInfo() and doUserCollisionDetection() to test your own skill.
  *
+ *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
+ *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
+ *
  *  Program size of GUI is 63 percent. 27% vs. 90%.
  *
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
@@ -140,7 +143,7 @@ void setup() {
     RobotCarMotorControl.init(true); // true -> read from EEPROM
 #else
     RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-            PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true);
+            PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true); // true -> read from EEPROM
 #endif
 
     delay(100);

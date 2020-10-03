@@ -47,7 +47,7 @@ bool sShowDebug = false;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton * aTheTouchedButton, int16_t aValue) {
-    RobotCarMotorControl.initGoDistanceCentimeter(aValue, sRobotCarDirection);
+    RobotCarMotorControl.startGoDistanceCentimeter(aValue, sRobotCarDirection);
 }
 
 void doShowDebug(BDButton * aTheTouchedButton, int16_t aValue) {
@@ -55,7 +55,7 @@ void doShowDebug(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 
 void doRotation(BDButton * aTheTouchedButton, int16_t aValue) {
-    RobotCarMotorControl.initRotateCar(aValue, sRobotCarDirection, true);
+    RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection, true);
 }
 
 /*

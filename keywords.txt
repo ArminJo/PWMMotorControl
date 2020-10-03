@@ -12,30 +12,52 @@ CarMotorControl	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
+# From PWMDcMotor
 init	KEYWORD2
-setMotorDriverMode	KEYWORD2
 setSpeed	KEYWORD2
 setSpeedCompensated	KEYWORD2
 stop	KEYWORD2
 setStopMode	KEYWORD2
-initGoDistanceCount	KEYWORD2
+setDefaultsForFixedDistanceDriving	KEYWORD2
+setValuesForFixedDistanceDriving	KEYWORD2
+setDistanceToTimeFactorForFixedDistanceDriving	KEYWORD2
+setDriveSpeed	KEYWORD2
+
+startGoDistanceCount	KEYWORD2
+startRampUp	KEYWORD2
 updateMotor	KEYWORD2
-setEepromMotorValuesDefaults	KEYWORD2
+goDistanceCount	KEYWORD2
+
 readMotorValuesFromEeprom	KEYWORD2
 writeMotorvaluesToEeprom	KEYWORD2
-initGoDistanceCount	KEYWORD2
-synchronizeMotor	KEYWORD2
+setMotorDriverMode	KEYWORD2
+checkAndHandleDirectionChange	KEYWORD2
+
+# From EncoderMotor
 resetControlValues	KEYWORD2
-initGoDistanceCentimeter	KEYWORD2
+synchronizeMotor	KEYWORD2
+calibrate	KEYWORD2
+
+# From CarMotorControl
+startGoDistanceCentimeter	KEYWORD2
 goDistanceCentimeter	KEYWORD2
-stopMotors	KEYWORD2
-setDefaultsForFixedDistanceDriving	KEYWORD2
+getCarDirectionOrBrakeMode	KEYWORD2
+waitForDriveSpeed	KEYWORD2
+startRampUpAndWait	KEYWORD2
+startRampUpAndWaitForDriveSpeed	KEYWORD2
+checkAndHandleDirectionChange	KEYWORD2
 updateMotors	KEYWORD2
+delayAndUpdateMotors	KEYWORD2
 startCarAndWaitForFullSpeed	KEYWORD2
+stopMotors	KEYWORD2
 stopCarAndWaitForIt	KEYWORD2
 waitUntilCarStopped	KEYWORD2
 isStopped	KEYWORD2
-initRotateCar	KEYWORD2
+isState	KEYWORD2
+isStateRamp	KEYWORD2
+# Rotation
+setFactorDegreeToCount	KEYWORD2
+startRotateCar	KEYWORD2
 rotateCar	KEYWORD2
 
 #######################################

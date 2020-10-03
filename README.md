@@ -4,11 +4,13 @@ Available as Arduino library "PWMMotorControl"
 ### [Version 1.0.0](https://github.com/ArminJo/PWMMotorControl/releases)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
+[![Commits since latest](https://img.shields.io/github/commits-since/ArminJo/PWMMotorControl/latest)](https://github.com/ArminJo/PWMMotorControl/commits/master)
 [![Build Status](https://github.com/ArminJo/PWMMotorControl/workflows/LibraryBuild/badge.svg)](https://github.com/ArminJo/PWMMotorControl/actions)
 ![Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_PWMMotorControl)
 
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **L298**, **TB6612** (new low loss dual full bridge IC), or **Adafruit_MotorShield** (using PCA9685 -> 2 x TB6612).
-- The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and fork light barrier to enable **driving a specified distance**.
+- The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
 - The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
 
 Basic commands are:
@@ -30,8 +32,8 @@ Some options which are enabed by default can be disabled by defining a *inhibit*
 
 | Macro | Default | File | Description |
 |-|-|-|-|
-| `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use fork light barrier and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
-| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bride.<br/>For full bride, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
+| `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
+| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
 | `USE_OWN_LIBRARY_FOR_`<br/>`ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Saves around 694 bytes program memory.<br/>Disable macro=`USE_STANDARD_LIBRARY_`<br/>`FOR_ADAFRUIT_MOTOR_SHIELD` |
 | `SUPPORT_RAMP_UP` | enabled | PWMDcMotor.h | Saves around 300 bytes program memory.<br/>Disable macro=`DO_NOT_SUPPORT_RAMP_UP` |
 
@@ -50,7 +52,7 @@ These values are used by functions and the first 2 can be overwritten by set* fu
 |-|-|-|-|
 | `DEFAULT_START_SPEED` | 45/150 for 7.4/6.0 volt supply | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
 | `DEFAULT_DRIVE_SPEED` | 80/255(max speed) for 7.4/6.0 volt supply | PWMDCMotor.h | The speed PWM value for going fixed distance. |
-| `DEFAULT_DISTANCE_TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
+| `DEFAULT_DISTANCE_TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
 | `RAMP_UP_UPDATE_INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
 | `RAMP_UP_UPDATE_INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
 
@@ -79,8 +81,8 @@ To customize the RobotCar example to cover different extensions, there are some 
 ![2 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg)
 4 wheel car, like 2 WD car before, but with servo mounted head up.
 ![4 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/4WheelDriveCar.jpg)
-Encoder fork sensor
-![Encoder fork sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg)
+Encoder slot-type photo interrupter sensor
+![Encoder slot-type photo interrupter sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg)
 Servo mounted head down
 ![Servo mounting](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ServoAtTopBack.jpg)
 VIN sensing
@@ -100,6 +102,9 @@ Automatic control page with detected wall at right
 - The tiny black bar is the rotation chosen by doCollisionDetection() function.
 
 # Revision History
+### Version 1.1.0
+- Added and renamed functions.
+
 ### Version 1.0.0
-Initial Arduino library version
+Initial Arduino library version.
 

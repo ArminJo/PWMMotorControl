@@ -40,16 +40,6 @@ jobs:
         #############################################################################################################
         arduino-boards-fqbn:
           - arduino:avr:uno
-#          - arduino:avr:leonardo
-#          - arduino:avr:mega
-#          - arduino:megaavr:nona4809:mode=off
-#          - arduino:sam:arduino_due_x
-#          - arduino:samd:arduino_zero_native
-#          - esp8266:esp8266:huzzah:eesz=4M3M,xtal=80
-#          - esp32:esp32:featheresp32:FlashFreq=80
-#          - STM32:stm32:GenF1:pnum=BLUEPILL_F103C8
-#          - stm32duino:STM32F1:genericSTM32F103C
-#          - SparkFun:apollo3:amap3nano
 
         # Specify parameters for each board.
         # With sketches-exclude you may exclude specific examples for a board. Use a comma separated list.
@@ -63,67 +53,6 @@ jobs:
                 -DUSE_US_SENSOR_1_PIN_MODE
                 -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
                 -DENABLE_MOTOR_LIST_FUNCTIONS
-
-#          - arduino-boards-fqbn: arduino:avr:leonardo
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-#          - arduino-boards-fqbn: arduino:avr:mega
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: arduino:megaavr:nona4809:mode=off
-#            sketches-exclude: SpeedTest,EndPositionsTest,QuadrupedControl,RobotArmControl # No getVCCVoltageMillivolt(), no EasyButton
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: arduino:sam:arduino_due_x
-#            sketches-exclude: QuadrupedControl,RobotArmControl # QuadrupedControl RobotArmControl because of missing EEprom
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: arduino:samd:arduino_zero_native
-#            sketches-exclude: QuadrupedControl,RobotArmControl
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: esp8266:esp8266:huzzah:eesz=4M3M,xtal=80
-#            platform-url: https://arduino.esp8266.com/stable/package_esp8266com_index.json
-#            sketches-exclude: QuadrupedControl,RobotArmControl,SpeedTest # SpeedTest because of only one analog input
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
-#            platform-url: https://dl.espressif.com/dl/package_esp32_index.json
-#            sketches-exclude: QuadrupedControl,RobotArmControl # Comma separated list of (unique substrings of) example names to exclude in build
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: STM32:stm32:GenF1:pnum=BLUEPILL_F103C8 # STM version
-#            platform-url: https://github.com/stm32duino/BoardManagerFiles/raw/master/STM32/package_stm_index.json
-#            sketches-exclude: QuadrupedControl,RobotArmControl
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: stm32duino:STM32F1:genericSTM32F103C # Roger Clark version
-#            platform-url: http://dan.drown.org/stm32duino/package_STM32duino_index.json
-#            sketches-exclude: QuadrupedControl,RobotArmControl
-#            build-properties:
-#              RobotCarBlueDisplay: -DBLUETOOTH_BAUD_RATE=BAUD_115200 -DUSE_STANDARD_SERIAL -DUSE_US_SENSOR_1_PIN_MODE -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-
-
-#          - arduino-boards-fqbn: SparkFun:apollo3:amap3nano
-#            platform-url: https://raw.githubusercontent.com/sparkfun/Arduino_Boards/master/IDE_Board_Manager/package_sparkfun_index.json
-#             # 4/2020 For PCA9685_Expander, Wire cannot be found in cli, it works in the regular IDE. SpeedTest and EndPositionsTest give strange BFD assertions
-#            sketches-exclude: QuadrupedControl,RobotArmControl,PCA9685_Expander,PCA9685_ExpanderAndServo,PCA9685_ExpanderFor32Servos,SpeedTest,EndPositionsTest
-
 
       # Do not cancel all jobs / architectures if one job fails
       fail-fast: false

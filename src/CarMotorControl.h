@@ -7,7 +7,7 @@
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -59,45 +59,66 @@ public:
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
             uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, bool aReadFromEeprom = false);
 #endif
+
     void setDefaultsForFixedDistanceDriving();
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
+    void setDriveSpeed(uint8_t aDriveSpeed);
+
 #ifdef USE_ENCODER_MOTOR_CONTROL
     void calibrate();
+    // retrieves values from right motor
+    unsigned int getDistanceCount();
+    int getDistanceCentimeter();
 #else
     // makes no sense for encoder motor
-    void setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor);
+    void setDistanceToTimeFactorForFixedDistanceDriving(unsigned int aDistanceToTimeFactor);
 #endif
 
 #ifdef SUPPORT_RAMP_UP
-    void initRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
-    void waitForDriveSpeed();
+    void startRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
+    void startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
+    void waitForDriveSpeed(void (*aLoopCallback)(void) = NULL);
 #endif
-    void initRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD, void (*aLoopCallback)(void) = NULL);
+    // If ramp up is not supported, these functions just sets the speed and return immediately
+    void startRampUpAndWait(uint8_t aRequestedSpeed, uint8_t aRequestedDirection = DIRECTION_FORWARD,
+            void (*aLoopCallback)(void) = NULL);
+    void startRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD, void (*aLoopCallback)(void) = NULL);
+
+    /*
+     * For car direction handling
+     */
+    uint8_t getCarDirectionOrBrakeMode();
+    uint8_t CarDirectionOrBrakeMode;
 
     /*
      * Functions for moving a fixed distance
      */
-    void initGoDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection); // only setup values
-    void goDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilCarStopped
     // With signed distance
-    void initGoDistanceCentimeter(int aDistanceCentimeter); // only setup values
+    void startGoDistanceCentimeter(uint8_t aRequestedSpeed, unsigned int aDistanceCentimeter, uint8_t aRequestedDirection); // only setup values
+    void startGoDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection); // only setup values
+    void startGoDistanceCentimeter(int aDistanceCentimeter); // only setup values, no movement -> use updateMotors()
+
     void goDistanceCentimeter(int aDistanceCentimeter, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilCarStopped
+    void goDistanceCentimeter(unsigned int aDistanceCentimeter, uint8_t aRequestedDirection, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilCarStopped
+
+    bool checkAndHandleDirectionChange(uint8_t aRequestedDirection); // used internally
 
     /*
      * Functions for rotation
      */
     void setFactorDegreeToCount(float aFactorDegreeToCount);
-    void initRotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = true);
-    void rotateCar(int16_t aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
+    void startRotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = true);
+    void rotateCar(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
             void (*aLoopCallback)(void) = NULL);
+    float FactorDegreeToCount;
 
     bool updateMotors();
+    void delayAndUpdateMotors(unsigned int aDelayMillis);
 
     /*
      * Start/Stop functions for infinite distance
      */
-    void stopCarAndWaitForIt(); // uses waitUntilCarStopped()
-
+    void stopCarAndWaitForIt(void (*aLoopCallback)(void) = NULL); // uses waitUntilCarStopped()
     void waitUntilCarStopped(void (*aLoopCallback)(void) = NULL);
 
     /*
@@ -105,7 +126,7 @@ public:
      */
     bool isStopped();
     bool isState(uint8_t aState);
-    bool needsFastUpdates();
+    bool isStateRamp(); // MOTOR_STATE_RAMP_UP OR MOTOR_STATE_RAMP_DOWN
 
     void resetControlValues();
 
@@ -120,8 +141,6 @@ public:
     void setSpeed(int aRequestedSpeed);
     void setSpeedCompensated(int aRequestedSpeed);
 
-    float FactorDegreeToCount;
-
 #ifdef USE_ENCODER_MOTOR_CONTROL
     EncoderMotor rightCarMotor; // 40 bytes RAM
     EncoderMotor leftCarMotor;
@@ -135,3 +154,6 @@ public:
 extern CarMotorControl * sCarMotorControlPointerForISR;
 
 #endif /* CARMOTORCONTROL_H_ */
+
+#pragma once
+

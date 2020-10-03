@@ -9,7 +9,7 @@
  *  Copyright (C) 2019-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,9 +25,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "1.0.0"
+#define VERSION_PWMMOTORCONTROL "1.1.0"
 #define VERSION_PWMMOTORCONTROL_MAJOR 1
-#define VERSION_PWMMOTORCONTROL_MINOR 0
+#define VERSION_PWMMOTORCONTROL_MINOR 1
 
 /*
  * Comment this out, if you have encoder interrupts attached at pin 2 and 3
@@ -39,8 +39,8 @@
 //
 /*
  * Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.
- * This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bride.
- * For full bride, analogWrite the millis() timer0 is used since we use pin 5 & 6.
+ * This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
+ * For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6.
  */
 //#define USE_ADAFRUIT_MOTOR_SHIELD
 //
@@ -55,9 +55,13 @@
  * Disabling SUPPORT_RAMP_UP saves 7 bytes RAM per motor and around 300 bytes program memory
  */
 #if ! DO_NOT_SUPPORT_RAMP_UP // if defined (externally), disables ramp up support
-#define SUPPORT_RAMP_UP
+#define SUPPORT_RAMP_UP      // 256 milliseconds for ramp, see below
 #endif
 
+/*
+ * Comment this out, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
+ */
+//#define VIN_2_LIPO
 #define MAX_SPEED   255
 
 /*
@@ -67,10 +71,11 @@
 #define DEFAULT_COUNTS_PER_FULL_ROTATION    40
 #define DEFAULT_MILLIMETER_PER_COUNT         5
 
+#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 150 // constant value for the for the formula below
 /*
  * DEFAULT_DISTANCE_TO_TIME_FACTOR is the factor used to convert distance in 5mm steps to motor on time in milliseconds. I depends on motor supply voltage.
  * Currently formula is:
- * computedMillisOfMotorStopForDistance = 150 + (10 * ((aDistanceCount * DistanceToTimeFactor) / DriveSpeed));
+ * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed));
  *
  * DEFAULT_START_SPEED is the speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 3,6 volt (USB supply) is appr. 70 to 100
  */
@@ -179,36 +184,44 @@ public:
     void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aMotorNumber = 0);
 #endif
 
-    void setMotorDriverMode(uint8_t cmd);
-    bool checkAndHandleDirectionChange(uint8_t aRequestedDirection);
-
     /*
      * Basic motor commands
      */
-    void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
-    void setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection);
-    // not used yet
     void setSpeed(int aRequestedSpeed);
+    void setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection);
     void setSpeedCompensated(int aRequestedSpeed);
+    void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
 
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
     void setStopMode(uint8_t aStopMode); // mode for Speed==0 or STOP_MODE_KEEP: MOTOR_BRAKE or MOTOR_RELEASE
 
+    /*
+     * Fixed distance driving
+     */
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
+    void setDriveSpeed(uint8_t aDriveSpeed);
 
-    void initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection);
-
-    #ifdef SUPPORT_RAMP_UP
-    void initRampUp(uint8_t aRequestedDirection);
+#ifdef SUPPORT_RAMP_UP
+    void startRampUp(uint8_t aRequestedDirection);
+    void startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
 #endif
 
 #ifndef USE_ENCODER_MOTOR_CONTROL
-    void setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor);
-    void goDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection);
-    // Signed distance count
-    void initGoDistanceCount(int16_t aDistanceCount);
+    // This function only makes sense for non encoder motors
+    void setDistanceToTimeFactorForFixedDistanceDriving(unsigned int aDistanceToTimeFactor);
+
+    // These functions are implemented by encoder motor too
+    void startGoDistanceCount(int aRequestedDistanceCount); // Signed distance count
+    void startGoDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
+    void startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
     bool updateMotor();
+
+    /*
+     * Implementation for non encoder motors. Not used by CarControl.
+     */
+    void goDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
+    void goDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
 #endif
 
     /*
@@ -216,6 +229,12 @@ public:
      */
     void readMotorValuesFromEeprom();
     void writeMotorvaluesToEeprom();
+
+    /*
+     * Internal functions
+     */
+    void setMotorDriverMode(uint8_t cmd);
+    bool checkAndHandleDirectionChange(uint8_t aRequestedDirection);
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) || defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     uint8_t PWMPin;     // PWM output pin / PCA9685 channel of Adafruit Motor Shield
@@ -232,7 +251,7 @@ public:
      * Is set by calibrate() and then stored (with the other values) in eeprom.
      */
     uint8_t StartSpeed; // Speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 4.3 volt (USB supply) is appr. 90 to 100
-    uint8_t DriveSpeed; // The speed PWM value for going fixed distance.
+    uint8_t DriveSpeed; // Speed PWM value used for going fixed distance.
 
     /*
      * Positive value to be subtracted from TargetSpeed to get CurrentSpeed to compensate for different left and right motors
@@ -263,11 +282,19 @@ public:
 
 #ifndef USE_ENCODER_MOTOR_CONTROL
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
-    uint16_t DistanceToTimeFactor; // Required for non encoder motors to estimate duration for a fixed distance
+    unsigned int DistanceToTimeFactor; // Required for non encoder motors to estimate duration for a fixed distance
 #endif
 
 };
 
-void PanicWithLed(uint16_t aDelay, uint8_t aCount);
-
+//void PanicWithLed(unsigned int aDelay, uint8_t aCount);
+/*
+ * Version 1.1.0 - 10/2020
+ * - Added and renamed functions.
+ *
+ * Version 1.0.0 - 9/2020
+ * - Initial version.
+ */
 #endif /* PWMDCMOTOR_H_ */
+
+#pragma once

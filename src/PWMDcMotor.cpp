@@ -1,7 +1,7 @@
 /*
  * PWMDcMotor.cpp
  *
- * Low level motor control for Adafruit_MotorShield OR breakout board with TB6612FNG / Driver IC for dual DC motor
+ * Low level motor control for Adafruit_MotorShield OR breakout board with TB6612 or L298 driver IC for two DC motors.
  *
  * Motor control has 2 parameters:
  * 1. Speed / PWM which is ignored for BRAKE or RELEASE. This library also accepts signed speed (including the direction as sign).
@@ -11,7 +11,7 @@
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -141,7 +141,7 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
  *  @param  aMotorDriverMode The mode can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
  */
 void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
-    CurrentDirectionOrBrakeMode = aMotorDriverMode;
+    CurrentDirectionOrBrakeMode = aMotorDriverMode; // The only statement which changes CurrentDirectionOrBrakeMode
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     // until here DIRECTION_FORWARD is 0 back is 1, Adafruit library starts with 1
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
@@ -196,20 +196,18 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
     bool tReturnValue = false;
     uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_MASK;
     if (CurrentDirectionOrBrakeMode != tRequestedDirection) {
-        CurrentDirectionOrBrakeMode = tRequestedDirection; // The only statement which changes CurrentDirectionOrBrakeMode
         if (CurrentSpeed != 0) {
-//#ifdef DEBUG
+#ifdef DEBUG
             Serial.print(F("Motor mode change to "));
             Serial.println(tRequestedDirection);
-//#endif
+#endif
             /*
              * Direction change requested but motor still running-> first stop motor
              */
             stop(MOTOR_BRAKE);
-            delay(200); // give the motor a chance to stop TODO take last speed into account
             tReturnValue = true;
         }
-        setMotorDriverMode(tRequestedDirection);
+        setMotorDriverMode(tRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
     }
     return tReturnValue;
 }
@@ -244,7 +242,7 @@ void PWMDcMotor::setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection) 
  * Subtracts SpeedCompensation from aRequestedSpeed before applying
  */
 void PWMDcMotor::setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection) {
-// avoid underflow
+    // avoid underflow
     uint8_t tCurrentSpeed;
     if (aRequestedSpeed > SpeedCompensation) {
         tCurrentSpeed = aRequestedSpeed - SpeedCompensation;
@@ -335,13 +333,31 @@ void PWMDcMotor::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t a
     SpeedCompensation = aSpeedCompensation;
 }
 
+void PWMDcMotor::setDriveSpeed(uint8_t aDriveSpeed) {
+    DriveSpeed = aDriveSpeed;
+}
+
 #ifdef SUPPORT_RAMP_UP
-void PWMDcMotor::initRampUp(uint8_t aRequestedDirection) {
+void PWMDcMotor::startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
     if (MotorRampState == MOTOR_STATE_STOPPED) {
-        CurrentDriveSpeed = DriveSpeed - SpeedCompensation;
         MotorRampState = MOTOR_STATE_START;
+
+        // avoid underflow
+        uint8_t tCurrentDriveSpeed;
+        if (aRequestedSpeed > SpeedCompensation) {
+            tCurrentDriveSpeed = aRequestedSpeed - SpeedCompensation;
+        } else {
+            tCurrentDriveSpeed = 0;
+        }
+        CurrentDriveSpeed = tCurrentDriveSpeed;
+    } else if (MotorRampState == MOTOR_STATE_DRIVE_SPEED) {
+        setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
     }
+}
+
+void PWMDcMotor::startRampUp(uint8_t aRequestedDirection) {
+    startRampUp(DriveSpeed, aRequestedDirection);
 }
 #endif
 
@@ -349,53 +365,77 @@ void PWMDcMotor::initRampUp(uint8_t aRequestedDirection) {
 /*
  * Required for non encoder motors to estimate duration for a fixed distance
  */
-void PWMDcMotor::setDistanceToTimeFactorForFixedDistanceDriving(uint16_t aDistanceToTimeFactor) {
+void PWMDcMotor::setDistanceToTimeFactorForFixedDistanceDriving(unsigned int aDistanceToTimeFactor) {
     DistanceToTimeFactor = aDistanceToTimeFactor;
 }
 
 /*
- * @param aDistanceCount distance in 5mm resolution (to be compatible with 20 slot encoder discs and 20 cm wheel circumference)
+ * @param aRequestedDistanceCount distance in 5mm resolution (to be compatible with 20 slot encoder discs and 20 cm wheel circumference)
+ * If motor is already running just update speed and new time
  */
-void PWMDcMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
-//    if (aDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
+void PWMDcMotor::startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+//    if (aRequestedDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
 //        PanicWithLed(400, 22);
 //    }
-    if (aDistanceCount == 0) {
+    if (aRequestedDistanceCount == 0) {
         return;
     }
-    checkAndHandleDirectionChange(aRequestedDirection);  // this may reset MotorMovesFixedDistance
-    MotorMovesFixedDistance = true;
 
     if (CurrentSpeed == 0) {
 #ifdef SUPPORT_RAMP_UP
         MotorRampState = MOTOR_STATE_START;
-        CurrentDriveSpeed = DriveSpeed;
+        CurrentDriveSpeed = aRequestedSpeed;
+        setMotorDriverMode(aRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
 #else
-        setSpeedCompensated(DriveSpeed, aRequestedDirection);
+        setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
 #endif
+        /*
+         * Estimate duration for given distance
+         * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
+         */
+        computedMillisOfMotorStopForDistance = millis() + DEFAULT_MOTOR_START_UP_TIME_MILLIS
+                + (10 * (((uint32_t) aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed));
+    } else {
+#ifdef SUPPORT_RAMP_UP
+        MotorRampState = MOTOR_STATE_START;
+        CurrentDriveSpeed = aRequestedSpeed;
+#endif
+        setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
+        /*
+         * Estimate duration for given distance
+         * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
+         */
+        computedMillisOfMotorStopForDistance = millis()
+                + (10 * (((uint32_t) aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed));
     }
+    MotorMovesFixedDistance = true;
+}
 
-    /*
-     * Estimate duration for given distance
-     * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
-     */
-    computedMillisOfMotorStopForDistance = millis() + 150 + (10 * (((uint32_t)aDistanceCount * DistanceToTimeFactor) / DriveSpeed));
+void PWMDcMotor::startGoDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+    startGoDistanceCount(DriveSpeed, aRequestedDistanceCount, aRequestedDirection);
 }
 
 /*
  * Signed DistanceCount
  */
-void PWMDcMotor::initGoDistanceCount(int16_t aDistanceCount) {
-    if (aDistanceCount < 0) {
-        aDistanceCount = -aDistanceCount;
-        initGoDistanceCount(aDistanceCount, DIRECTION_BACKWARD);
+void PWMDcMotor::startGoDistanceCount(int aRequestedDistanceCount) {
+    if (aRequestedDistanceCount < 0) {
+        aRequestedDistanceCount = -aRequestedDistanceCount;
+        startGoDistanceCount(DriveSpeed, aRequestedDistanceCount, DIRECTION_BACKWARD);
     } else {
-        initGoDistanceCount(aDistanceCount, DIRECTION_FORWARD);
+        startGoDistanceCount(DriveSpeed, aRequestedDistanceCount, DIRECTION_FORWARD);
     }
 }
 
-void PWMDcMotor::goDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
-    initGoDistanceCount(aDistanceCount, aRequestedDirection);
+/*
+ * Not used by CarControl
+ */
+void PWMDcMotor::goDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+    goDistanceCount(DriveSpeed, aRequestedDistanceCount, aRequestedDirection);
+}
+
+void PWMDcMotor::goDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+    startGoDistanceCount(aRequestedSpeed, aRequestedDistanceCount, aRequestedDirection);
     while (millis() <= computedMillisOfMotorStopForDistance) {
 #ifdef SUPPORT_RAMP_UP
         updateMotor();
@@ -512,11 +552,11 @@ void PWMDcMotor::writeMotorvaluesToEeprom() {
     }
 }
 
-void PanicWithLed(uint16_t aDelay, uint8_t aCount) {
-    for (uint8_t i = 0; i < aCount; ++i) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(aDelay);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(aDelay);
-    }
-}
+//void PanicWithLed(unsigned int aDelay, uint8_t aCount) {
+//    for (uint8_t i = 0; i < aCount; ++i) {
+//        digitalWrite(LED_BUILTIN, HIGH);
+//        delay(aDelay);
+//        digitalWrite(LED_BUILTIN, LOW);
+//        delay(aDelay);
+//    }
+//}

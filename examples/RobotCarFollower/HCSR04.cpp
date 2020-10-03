@@ -93,7 +93,6 @@ unsigned int getUSDistance(unsigned int aTimeoutMicros) {
 
 // need minimum 10 usec Trigger Pulse
     digitalWrite(sTriggerOutPin, HIGH);
-    // If in
 
     if (sHCSR04Mode == HCSR04_MODE_USE_1_PIN) {
         // do it AFTER digitalWrite to avoid spurious triggering by just switching pin to output

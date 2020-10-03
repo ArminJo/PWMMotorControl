@@ -1,7 +1,7 @@
 /*
  * EncoderMotor.cpp
  *
- *  Functions for controlling a DC-motor which rotary encoder implemented by fork light barrier and an attached encoder disc (with 20 slots).
+ *  Functions for controlling a DC-motor which rotary encoder implemented by slot-type photo interrupter and an attached encoder disc (with 20 slots).
  *  Works with positive (unsigned) speed and direction or signed speed.
  *
  *  Contains functions to go a specified distance.
@@ -15,7 +15,7 @@
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -69,34 +69,31 @@ void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMP
 #endif
 
 /*
- * If motor is still running, add aDistanceCount to current target distance
+ * If motor is already running, adjust TargetDistanceCount to go to aRequestedDistanceCount
  */
-void EncoderMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequestedDirection) {
-//    if (aDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
+void EncoderMotor::startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+//    if (aRequestedDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
 //        PanicWithLed(400, 22);
 //    }
-    if (aDistanceCount == 0) {
+    if (aRequestedDistanceCount == 0) {
         return;
     }
-    checkAndHandleDirectionChange(aRequestedDirection); // this may reset MotorMovesFixedDistance
-    MotorMovesFixedDistance = true;
-
     if (CurrentSpeed == 0) {
-        TargetDistanceCount = aDistanceCount;
+        TargetDistanceCount = aRequestedDistanceCount;
 #ifdef SUPPORT_RAMP_UP
-        MotorRampState = MOTOR_STATE_START;
-        CurrentDriveSpeed = DriveSpeed;
+        MotorRampState = MOTOR_STATE_START;  // This in turn resets EncoderCount etc. at first call of updateMotor()
+        CurrentDriveSpeed = aRequestedSpeed;
+        setMotorDriverMode(aRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
 #else
-        setSpeedCompensated(DriveSpeed, aRequestedDirection);
+        setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
 #endif
     } else {
-        TargetDistanceCount = EncoderCount + aDistanceCount;
+        TargetDistanceCount = EncoderCount + aRequestedDistanceCount;
         /*
          * prolong NextChangeMaxTargetCount for the new distance
          */
 #ifdef SUPPORT_RAMP_UP
         MotorRampState = MOTOR_STATE_DRIVE_SPEED;
-        PWMDcMotor::setSpeed(CurrentDriveSpeed, aRequestedDirection);
         uint8_t tDistanceCountForRampDown = DistanceCountAfterRampUp;
         // guarantee minimal ramp down length
         if (tDistanceCountForRampDown < 3 && TargetDistanceCount > 6) {
@@ -104,20 +101,26 @@ void EncoderMotor::initGoDistanceCount(uint16_t aDistanceCount, uint8_t aRequest
         }
         NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
 #endif
+        PWMDcMotor::setSpeed(aRequestedSpeed, aRequestedDirection);
     }
     LastTargetDistanceCount = TargetDistanceCount;
+    MotorMovesFixedDistance = true;
+}
+
+void EncoderMotor::startGoDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection) {
+    startGoDistanceCount(DriveSpeed, aRequestedDistanceCount, aRequestedDirection);
 }
 
 /*
- * if aDistanceCount < 0 then use DIRECTION_BACKWARD
+ * if aRequestedDistanceCount < 0 then use DIRECTION_BACKWARD
  * initialize motorInfo fields DirectionForward, CurrentDriveSpeed, DistanceTickCounter and optional NextChangeMaxTargetCount.
  */
-void EncoderMotor::initGoDistanceCount(int16_t aDistanceCount) {
-    if (aDistanceCount < 0) {
-        aDistanceCount = -aDistanceCount;
-        initGoDistanceCount(aDistanceCount, DIRECTION_BACKWARD);
+void EncoderMotor::startGoDistanceCount(int aRequestedDistanceCount) {
+    if (aRequestedDistanceCount < 0) {
+        aRequestedDistanceCount = -aRequestedDistanceCount;
+        startGoDistanceCount(aRequestedDistanceCount, DIRECTION_BACKWARD);
     } else {
-        initGoDistanceCount(aDistanceCount, DIRECTION_FORWARD);
+        startGoDistanceCount(aRequestedDistanceCount, DIRECTION_FORWARD);
     }
 }
 
@@ -253,7 +256,7 @@ bool EncoderMotor::updateMotor() {
  * Computes motor speed compensation value in order to go exactly straight ahead
  * Compensate only at forward direction
  */
-void EncoderMotor::synchronizeMotor(EncoderMotor * aOtherMotorControl, uint16_t aCheckInterval) {
+void EncoderMotor::synchronizeMotor(EncoderMotor * aOtherMotorControl, unsigned int aCheckInterval) {
     if (CurrentDirectionOrBrakeMode != DIRECTION_FORWARD) {
         return;
     }
@@ -337,7 +340,7 @@ void EncoderMotor::resetControlValues() {
  ***************************************************/
 void EncoderMotor::handleEncoderInterrupt() {
     long tMillis = millis();
-    uint16_t tDeltaMillis = tMillis - EncoderTickLastMillis;
+    unsigned int tDeltaMillis = tMillis - EncoderTickLastMillis;
     if (tDeltaMillis <= ENCODER_SENSOR_MASK_MILLIS) {
 // signal is ringing
         CurrentVelocity = 99;
@@ -421,11 +424,11 @@ bool EncoderMotor::updateAllMotors() {
 /*
  * Waits until distance is reached
  */
-void EncoderMotor::initRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
+void EncoderMotor::startRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
     EncoderMotor * tEncoderMotorControlPointer = sMotorControlListStart;
 // walk through list
     while (tEncoderMotorControlPointer != NULL) {
-        tEncoderMotorControlPointer->initRampUp(aRequestedDirection);
+        tEncoderMotorControlPointer->startRampUp(aRequestedDirection);
         tEncoderMotorControlPointer = tEncoderMotorControlPointer->NextMotorControl;
     }
     bool tMotorsNotStopped; // to check if motors are not stopped by aLoopCallback
@@ -437,11 +440,11 @@ void EncoderMotor::initRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirect
     } while (tMotorsNotStopped && !EncoderMotor::allMotorsStarted());
 }
 
-void EncoderMotor::initGoDistanceCountForAll(int aDistanceCount) {
+void EncoderMotor::startGoDistanceCountForAll(int aRequestedDistanceCount) {
     EncoderMotor * tEncoderMotorControlPointer = sMotorControlListStart;
 // walk through list
     while (tEncoderMotorControlPointer != NULL) {
-        tEncoderMotorControlPointer->initGoDistanceCount(aDistanceCount);
+        tEncoderMotorControlPointer->startGoDistanceCount(aRequestedDistanceCount);
         tEncoderMotorControlPointer = tEncoderMotorControlPointer->NextMotorControl;
     }
 }
@@ -449,11 +452,11 @@ void EncoderMotor::initGoDistanceCountForAll(int aDistanceCount) {
 /*
  * Waits until distance is reached
  */
-void EncoderMotor::goDistanceCountForAll(int aDistanceCount, void (*aLoopCallback)(void)) {
+void EncoderMotor::goDistanceCountForAll(int aRequestedDistanceCount, void (*aLoopCallback)(void)) {
     EncoderMotor * tEncoderMotorControlPointer = sMotorControlListStart;
 // walk through list
     while (tEncoderMotorControlPointer != NULL) {
-        tEncoderMotorControlPointer->initGoDistanceCount(aDistanceCount);
+        tEncoderMotorControlPointer->startGoDistanceCount(aRequestedDistanceCount);
         tEncoderMotorControlPointer = tEncoderMotorControlPointer->NextMotorControl;
     }
     waitUntilAllMotorsStopped(aLoopCallback);

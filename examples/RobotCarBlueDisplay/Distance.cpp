@@ -27,6 +27,7 @@ ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 Servo DistanceServo;
 uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning
+bool sLastFollowerTargetFoundRight;
 
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
@@ -155,6 +156,84 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 }
 
 /*
+ * Stop, scan 70, 90 and 110 degree for moved target and sets sNextDegreesToTurn.
+ */
+void scanForTarget() {
+    uint8_t tDegreeForSearch;
+    int tDeltaDegree;
+    unsigned int tCentimeter;
+    /*
+     * Set start values according to last successful scan
+     */
+    if (sLastFollowerTargetFoundRight) {
+        // Start searching at right
+        tDegreeForSearch = 70;
+        tDeltaDegree = 20;
+    } else {
+        // Start searching at left
+        tDegreeForSearch = 110;
+        tDeltaDegree = -20;
+    }
+    /*
+     * Scan and display 3 distances, but break prematurely if target found.
+     * The break is implemented to speed up finding the moved target.
+     */
+    for (uint8_t i = 0; i < 3; ++i) {
+        DistanceServoWriteAndDelay(tDegreeForSearch, true);
+        tCentimeter = getDistanceAsCentiMeter(false);
+        sForwardDistancesInfo.RawDistancesArray[i] = tCentimeter;
+        if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
+            /*
+             * Determine color
+             */
+            color16_t tColor;
+            tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
+            if (tCentimeter <= FOLLOWER_MAX_DISTANCE_CENTIMETER) {
+                tColor = COLOR_GREEN;
+            } else if (tCentimeter < FOLLOWER_MIN_DISTANCE_CENTIMETER) {
+                tColor = COLOR_YELLOW;
+            }
+
+            /*
+             * Draw distance line
+             */
+            // Clear old line
+            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
+                    sForwardDistancesInfo.RawDistancesArray[i], tDegreeForSearch,
+                    COLOR_WHITE, 3);
+            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tDegreeForSearch,
+                    tColor, 3);
+        }
+        sForwardDistancesInfo.RawDistancesArray[i] = tCentimeter;
+        if (tCentimeter <= FOLLOWER_RESCAN_DISTANCE_CENTIMETER) {
+            break;
+        }
+        // prepare for next scan
+        loopGUI();
+        tDegreeForSearch += tDeltaDegree;
+    }
+
+
+    int8_t tDegreeToTurn = tDegreeForSearch - 90;
+
+    DistanceServoWriteAndDelay(90, false);
+    if (tCentimeter <= FOLLOWER_RESCAN_DISTANCE_CENTIMETER) {
+        /*
+         * Target found -> print turn info
+         */
+        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tDegreeToTurn, tCentimeter); // \xB0 is degree character
+        BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
+        COLOR_BLACK, COLOR_WHITE);
+
+        // store found direction
+        sLastFollowerTargetFoundRight = (tDegreeForSearch <= 90);
+        sNextDegreesToTurn = tDegreeToTurn;
+    } else {
+        sNextDegreesToTurn = SCAN_AGAIN;
+    }
+}
+
+/*
  * Get 7 distances starting at 9 degrees (right) increasing by 18 degrees up to 171 degrees (left)
  * Avoid 0 and 180 degrees since at this position the US sensor might see the wheels of the car as an obstacle.
  * @param aDoFirstValue if false, skip first value since it is the same as last value of last measurement in continuous mode.
@@ -204,7 +283,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             return true;
         }
 
-        unsigned int tCentimeter = getDistanceAsCentiMeter();
+        unsigned int tCentimeter = getDistanceAsCentiMeter(false);
         if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimeterPerScanTimesTwo) {
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
@@ -226,7 +305,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             }
 
             /*
-             * Clear old and draw new line
+             * Clear old and draw new distance line
              */
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
                     sForwardDistancesInfo.RawDistancesArray[tIndex], tCurrentDegrees, COLOR_WHITE, 3);
@@ -245,17 +324,264 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
 }
 
 /*
+ * This documentation assumes 20 degrees stepping.
+ * By changing DEGREES_PER_STEP it can easily adopted to other degrees values.
+ *
+ * Assume the value of 20 and 40 degrees are distances to a wall.
+ * @return the clipped (aClipValue) distance to the wall of the vector at 0 degree.
+ *
+ * @param [out] aDegreeOfEndpointConnectingLine: The angle of the line from endpoint 0 degrees to given endpoints
+ * 0 means x values of given endpoints are the same >= wall is parallel / rectangular to the vector at 0 degree
+ * Positive means wall is more ore less in front, to avoid we must turn positive angle
+ * 90 means y values are the same =>  wall is in front
+ * Negative means we are heading away from wall
+ */
+uint8_t computeNeigbourValue(uint8_t aDegreesPerStepValue, uint8_t a2DegreesPerStepValue, uint8_t aClipValue,
+        int8_t * aDegreeOfEndpointConnectingLine) {
+
+    /*
+     * Name of the variables are for DEGREES_PER_STEP = 20 only for better understanding.
+     * The computation of course works for other values of DEGREES_PER_STEP!
+     */
+    float tYat20degrees = sin((PI / 180) * DEGREES_PER_STEP) * aDegreesPerStepValue; // e.g. 20 Degree
+// assume current = 40 Degree
+    float tYat40degrees = sin((PI / 180) * (DEGREES_PER_STEP * 2)) * a2DegreesPerStepValue; // e.g. 40 Degree
+
+//    char tStringBuffer[] = "A=_______ L=_______";
+//    dtostrf(tYat40degrees, 7, 2, &tStringBuffer[2]);
+//    tStringBuffer[9] = ' ';
+//    dtostrf(tYat20degrees, 7, 2, &tStringBuffer[12]);
+//    BlueDisplay1.debugMessage(tStringBuffer);
+
+    uint8_t tDistanceAtZeroDegree = aClipValue;
+
+    /*
+     * if tY40degrees == tY20degrees the tInvGradient is infinite (distance at 0 is infinite)
+     */
+    if (tYat40degrees > tYat20degrees) {
+        float tXat20degrees = cos((PI / 180) * DEGREES_PER_STEP) * aDegreesPerStepValue; // 20 Degree
+        float tXat40degrees = cos((PI / 180) * (DEGREES_PER_STEP * 2)) * a2DegreesPerStepValue; // 40 Degree
+
+//        dtostrf(tXat40degrees, 7, 2, &tStringBuffer[2]);
+//        tStringBuffer[9] = ' ';
+//        dtostrf(tXat20degrees, 7, 2, &tStringBuffer[12]);
+//        BlueDisplay1.debugMessage(tStringBuffer);
+
+        /*  Here the graphic for 90 and 60 degrees (since we have no ASCII graphic symbols for 20 and 40 degree)
+         *  In this function we have e.g. 40 and 20 degrees and compute 0 degrees!
+         *      90 degrees value
+         *      |\ \==wall
+         *      | \  60 degrees value
+         *      | /\
+ *      |/__\ 0 degrees value to be computed
+         */
+
+        /*
+         * InvGradient line represents the wall
+         * if tXat20degrees > tXat40degrees InvGradient is negative => X0 value is bigger than X20 one / right wall is in front if we look in 90 degrees direction
+         * if tXat20degrees == tXat40degrees InvGradient is 0 / wall is parallel right / 0 degree
+         * if tXat20degrees < tXat40degrees InvGradient is positive / right wall is behind / degrees is negative (from direction front which is 90 degrees)
+         */
+        float tInvGradient = (tXat40degrees - tXat20degrees) / (tYat40degrees - tYat20degrees);
+        float tXatZeroDegree = tXat20degrees - (tInvGradient * tYat20degrees);
+        *aDegreeOfEndpointConnectingLine = -(atan(tInvGradient) * RAD_TO_DEG);
+//        tStringBuffer[0] = 'G';
+//        tStringBuffer[10] = 'B';
+//        dtostrf(tInvGradient, 7, 2, &tStringBuffer[2]);
+//        tStringBuffer[9] = ' ';
+//        dtostrf(tXZeroDegree, 7, 2, &tStringBuffer[12]);
+//        BlueDisplay1.debugMessage(tStringBuffer);
+
+        if (tXatZeroDegree < 255) {
+            tDistanceAtZeroDegree = tXatZeroDegree + 0.5;
+            if (tDistanceAtZeroDegree > aClipValue) {
+                tDistanceAtZeroDegree = aClipValue;
+            }
+        }
+    }
+    return tDistanceAtZeroDegree;
+}
+
+/*
+ * The problem of the ultrasonic values is, that you can only detect a wall with the ultrasonic sensor if the angle of the wall relative to sensor axis is approximately between 70 and 110 degree.
+ * For other angels the reflected ultrasonic beam can not not reach the receiver which leads to unrealistic great distances.
+ *
+ * Therefore I take samples every 18 degrees and if I get 2 adjacent short (< sCentimeterPerScanTimesTwo) distances, I assume a wall determined by these 2 samples.
+ * The (invalid) values 18 degrees right and left of these samples are then extrapolated by computeNeigbourValue().
+ */
+//#define TRACE // only used for this function
+void doWallDetection() {
+    uint8_t tTempDistancesArray[NUMBER_OF_DISTANCES];
+    /*
+     * First copy all raw values
+     */
+    memcpy(tTempDistancesArray, sForwardDistancesInfo.RawDistancesArray, NUMBER_OF_DISTANCES);
+
+    uint8_t tCurrentAngleToCheck = START_DEGREES + (2 * DEGREES_PER_STEP); // first angle to adjust at index 2
+    int8_t tDegreeOfConnectingLine;
+    sForwardDistancesInfo.WallRightAngleDegrees = 0;
+    sForwardDistancesInfo.WallLeftAngleDegrees = 0;
+//    sForwardDistancesInfo.WallRightDistance = 0xFF;
+//    sForwardDistancesInfo.WallLeftDistance = 0xFF;
+
+    /*
+     * Parse the array from 0 to STEPS_PER_SCAN
+     * Check values at i and i-1 and adjust value at i+1
+     * i is index of CurrentDistance
+     */
+    uint8_t tLastDistance = tTempDistancesArray[0];
+    uint8_t tCurrentDistance = tTempDistancesArray[1];
+    for (uint8_t i = 1; i < STEPS_PER_SCAN; ++i) {
+        uint8_t tNextDistanceOriginal = tTempDistancesArray[i + 1];
+        if (tLastDistance < sCentimeterPerScanTimesTwo && tCurrentDistance < sCentimeterPerScanTimesTwo) {
+            /*
+             * 2 adjacent short distances -> assume a wall -> adjust adjacent values
+             */
+
+            /*
+             * Use computeNeigbourValue the other way round
+             * i.e. put 20 degrees to 40 degrees parameter and vice versa in order to use the 0 degree value as the 60 degrees one
+             */
+            uint8_t tNextDistanceComputed = computeNeigbourValue(tCurrentDistance, tLastDistance, DISTANCE_TIMEOUT_CM,
+                    &tDegreeOfConnectingLine);
+#ifdef TRACE
+            BlueDisplay1.debug("i=", i);
+            BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
+            BlueDisplay1.debug("Original distance @i+1=", tNextDistanceOriginal);
+            BlueDisplay1.debug("New distance @i+1=", tNextDistanceComputed);
+            BlueDisplay1.debug("Connecting degrees @i+1=", tDegreeOfConnectingLine);
+#endif
+
+            if (tNextDistanceOriginal > tNextDistanceComputed + 5) {
+                /*
+                 * Adjust and draw next value if computed value is less than original value - 5
+                 *
+                 * Start with i=1 and adjust for 2 at (2 * DEGREES_PER_STEP) + START_DEGREES.
+                 * Since we use computeNeigbourValue the other way round, we must change sign of tDegreeOfConnectingLine!
+                 * The formula is 90 - (180->sum of degrees in triangle - tCurrentAngleToCheck - (90 - tDegreeOfConnectingLine)->since we use it the other way round)
+                 * Which leads to -90 + tCurrentAngleToCheck + 90 - tDegreeOfConnectingLine.
+                 * If we then get a tDegreeOfConnectingLine value of 0 we have a wall at right rectangular to the vector at 2,
+                 * Negative raw values means the wall is more in front / the the wall angle is greater,
+                 */
+                int tDegreeOfWallAngle = tCurrentAngleToCheck - tDegreeOfConnectingLine;
+#ifdef TRACE
+                BlueDisplay1.debug("tDegreeOfWallAngle=", tDegreeOfWallAngle);
+#endif
+                if (tDegreeOfWallAngle <= 90) {
+                    // wall at right
+                    sForwardDistancesInfo.WallRightAngleDegrees = tDegreeOfWallAngle;
+//                    sForwardDistancesInfo.WallRightDistance = tCurrentDistance;
+                } else {
+                    // wall at left
+                    sForwardDistancesInfo.WallLeftAngleDegrees = 180 - tDegreeOfWallAngle;
+//                    sForwardDistancesInfo.WallLeftDistance = tCurrentDistance;
+                }
+
+                // store and draw adjusted value
+                tTempDistancesArray[i + 1] = tNextDistanceComputed;
+                tNextDistanceOriginal = tNextDistanceComputed;
+                if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
+                    BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextDistanceComputed,
+                            tCurrentAngleToCheck, COLOR_WHITE, 1);
+                }
+            }
+        }
+        tLastDistance = tCurrentDistance;
+        tCurrentDistance = tNextDistanceOriginal;
+        tCurrentAngleToCheck += DEGREES_PER_STEP;
+    }
+
+    /*
+     * Go backwards through the array
+     */
+    memcpy(sForwardDistancesInfo.ProcessedDistancesArray, tTempDistancesArray, NUMBER_OF_DISTANCES);
+
+    tLastDistance = tTempDistancesArray[STEPS_PER_SCAN];
+    tCurrentDistance = tTempDistancesArray[STEPS_PER_SCAN - 1];
+    tCurrentAngleToCheck = 180 - (START_DEGREES + (2 * DEGREES_PER_STEP));
+
+    /*
+     * check values at i and i+1 and adjust value at i-1
+     */
+    for (uint8_t i = STEPS_PER_SCAN - 1; i > 0; --i) {
+        uint8_t tNextValue = tTempDistancesArray[i - 1];
+
+// Do it only if none of the 3 values are processed before
+        if (tTempDistancesArray[i + 1] == sForwardDistancesInfo.RawDistancesArray[i + 1]
+                && tTempDistancesArray[i] == sForwardDistancesInfo.RawDistancesArray[i]
+                && tNextValue == sForwardDistancesInfo.RawDistancesArray[i - 1]) {
+
+            /*
+             * check values at i+1 and i and adjust value at i-1
+             */
+            if (tLastDistance < sCentimeterPerScanTimesTwo && tCurrentDistance < sCentimeterPerScanTimesTwo) {
+                /*
+                 * Wall detected -> adjust adjacent values
+                 * Use computeNeigbourValue in the intended way, so do not change sign of tDegreeOfConnectingLine!
+                 */
+                uint8_t tNextValueComputed = computeNeigbourValue(tCurrentDistance, tLastDistance, DISTANCE_TIMEOUT_CM,
+                        &tDegreeOfConnectingLine);
+#ifdef TRACE
+                BlueDisplay1.debug("i=", i);
+                BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
+                BlueDisplay1.debug("Original distance @i-1=", tNextValue);
+                BlueDisplay1.debug("New distance @i-1=", tNextValueComputed);
+                BlueDisplay1.debug("Connecting degrees @i-1=", tDegreeOfConnectingLine);
+#endif
+                if (tNextValue > tNextValueComputed + 5) {
+                    // start with i = 8 and adjust for 7
+                    // degrees at index i-1 are ((i - 1) * DEGREES_PER_STEP) + START_DEGREES
+                    int tWallBackwardDegrees = tCurrentAngleToCheck + tDegreeOfConnectingLine;
+#ifdef TRACE
+                    BlueDisplay1.debug("tWallBackwardDegrees=", tWallBackwardDegrees);
+#endif
+                    if (tWallBackwardDegrees <= 90) {
+                        // wall at right - overwrite only if greater
+                        if (sForwardDistancesInfo.WallRightAngleDegrees < tWallBackwardDegrees) {
+                            sForwardDistancesInfo.WallRightAngleDegrees = tWallBackwardDegrees;
+#ifdef TRACE
+                            BlueDisplay1.debug("WallRightAngleDegrees=", sForwardDistancesInfo.WallRightAngleDegrees);
+#endif
+                        }
+                    } else if (sForwardDistancesInfo.WallLeftAngleDegrees < (180 - tWallBackwardDegrees)) {
+                        // wall at right - overwrite only if greater
+                        sForwardDistancesInfo.WallLeftAngleDegrees = 180 - tWallBackwardDegrees;
+#ifdef TRACE
+                        BlueDisplay1.debug("WallLeftAngleDegrees=", sForwardDistancesInfo.WallLeftAngleDegrees);
+#endif
+
+                    }
+                    //Adjust and draw next value if original value is greater
+                    sForwardDistancesInfo.ProcessedDistancesArray[i - 1] = tNextValueComputed;
+                    tNextValue = tNextValueComputed;
+                    if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
+                        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextValueComputed,
+                                tCurrentAngleToCheck, COLOR_WHITE, 1);
+                    }
+                }
+            }
+        }
+        tLastDistance = tCurrentDistance;
+        tCurrentDistance = tNextValue;
+        tCurrentAngleToCheck -= DEGREES_PER_STEP;
+
+    }
+}
+
+/*
  * Find min and max value. Prefer the headmost value if we have more than one choice
  * Do not use the values at 0 and 9 for minimum, since sometimes we measure the distance to the own wheels at this degrees.
  */
-void postProcessDistances() {
+void postProcessDistances(uint8_t aDistanceThreshold) {
     unsigned int tMax = 0;
     unsigned int tMin = __UINT16_MAX__; // = 65535
+    sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold = 0xFF;
     // scan simultaneously from 0 to 4 and 9 to 5 to prefer headmost values/indexes, if distances are the same.
     for (uint8_t i = 0; i < (NUMBER_OF_DISTANCES + 1) / 2; ++i) {
         uint8_t tIndex = i;
         for (uint8_t j = 0; j < 2; ++j) {
             uint8_t tDistance;
+            // Check if we have processed distances, otherwise take the raw ones
             if (sForwardDistancesInfo.ProcessedDistancesArray[0] != 0) {
                 tDistance = sForwardDistancesInfo.ProcessedDistancesArray[tIndex];
             } else {
@@ -271,6 +597,9 @@ void postProcessDistances() {
                 sForwardDistancesInfo.IndexOfMinDistance = tIndex;
                 sForwardDistancesInfo.MinDistance = tDistance;
             }
+            if (tDistance >= aDistanceThreshold) {
+                sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold = tIndex;
+            }
             tIndex = STEPS_PER_SCAN - i;
         }
     }
@@ -280,7 +609,7 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
     static long sLastUSMeasurementMillis;
 
     // Do not show distanced during (time critical) acceleration or deceleration
-    if (!RobotCarMotorControl.needsFastUpdates()) {
+    if (!RobotCarMotorControl.isStateRamp()) {
         long tMillis = millis();
         if (sLastUSMeasurementMillis + aPeriodMillis < tMillis) {
             sLastUSMeasurementMillis = tMillis;
