@@ -67,8 +67,6 @@ unsigned int sSliderIRLastCentimeter;
 uint32_t sMillisOfNextVCCInfo = 0;
 
 void setupGUI(void) {
-    initSerial(BLUETOOTH_BAUD_RATE);
-
     sCurrentPage = PAGE_HOME;
 
     // Register callback handler and check for connection
@@ -181,7 +179,6 @@ void doRobotCarStartStop(BDButton * aTheTouchedButton, int16_t aDoStart) {
 void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue) {
     RobotCarMotorControl.calibrate();
     printMotorValues();
-    printMotorDebugValues();
 }
 #endif
 
@@ -420,7 +417,7 @@ void initRobotCarDisplay(void) {
 #else
     // Big US distance slider without caption but with cm units POS_X_THIRD_SLIDER because it is the position of the left edge
     SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, BUTTON_WIDTH_10,
-    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
+    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
             FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setValueUnitString("cm");
 #endif
@@ -531,9 +528,9 @@ void checkForLowVoltage() {
             BlueDisplay1.drawText(10 + (4 * TEXT_SIZE_33_WIDTH), 50 + (2 * TEXT_SIZE_33_HEIGHT), F("too low"));
         }
 
-        tone(PIN_SPEAKER, 2200, 100);
+        tone(PIN_BUZZER, 2200, 100);
         delay(200);
-        tone(PIN_SPEAKER, 2200, 100);
+        tone(PIN_BUZZER, 2200, 100);
 
         if (BlueDisplay1.isConnectionEstablished()) {
             uint8_t tLoopCount = VOLTAGE_TOO_LOW_DELAY_ONLINE / 500; // 12
@@ -633,9 +630,9 @@ void printMotorDistanceValues() {
 }
 #endif
 
-void showUSDistance(unsigned int aCentimeter) {
+void showUSDistance(unsigned int aCentimeter, bool aForceDraw) {
 // feedback as slider length
-    if (aCentimeter != sSliderUSLastCentimeter) {
+    if (aForceDraw || aCentimeter != sSliderUSLastCentimeter) {
         sSliderUSLastCentimeter = aCentimeter;
         SliderUSDistance.setValueAndDrawBar(aCentimeter);
     }

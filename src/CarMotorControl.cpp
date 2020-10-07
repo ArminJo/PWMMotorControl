@@ -24,7 +24,7 @@
 #include <Arduino.h>
 #include "CarMotorControl.h"
 
-#define DEBUG // for development
+//#define DEBUG // Only for development
 
 CarMotorControl * sCarMotorControlPointerForISR;
 
@@ -75,6 +75,7 @@ void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBac
 
 /*
  * Sets default values for min and max speed, factor for distance to time conversion for non encoder motors and reset compensation
+ * Is called automatically at init if parameter aReadFromEeprom is set to false
  */
 void CarMotorControl::setDefaultsForFixedDistanceDriving() {
     rightCarMotor.setDefaultsForFixedDistanceDriving();
@@ -184,8 +185,7 @@ void CarMotorControl::setStopMode(uint8_t aStopMode) {
 }
 
 /*
- * Stop car and reset all control values as speed, distances, debug values to 0x00
- * Leave calibration and compensation (EEPROM) values unaffected.
+ * Stop car and reset all control values as speed, distances, debug values etc. to 0x00
  */
 void CarMotorControl::resetControlValues() {
 #ifdef USE_ENCODER_MOTOR_CONTROL

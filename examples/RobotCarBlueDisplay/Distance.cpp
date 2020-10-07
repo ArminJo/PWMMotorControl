@@ -26,8 +26,7 @@
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 Servo DistanceServo;
-uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning
-bool sLastFollowerTargetFoundRight;
+uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
@@ -156,80 +155,81 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 }
 
 /*
- * Stop, scan 70, 90 and 110 degree for moved target and sets sNextDegreesToTurn.
+ * Stop, scan 70, 90 and 110 degree for moved target and returns NextDegreesToTurn.
  */
-void scanForTarget() {
-    uint8_t tDegreeForSearch;
-    int tDeltaDegree;
+int scanForTarget() {
+    uint8_t tDegreeFound = 0;
     unsigned int tCentimeter;
+    uint8_t tScanDegree;
+    int tDeltaDegree;
     /*
-     * Set start values according to last successful scan
+     * Set start values according to last servo position
      */
-    if (sLastFollowerTargetFoundRight) {
+    if (sLastServoAngleInDegrees < 90) {
         // Start searching at right
-        tDegreeForSearch = 70;
+        tScanDegree = 70;
         tDeltaDegree = 20;
     } else {
         // Start searching at left
-        tDegreeForSearch = 110;
+        tScanDegree = 110;
         tDeltaDegree = -20;
     }
     /*
-     * Scan and display 3 distances, but break prematurely if target found.
-     * The break is implemented to speed up finding the moved target.
+     * Scan and display 3 distances
      */
     for (uint8_t i = 0; i < 3; ++i) {
-        DistanceServoWriteAndDelay(tDegreeForSearch, true);
-        tCentimeter = getDistanceAsCentiMeter(false);
-        sForwardDistancesInfo.RawDistancesArray[i] = tCentimeter;
+        DistanceServoWriteAndDelay(tScanDegree, true);
+        tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_FOLLOWER);
+
+        uint8_t tCurrentIndex;
+        if (tDeltaDegree > 0) {
+            // scan from 70 to 110 -> 0 contains value for 70 degrees, 1 for 90 and 2 for 110
+            tCurrentIndex = i;
+        } else {
+            tCurrentIndex = 2 - i;
+        }
+
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
             /*
-             * Determine color
+             * Determine color and draw distance line
              */
             color16_t tColor;
             tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
-            if (tCentimeter <= FOLLOWER_MAX_DISTANCE_CENTIMETER) {
+            if (tCentimeter <= FOLLOWER_TARGET_SCAN_DISTANCE_CENTIMETER) {
                 tColor = COLOR_GREEN;
             } else if (tCentimeter < FOLLOWER_MIN_DISTANCE_CENTIMETER) {
                 tColor = COLOR_YELLOW;
             }
 
-            /*
-             * Draw distance line
-             */
             // Clear old line
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
-                    sForwardDistancesInfo.RawDistancesArray[i], tDegreeForSearch,
+                    sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tScanDegree,
                     COLOR_WHITE, 3);
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tDegreeForSearch,
-                    tColor, 3);
+            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tScanDegree, tColor, 3);
         }
-        sForwardDistancesInfo.RawDistancesArray[i] = tCentimeter;
-        if (tCentimeter <= FOLLOWER_RESCAN_DISTANCE_CENTIMETER) {
+        sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
+        if (tCentimeter <= FOLLOWER_TARGET_SCAN_DISTANCE_CENTIMETER) {
+            tDegreeFound = tScanDegree;
             break;
         }
-        // prepare for next scan
+        // prepare for next measurement
         loopGUI();
-        tDegreeForSearch += tDeltaDegree;
+        tScanDegree += tDeltaDegree;
     }
 
-
-    int8_t tDegreeToTurn = tDegreeForSearch - 90;
-
-    DistanceServoWriteAndDelay(90, false);
-    if (tCentimeter <= FOLLOWER_RESCAN_DISTANCE_CENTIMETER) {
+    if (tDegreeFound != 0) {
         /*
          * Target found -> print turn info
          */
-        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tDegreeToTurn, tCentimeter); // \xB0 is degree character
+        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tScanDegree - 90, tCentimeter); // \xB0 is degree character
         BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
         COLOR_BLACK, COLOR_WHITE);
 
-        // store found direction
-        sLastFollowerTargetFoundRight = (tDegreeForSearch <= 90);
-        sNextDegreesToTurn = tDegreeToTurn;
+        // reset distance servo direction
+        DistanceServoWriteAndDelay(90, false);
+        return tScanDegree - 90;
     } else {
-        sNextDegreesToTurn = SCAN_AGAIN;
+        return SCAN_AGAIN;
     }
 }
 
@@ -296,7 +296,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
              * Determine color
              */
             tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
-            if (tCentimeter >= DISTANCE_TIMEOUT_CM) {
+            if (tCentimeter >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
                 tColor = DISTANCE_TIMEOUT_COLOR;
             } else if (tCentimeter > sCentimeterPerScanTimesTwo) {
                 tColor = COLOR_GREEN;
@@ -442,8 +442,8 @@ void doWallDetection() {
              * Use computeNeigbourValue the other way round
              * i.e. put 20 degrees to 40 degrees parameter and vice versa in order to use the 0 degree value as the 60 degrees one
              */
-            uint8_t tNextDistanceComputed = computeNeigbourValue(tCurrentDistance, tLastDistance, DISTANCE_TIMEOUT_CM,
-                    &tDegreeOfConnectingLine);
+            uint8_t tNextDistanceComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
+                    DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
 #ifdef TRACE
             BlueDisplay1.debug("i=", i);
             BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
@@ -519,8 +519,8 @@ void doWallDetection() {
                  * Wall detected -> adjust adjacent values
                  * Use computeNeigbourValue in the intended way, so do not change sign of tDegreeOfConnectingLine!
                  */
-                uint8_t tNextValueComputed = computeNeigbourValue(tCurrentDistance, tLastDistance, DISTANCE_TIMEOUT_CM,
-                        &tDegreeOfConnectingLine);
+                uint8_t tNextValueComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
+                        DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
 #ifdef TRACE
                 BlueDisplay1.debug("i=", i);
                 BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
@@ -621,14 +621,14 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
 /*
  * Timeout is DISTANCE_TIMEOUT_CM (1 meter)
  */
-unsigned int getDistanceAsCentiMeter(bool doShow) {
+unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout) {
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
     if (sScanMode != SCAN_MODE_US) {
         sToFDistanceSensor.VL53L1X_StartRanging();
     }
 #endif
 
-    unsigned int tCentimeter = getUSDistanceAsCentiMeterWithCentimeterTimeout(DISTANCE_TIMEOUT_CM);
+    unsigned int tCentimeter = getUSDistanceAsCentiMeterWithCentimeterTimeout(aDistanceTimeout);
     if (doShow) {
         showUSDistance(tCentimeter);
     }

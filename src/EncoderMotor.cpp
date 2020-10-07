@@ -325,8 +325,7 @@ void EncoderMotor::synchronizeMotor(EncoderMotor * aOtherMotorControl, unsigned 
  * Direct motor control
  *************************/
 /*
- * Reset all control values as distances, debug values to 0x00
- * Leave calibration and compensation values unaffected.
+ * Reset all control values as distances, debug values etc. to 0x00
  */
 void EncoderMotor::resetControlValues() {
     memset(reinterpret_cast<uint8_t*>(&CurrentVelocity), 0,

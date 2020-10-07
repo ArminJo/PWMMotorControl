@@ -25,14 +25,20 @@
 #include "Servo.h"
 #include "HCSR04.h"
 
-#define DISTANCE_MINIMUM_CENTIMETER 20 // If measured distance is less than this value, go backwards
-#define DISTANCE_MAXIMUM_CENTIMETER 30 // If measured distance is greater than this value, go forward
-#define DISTANCE_DELTA_CENTIMETER   (DISTANCE_MAXIMUM_CENTIMETER - DISTANCE_MINIMUM_CENTIMETER)
-
-//#define VIN_2_LIPO
+#define DISTANCE_MINIMUM_CENTIMETER         20 // If measured distance is less than this value, go backwards
+#define DISTANCE_MAXIMUM_CENTIMETER         30 // If measured distance is greater than this value, go forward
+#define DISTANCE_DELTA_CENTIMETER           (DISTANCE_MAXIMUM_CENTIMETER - DISTANCE_MINIMUM_CENTIMETER)
+#define DISTANCE_TARGET_SCAN_CENTIMETER     70 // search if target moved to side
 
 //#define PLOTTER_OUTPUT // Comment this out, if you want to see the result of the US distance sensor and resulting speed in Arduino plotter
 
+#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+// Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
+#define VIN_2_LIPO // comment it out to use speed values for 7.4 Volt
+#else
+#endif
+
+//#define VIN_2_LIPO // comment it out to use speed values for 7.4 Volt
 #if defined(VIN_2_LIPO)
 // values for 2xLIPO / 7.4 volt
 #define START_SPEED                 30 // Speed PWM value at which car starts to move.
@@ -40,8 +46,8 @@
 #define MAX_SPEED_FOLLOWER         100 // Max speed PWM value used for follower.
 #else
 // Values for 4xAA / 6.0 volt
-#define START_SPEED                 80 // Speed PWM value at which car starts to move.
-#define DRIVE_SPEED                150 // Speed PWM value used for going fixed distance.
+#define START_SPEED                140 // Speed PWM value at which car starts to move.
+#define DRIVE_SPEED                220 // Speed PWM value used for going fixed distance.
 #define MAX_SPEED_FOLLOWER         255 // Max speed PWM value used for follower.
 #endif
 
@@ -53,18 +59,18 @@
  * Pins 9 + 10 are reserved for Servo
  * 2 + 3 are reserved for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD      4
-#define PIN_LEFT_MOTOR_BACKWARD     7
-#define PIN_LEFT_MOTOR_PWM          5 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
+#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
+#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     8
-#define PIN_RIGHT_MOTOR_BACKWARD   12 // Pin 9 is already reserved for distance servo
-#define PIN_RIGHT_MOTOR_PWM         6 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
+#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
 #define PIN_DISTANCE_SERVO          9 // Servo Nr. 2 on Adafruit Motor Shield
 
-#define PIN_SPEAKER                11
+#define PIN_BUZZER                 11
 
 #define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
 #define PIN_ECHO_IN                A1
@@ -100,9 +106,9 @@ void setup() {
     DistanceServo.write(90);
     initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
 
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
 
     /*
      * Do not start immediately with driving
@@ -112,20 +118,50 @@ void setup() {
     /*
      * Tone feedback for start of driving
      */
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
 }
 
 void loop() {
 
     unsigned int tCentimeter = getDistanceAndPlayTone();
     unsigned int tSpeed;
-    /*
-     * TODO check if distance too high, then search for target in a different direction
-     */
 
-    if (tCentimeter > DISTANCE_MAXIMUM_CENTIMETER) {
+    if (tCentimeter > DISTANCE_TARGET_SCAN_CENTIMETER) {
+        /*
+         * Distance too high / target not found -> search for target at different directions and turn f found
+         */
+        noTone(PIN_BUZZER);
+        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+#ifndef PLOTTER_OUTPUT
+            Serial.print(F("Stop and search"));
+#endif
+            RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+        }
+
+        // check 70 and 110 degree for vanished target
+        for (uint8_t i = 70; i < 111; i += 40) {
+            DistanceServo.write(i);
+            delay(200); // To let the servo reach its position
+            if (getUSDistanceAsCentiMeter() < DISTANCE_TARGET_SCAN_CENTIMETER) {
+                /*
+                 * Target found -> turn and proceed
+                 */
+#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+                RobotCarMotorControl.rotateCar(90 - i);
+#else
+                RobotCarMotorControl.rotateCar(i - 90);
+#endif
+                DistanceServo.write(90);
+                break;
+            }
+        }
+        // reset servo position
+        DistanceServo.write(90);
+        delay(100); // Additional delay to let the servo reach its position
+
+    } else if (tCentimeter > DISTANCE_MAXIMUM_CENTIMETER) {
         /*
          * Target too far -> drive forward with speed proportional to the gap
          */
@@ -209,6 +245,6 @@ unsigned int getDistanceAndPlayTone() {
      * Play tone
      */
     int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
-    tone(PIN_SPEAKER, tFrequency);
+    tone(PIN_BUZZER, tFrequency);
     return tCentimeter;
 }

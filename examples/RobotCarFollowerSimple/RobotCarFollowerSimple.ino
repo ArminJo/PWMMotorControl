@@ -27,14 +27,18 @@
 #define DISTANCE_MINIMUM_CENTIMETER 20 // If measured distance is less than this value, go backwards
 #define DISTANCE_MAXIMUM_CENTIMETER 30 // If measured distance is greater than this value, go forward
 
-// Values for 4xAA / 6.0 volt
-//#define START_SPEED                 80 // Speed PWM value at which car starts to move.
-//#define DRIVE_SPEED                150 // Speed PWM value used for going fixed distance.
-//#define MAX_SPEED_FOLLOWER         255 // Max speed PWM value used for follower.
+//#define VIN_2_LIPO
+#if defined(VIN_2_LIPO)
 // values for 2xLIPO / 7.4 volt
 #define START_SPEED                 30 // Speed PWM value at which car starts to move.
 #define DRIVE_SPEED                 60 // Speed PWM value used for going fixed distance.
 #define MAX_SPEED_FOLLOWER         100 // Max speed PWM value used for follower.
+#else
+// Values for 4xAA / 6.0 volt
+#define START_SPEED                140 // Speed PWM value at which car starts to move.
+#define DRIVE_SPEED                220 // Speed PWM value used for going fixed distance.
+#define MAX_SPEED_FOLLOWER         255 // Max speed PWM value used for follower.
+#endif
 
 #define SPEED_COMPENSATION_RIGHT     0 // If positive, this value is subtracted from the speed of the right motor, if negative, -value is subtracted from the left speed.
 
@@ -43,23 +47,24 @@
  * Pins 9 + 10 are reserved for Servo
  * 2 + 3 are reserved for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD      4
-#define PIN_LEFT_MOTOR_BACKWARD     7
-#define PIN_LEFT_MOTOR_PWM          5 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
+#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
+#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     8
-#define PIN_RIGHT_MOTOR_BACKWARD   12 // Pin 9 is already reserved for distance servo
-#define PIN_RIGHT_MOTOR_PWM         6 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
+#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 
 #define PIN_DISTANCE_SERVO          9 // Servo Nr. 2 on Adafruit Motor Shield
 
-#define PIN_SPEAKER                11
+#define PIN_BUZZER                 11
 
 #define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
 #define PIN_ECHO_IN                A1
 
 //Car Control
 CarMotorControl RobotCarMotorControl;
+
 Servo DistanceServo;
 
 unsigned int getDistanceAndPlayTone();
@@ -92,9 +97,9 @@ void setup() {
     /*
      * Tone feedback for start of driving
      */
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    tone(PIN_SPEAKER, 2200, 100);
+    tone(PIN_BUZZER, 2200, 100);
 }
 
 void loop() {
@@ -159,6 +164,6 @@ unsigned int getDistanceAndPlayTone() {
      * Play tone
      */
     int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
-    tone(PIN_SPEAKER, tFrequency);
+    tone(PIN_BUZZER, tFrequency);
     return tCentimeter;
 }

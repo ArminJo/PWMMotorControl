@@ -27,17 +27,17 @@
  * Pins 9 + 10 are already used for Servo
  * 2 + 3 are already used for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD      4
-#define PIN_LEFT_MOTOR_BACKWARD     7
-#define PIN_LEFT_MOTOR_PWM          5 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
+#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
+#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     8
-#define PIN_RIGHT_MOTOR_BACKWARD   12 // Pin 9 is already reserved for distance servo
-#define PIN_RIGHT_MOTOR_PWM         6 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
+#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
 CarMotorControl RobotCarMotorControl;
-#define SIZE_OF_SQUARE  50
+#define SIZE_OF_SQUARE_CM  40
 
 void setup() {
 // initialize the digital pin as an output.
@@ -63,8 +63,8 @@ void setup() {
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0); // Set compensation to 0
-    // set Factor for 2 LIPOS
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+    // set factor for converting distance to drive time
+    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR); // 300
 #if defined(CAR_HAS_4_WHEELS)
     RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT);
 #else
@@ -76,19 +76,24 @@ void setup() {
 void loop() {
     static uint8_t sMotorDirection = DIRECTION_FORWARD;
 
-    /*
-     * Try the default minimum speed (from PWMDCMotor.h), at which the motor starts to move.
-     */
-    RobotCarMotorControl.goDistanceCentimeter(SIZE_OF_SQUARE, sMotorDirection);
-    delay(1000);               // wait for a second
-    /*
-     * Now set speed to the default maximum speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
-     */
-    RobotCarMotorControl.rotateCar(90, sMotorDirection);
+    for (int i = 0; i < 4; ++i) {
+        /*
+         * Try to go 40 cm with speed DEFAULT_DRIVE_SPEED.
+         * You can adjust the speed as well as the distance to time factor above, to get better results.
+         * If you have have slot type photo interrupters assembled, you require no factor if defining USE_ENCODER_MOTOR_CONTROL in PWMDCMotor.h
+         */
+        RobotCarMotorControl.goDistanceCentimeter(SIZE_OF_SQUARE_CM, sMotorDirection);
+        delay(400);
+        /*
+         * Try to turn by 90 degree.
+         */
+        RobotCarMotorControl.rotateCar(90, sMotorDirection);
+    }
 
     /*
-     * switch direction
+     * Turn car around and switch direction
      */
+    RobotCarMotorControl.rotateCar(180, TURN_IN_PLACE, true);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
-    delay(5000);
+    delay(2000);
 }

@@ -1,7 +1,7 @@
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Available as Arduino library "PWMMotorControl"
 
-### [Version 1.0.0](https://github.com/ArminJo/PWMMotorControl/releases)
+### [Version 1.1.1](https://github.com/ArminJo/PWMMotorControl/releases)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
@@ -9,14 +9,18 @@ Available as Arduino library "PWMMotorControl"
 [![Build Status](https://github.com/ArminJo/PWMMotorControl/workflows/LibraryBuild/badge.svg)](https://github.com/ArminJo/PWMMotorControl/actions)
 ![Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_PWMMotorControl)
 
-- The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **L298**, **TB6612** (new low loss dual full bridge IC), or **Adafruit_MotorShield** (using PCA9685 -> 2 x TB6612).
+- The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
 - The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
 
+The motor is mainly controlled by 2 dimensions:
+1. Motor driver control / direction. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
+2. Speed / PWM which is ignored for BRAKE or RELEASE. Some functions allow a signed speed parameter, which incudes the direction as sign (positive -> FORWARD).
+
 Basic commands are:
-- `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`
-- `setSpeed(uint8_t Unsigned_Speed,uint8_t Direction)` or `setSpeed(int Signed_Speed)`
-- `stop()`
+- `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
+- `setSpeed(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeed(int Signed_Speed)`.
+- `stop()` or `setSpeed(0)`.
 
 To go a specified distance (in 5mm/one encoder tick steps), use:
 - `setDefaultsForFixedDistanceDriving()` to set minimal speed and maximal speed. Minimal speed is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
@@ -25,9 +29,12 @@ Maximal speed is the PWM value to use for driving a fixed distance. For encoder 
 - `initGoDistanceCount(uint8_t Unsigned_DistanceCount,uint8_tDirection)` or `setSpeed(intSigned_DistanceCount)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
 - `updateMotor()` - call this in your loop if you use the start* functions.
 
+2 wheel car with encoders, slot-type photo interrupter, 2 LiPo batteries, Adafruit Motor Shield V2, HC-05 Bluetooth module, and servo mounted head down.
+![2 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/L298Car_TopView_small.jpg)
+
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
-Modify it by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for gobal compile (the latter is not possible with the Arduino IDE, so consider to use [sloeber](https://eclipse.baeyens.it).<br/>
+Modify it by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for gobal compile (the latter is not possible with the Arduino IDE, so consider to use [Sloeber](https://eclipse.baeyens.it).<br/>
 Some options which are enabed by default can be disabled by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
 
 | Macro | Default | File | Description |
@@ -56,6 +63,32 @@ These values are used by functions and the first 2 can be overwritten by set* fu
 | `RAMP_UP_UPDATE_INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
 | `RAMP_UP_UPDATE_INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
 
+# [Examples](tree/master/examples)
+
+## Start
+**To check the default values of StartSpeed and DriveSpeed**. One motor starts with StartSpeed for one second, then runs 1 second with DriveSpeed.
+After stooping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
+For the next loop, the direction is switched to backwards.
+
+## Square
+4 times drive 40 cm, then 90 degree left turn. After the square, the car is turned by 180 degree and the direction is switched to backwards. Then the square starts again.
+
+## RobotCarBasic
+Template for your RobotCar control. Currently implemented is: drive until distance too low, then stop, and turn random amount.
+
+## RobotCarFollowerSimple
+The car tries to hold a distance between 20 and 30 cm to an obstacle. The measured distance is converted to a pitch as an acoustic feedback.
+
+## RobotCarFollower
+The car tries to hold a distance between 20 and 30 cm to an target. If the target vanishes, the distance sensor scans for the vanished or a new target.
+
+## [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar)
+Enables autonomous driving of a 2 or 4 wheel car with an Arduino and a Adafruit Motor Shield V2.<br/>
+To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the environment.
+Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the BlueDisplay library.
+
+Just overwrite the function doUserCollisionDetection() to test your own skill.<br/>
+You may also overwrite the function fillAndShowForwardDistancesInfo(), if you use your own scanning method.
 
 # Compile options for RobotCar example
 To customize the RobotCar example to cover different extensions, there are some compile options available.
@@ -77,9 +110,15 @@ To customize the RobotCar example to cover different extensions, there are some 
 #### If you find this library useful, please give it a star.
 
 # Pictures
-2 wheel car with encoders, 2 LiPo batteries, Adafruit Motor Shield V2, Bluetooth connection, and servo mounted head down
+Connection schematic of the L298 board for the examples. If motor drives in opposite direction, you must flip the motor to L298 connections.
+![L298 connections](https://github.com/ArminJo/PWMMotorControl/blob/master/extras/L298_Connections_Steckplatine.png)
+Connections on the Arduino and on the L298 board.
+![Uno connections](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/UnoConnections_small.jpg)
+![L298 connections](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Connections_small.jpg)
+
+2 wheel car with encoders, slot-type photo interrupter, 2 LiPo batteries, Adafruit Motor Shield V2, HC-05 Bluetooth module, and servo mounted head down.
 ![2 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg)
-4 wheel car, like 2 WD car before, but with servo mounted head up.
+4 wheel car with servo mounted head up.
 ![4 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/4WheelDriveCar.jpg)
 Encoder slot-type photo interrupter sensor
 ![Encoder slot-type photo interrupter sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg)
@@ -102,9 +141,10 @@ Automatic control page with detected wall at right
 - The tiny black bar is the rotation chosen by doCollisionDetection() function.
 
 # Revision History
+### Version 1.1.1
+- Improved examples
+
 ### Version 1.1.0
 - Added and renamed functions.
-
-### Version 1.0.0
-Initial Arduino library version.
+- Initial Arduino library version.
 

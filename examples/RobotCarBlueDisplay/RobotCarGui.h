@@ -36,14 +36,6 @@ extern uint32_t sMillisOfNextVCCInfo;
 // a string buffer for BD info output
 extern char sStringBuffer[128];
 
-/****************************************************************************
- * Change this if you have reprogrammed the hc05 module for other baud rate
- ***************************************************************************/
-#ifndef BLUETOOTH_BAUD_RATE
-//#define BLUETOOTH_BAUD_RATE BAUD_115200
-#define BLUETOOTH_BAUD_RATE BAUD_9600
-#endif
-
 #define DISPLAY_WIDTH DISPLAY_HALF_VGA_WIDTH   // 320
 #define DISPLAY_HEIGHT DISPLAY_HALF_VGA_HEIGHT // 240
 
@@ -65,7 +57,7 @@ extern char sStringBuffer[128];
 #define PAGE_LAST_NUMBER PAGE_TEST
 extern uint8_t sCurrentPage;
 
-void showUSDistance(unsigned int aCentimeter);
+void showUSDistance(unsigned int aCentimeter, bool aForceDraw = false);
 void showIRDistance(unsigned int aCentimeter);
 
 // from PathInfoPage

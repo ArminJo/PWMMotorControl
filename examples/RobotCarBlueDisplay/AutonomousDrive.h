@@ -39,10 +39,10 @@ extern uint8_t sDriveMode;
 extern uint8_t sStepMode;
 extern bool sDoStep;
 
-#define FOLLOWER_MIN_DISTANCE_CENTIMETER     22
-#define FOLLOWER_MAX_DISTANCE_CENTIMETER     30
-#define FOLLOWER_DELTA_DISTANCE_CENTIMETER   (FOLLOWER_MAX_DISTANCE_CENTIMETER - FOLLOWER_MIN_DISTANCE_CENTIMETER)
-#define FOLLOWER_RESCAN_DISTANCE_CENTIMETER  50 // search if target moved to side
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER      22
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER      30
+#define FOLLOWER_DISTANCE_DELTA_CENTIMETER   (FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER - FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
+#define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER  70 // search if target moved to side
 
 /*
  * Different result types acquired at one scan
@@ -56,7 +56,7 @@ extern uint8_t sScanMode;
 #endif
 
 #define GO_BACK_AND_SCAN_AGAIN 360 // possible result of doBuiltInCollisionDetection()
-#define SCAN_AGAIN 360 // possible result of scanForTarget()
+#define SCAN_AGAIN 360 // possible result of scanForTarget(), scan at next step.
 
 /*
  * Used for adaptive collision detection

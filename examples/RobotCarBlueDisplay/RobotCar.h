@@ -60,15 +60,15 @@ extern CarMotorControl RobotCarMotorControl;
  * PIN  I/O Function
  *   2  I   Right motor encoder interrupt input
  *   3  I   Left motor encoder interrupt input
- *   4  O   Left motor fwd / NC for UNO board
- *   5  O   Left motor PWM / NC for UNO board
- *   6  O   Right motor PWM / NC for UNO board
- *   7  O   Left motor back / NC for UNO board
- *   8  O   Right motor fwd / NC for UNO board
+ *   4  O   Right motor fwd / NC for UNO board  - connected to IN4 on the L298N board
+ *   5  O   Right motor PWM / NC for UNO board  - connected to ENB
+ *   6  O   Left motor PWM / NC for UNO board   - connected to ENA
+ *   7  O   Right motor back / NC for UNO board - connected to IN3
+ *   8  O   Left motor fwd / NC for UNO board   - connected to IN2
  *   9  O   Servo US distance - Servo Nr. 2 on Adafruit Motor Shield
  *   10 O   Servo laser pan   - Servo Nr. 1 on Adafruit Motor Shield
  *   11 O   Servo laser tilt / Speaker for UNO board
- *   12 O   Right motor back / NC for UNO board
+ *   12 O   Left motor back / NC for UNO board  - connected to IN1
  *   13 O   Laser power
  *
  *   A0 O   US trigger (and echo in 1 pin US sensor mode)
@@ -87,13 +87,13 @@ extern CarMotorControl RobotCarMotorControl;
  * Pins 9 + 10 are reserved for Servo
  * 2 + 3 are reserved for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD     12 // Pin 9 is already reserved for distance servo
-#define PIN_LEFT_MOTOR_BACKWARD     8
-#define PIN_LEFT_MOTOR_PWM          6 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
+#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
+#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     4
-#define PIN_RIGHT_MOTOR_BACKWARD    7
-#define PIN_RIGHT_MOTOR_PWM         5 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
+#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
 
@@ -141,7 +141,7 @@ extern CarMotorControl RobotCarMotorControl;
 #  ifdef CAR_HAS_CAMERA
 #define PIN_CAMERA_SUPPLY_CONTROL A7 // Not available on UNO board
 #  endif
-#define PIN_SPEAKER               A6 // Not available on UNO board
+#define PIN_BUZZER                A6 // Not available on UNO board
 
 #else
 /*
@@ -150,7 +150,7 @@ extern CarMotorControl RobotCarMotorControl;
 #  ifdef CAR_HAS_CAMERA
 #define PIN_CAMERA_SUPPLY_CONTROL  4
 #  endif
-#define PIN_SPEAKER               11
+#define PIN_BUZZER                11
 #endif
 
 /**************************
@@ -180,14 +180,10 @@ extern Servo PanServo;
 extern Servo TiltServo;
 #endif
 
-#define DISTANCE_TIMEOUT_CM 100 // do not measure and process distances greater than 100 cm
 
 /************************************************************************************
  * Definitions and declarations only used for GUI in RobotCarBlueDisplay.cpp example
  ************************************************************************************/
-#define DISTANCE_TIMEOUT_COLOR COLOR_CYAN
-#define DISTANCE_DISPLAY_PERIOD_MILLIS 500
-
 #define MINIMUM_DISTANCE_TO_SIDE 21
 #define MINIMUM_DISTANCE_TO_FRONT 35
 

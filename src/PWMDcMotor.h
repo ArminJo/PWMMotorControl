@@ -2,8 +2,9 @@
  * PWMDCMotor.h
  *
  * Motor control has 2 technical dimensions
- * 1. Motor driver control. Can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
- * 2. Speed / PWM which is ignored for BRAKE or RELEASE
+ * 1. Motor driver control / direction. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened)
+ *    or RELEASE (motor connections are high impedance).
+ * 2. Speed / PWM which is ignored for BRAKE or RELEASE.
  *
  *  Created on: 12.05.2019
  *  Copyright (C) 2019-2020  Armin Joachimsmeyer
@@ -25,7 +26,7 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "1.1.0"
+#define VERSION_PWMMOTORCONTROL "1.1.1"
 #define VERSION_PWMMOTORCONTROL_MAJOR 1
 #define VERSION_PWMMOTORCONTROL_MINOR 1
 
@@ -83,8 +84,8 @@
 #define DEFAULT_DRIVE_SPEED_7_4_VOLT                80
 #define DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT   135 // for 2 x LIPO batteries (7.4 volt).
 
-#define DEFAULT_START_SPEED_6_VOLT                  150
-#define DEFAULT_DRIVE_SPEED_6_VOLT                  255
+#define DEFAULT_START_SPEED_6_VOLT                  140
+#define DEFAULT_DRIVE_SPEED_6_VOLT                  220
 #define DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT      300 // for 4 x AA batteries (6 volt).
 
 // Default values - used if EEPROM values are invalid
@@ -225,7 +226,7 @@ public:
 #endif
 
     /*
-     * EEPROM functions to read and store calibration and other control values (DriveSpeed, SpeedCompensation)
+     * EEPROM functions to read and store control values (DriveSpeed, SpeedCompensation)
      */
     void readMotorValuesFromEeprom();
     void writeMotorvaluesToEeprom();

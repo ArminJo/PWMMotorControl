@@ -41,8 +41,6 @@ uint8_t sScanMode = SCAN_MODE_MINIMUM; // one of SCAN_MODE_MINIMUM, SCAN_MODE_MA
 bool sDoSlowScan = false;
 bool sRuningAutonomousDrive = false; // = (sDriveMode == MODE_AUTONOMOUS_DRIVE_BUILTIN || sDriveMode == MODE_AUTONOMOUS_DRIVE_USER || sDriveMode == MODE_FOLLOWER) is modified by buttons on this page
 
-bool sFollowerTargetFound = false; // One time flag to start with scanning for target.
-
 uint8_t sTurnMode = TURN_IN_PLACE;
 
 // Storage for turning decision especially for single step mode
@@ -59,7 +57,7 @@ uint8_t sCentimeterPerScan = CENTIMETER_PER_RIDE;
  */
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
     sRuningAutonomousDrive = aDoStart;
-    noTone(PIN_SPEAKER); // for follower mode
+    noTone(PIN_BUZZER); // for follower mode
 
     if (aDoStart) {
         /*
@@ -78,11 +76,10 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             setStepMode(MODE_SINGLE_STEP);
         } else if (aDriveMode == MODE_FOLLOWER) {
             DistanceServoWriteAndDelay(90); // reset Servo
-            sFollowerTargetFound = false;
             // Show distance sliders
-            SliderUSDistance.drawSlider();
+//            SliderUSDistance.drawSlider();
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-            SliderIRDistance.drawSlider();
+//            SliderIRDistance.drawSlider();
 #  endif
         }
 
@@ -108,7 +105,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 
 int postProcessAndCollisionDetection() {
     doWallDetection();
-    postProcessDistances(sCentimeterPerScanTimesTwo);
+    postProcessDistances(sCentimeterPerScan);
     int tNextDegreesToTurn;
     if (sDriveMode == MODE_AUTONOMOUS_DRIVE_BUILTIN) {
         tNextDegreesToTurn = doBuiltInCollisionDetection();
@@ -260,8 +257,8 @@ int doBuiltInCollisionDetection() {
     /*
      * First check if free ahead
      */
-    if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_1] > sCentimeterPerScanTimesTwo
-            && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_2] > sCentimeterPerScanTimesTwo) {
+    if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_1] > sCentimeterPerScan
+            && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_2] > sCentimeterPerScan) {
         /*
          * Free ahead, currently do nothing
          */
@@ -275,7 +272,7 @@ int doBuiltInCollisionDetection() {
              */
             tDegreeToTurn = ((sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold * DEGREES_PER_STEP) + START_DEGREES) - 90;
         } else {
-            if (sForwardDistancesInfo.MaxDistance > sCentimeterPerScanTimesTwo) {
+            if (sForwardDistancesInfo.MaxDistance > sCentimeterPerScan) {
                 /*
                  * Go to max distance if greater than threshold of sCentimeterPerScanTimesTwo, currently the same as above
                  */
@@ -314,58 +311,77 @@ void checkSpeedAndGo(unsigned int aSpeed, uint8_t aRequestedDirection) {
  */
 void driveFollowerModeOneStep() {
 
-    unsigned int tCentimeter = getDistanceAndPlayTone();
+    if (sNextDegreesToTurn == SCAN_AGAIN) {
+        noTone(PIN_BUZZER);
 
-    if (sStepMode == MODE_STEP_TO_NEXT_TURN && sNextDegreesToTurn != SCAN_AGAIN) {
-        // we had fount a target before -> wait for step signal
-        if (sDoStep) {
+        sNextDegreesToTurn = scanForTarget();
+        if (sNextDegreesToTurn == SCAN_AGAIN) {
+            delayAndLoopGUI(50); // to display the values
+            return;
+        }
+        /*
+         * Found target here
+         */
+        if (sStepMode == MODE_STEP_TO_NEXT_TURN) {
+            // wait for GUI to do enable the next step
             sDoStep = false;
+        }
+    }
+
+    if (sDoStep) {
+        if (sNextDegreesToTurn != 0) {
+            /*
+             * we had a pending turn
+             */
             RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_FORWARD, true);
             //RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_IN_PLACE, true);
-            // reset flag, that we have to stop
-            sNextDegreesToTurn = SCAN_AGAIN;
-        }
-        return; // wait for step
-    }
+            sNextDegreesToTurn = 0;
 
-    if (!sFollowerTargetFound || tCentimeter > FOLLOWER_RESCAN_DISTANCE_CENTIMETER) {
-        /*
-         * Distance too high, stop car and search target in front directions
-         */
-        RobotCarMotorControl.stopMotors();
-        clearPrintedForwardDistancesInfos();
-        // show current distance (as US distance), which triggers the scan
-        showUSDistance(tCentimeter);
+        } else {
+            /*
+             * No scanning, no waiting for step, no pending turn
+             * Measure distance, display it and drive or start scanning
+             */
+            unsigned int tCentimeter = getDistanceAndPlayTone();
 
-        scanForTarget();
-        if (sNextDegreesToTurn != SCAN_AGAIN) {
-            sFollowerTargetFound = true; // (Moved) target found
-        }
-        delayAndLoopGUI(50); // to display the values
-        return;
-    }
+            if (tCentimeter > FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
+                // trigger scanning in the next loop
+                // Stop car, clear display area and show distance
+                RobotCarMotorControl.stopMotors();
+                clearPrintedForwardDistancesInfos();
+                // show current distance (as US distance), which triggers the scan
+                showUSDistance(tCentimeter, true);
+                sNextDegreesToTurn = SCAN_AGAIN;
+                return;
+            }
 
-    unsigned int tSpeed;
-    if (tCentimeter > FOLLOWER_MAX_DISTANCE_CENTIMETER) {
+            /*
+             * Simple follower without any turn
+             */
+            // show current distance (as US distance)
+            showUSDistance(tCentimeter, false);
+
+            unsigned int tSpeed;
+            if (tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
 //            Serial.println(F("Go forward"));
 //        }
-        tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (tCentimeter - FOLLOWER_MAX_DISTANCE_CENTIMETER) * 2;
-        checkSpeedAndGo(tSpeed, DIRECTION_FORWARD);
+                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
+                checkSpeedAndGo(tSpeed, DIRECTION_FORWARD);
 
-    } else if (tCentimeter < FOLLOWER_MIN_DISTANCE_CENTIMETER) {
+            } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
 //            Serial.println(F("Go backward"));
 //        }
-        tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (FOLLOWER_MIN_DISTANCE_CENTIMETER - tCentimeter) * 4;
-        checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
+                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+                checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
 
-    } else {
-        // Target found here :-)
-        sFollowerTargetFound = true;
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+            } else {
+                if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
 //        Serial.println(F("Stop"));
-            RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+                    RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+                }
+            }
         }
     }
     delayAndLoopGUI(100); // the IR sensor takes 39 ms for one measurement
@@ -375,11 +391,11 @@ unsigned int __attribute__((weak)) getDistanceAndPlayTone() {
     /*
      * Get distance; timeout is 1 meter
      */
-    unsigned int tCentimeter = getDistanceAsCentiMeter(true);
+    unsigned int tCentimeter = getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM_FOLLOWER);
     /*
      * play tone
      */
     int tFrequency = map(tCentimeter, 0, 100, 100, 2000);
-    tone(PIN_SPEAKER, tFrequency);
+    tone(PIN_BUZZER, tFrequency);
     return tCentimeter;
 }

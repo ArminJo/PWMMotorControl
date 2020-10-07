@@ -266,8 +266,8 @@ void drawForwardDistancesInfos() {
          */
         uint8_t tDistance = sForwardDistancesInfo.RawDistancesArray[i];
         tColor = COLOR_ORANGE;
-        if (tDistance >= DISTANCE_TIMEOUT_CM) {
-            tDistance = DISTANCE_TIMEOUT_CM;
+        if (tDistance >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
+            tDistance = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
             tColor = COLOR_GREEN;
         }
         if (tDistance > sCentimeterPerScanTimesTwo) {

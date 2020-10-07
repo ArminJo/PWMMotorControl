@@ -26,13 +26,13 @@
  * Pins 9 + 10 are already used for Servo
  * 2 + 3 are already used for encoder input
  */
-#define PIN_LEFT_MOTOR_FORWARD      4
-#define PIN_LEFT_MOTOR_BACKWARD     7
-#define PIN_LEFT_MOTOR_PWM          5 // Must be PWM capable
+#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
+#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
+#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_RIGHT_MOTOR_FORWARD     8
-#define PIN_RIGHT_MOTOR_BACKWARD   12 // Pin 9 is already reserved for distance servo
-#define PIN_RIGHT_MOTOR_PWM         6 // Must be PWM capable
+#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
+#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
 PWMDcMotor rightMotor;
@@ -76,12 +76,12 @@ void loop() {
     static uint8_t sMotorDirection = DIRECTION_FORWARD;
 
     /*
-     * Try the default minimum speed (from PWMDCMotor.h), at which the motor starts to move.
+     * Try the default start speed (from PWMDCMotor.h), at which the motor starts to move.
      */
     rightMotor.setSpeed(DEFAULT_START_SPEED, sMotorDirection);
     delay(1000);               // wait for a second
     /*
-     * Now set speed to the default maximum speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
+     * Now set speed to the default drive speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
      */
     rightMotor.setSpeed(DEFAULT_DRIVE_SPEED, sMotorDirection);
     delay(1000);               // wait for a second
@@ -89,7 +89,7 @@ void loop() {
      * Stop motor
      */
     rightMotor.stop();
-    delay(2000);               // wait for a second
+    delay(1000);               // wait for a second
     /*
      * Try to go a whole turn (21.5 cm for my wheels)
      */
@@ -104,12 +104,12 @@ void loop() {
     leftMotor.setSpeed(DEFAULT_DRIVE_SPEED, sMotorDirection);
     delay(1000);
     leftMotor.stop();
-    delay(2000);
+    delay(1000);
     leftMotor.goDistanceCount(DEFAULT_COUNTS_PER_FULL_ROTATION, sMotorDirection);
 
     /*
      * switch direction
      */
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
-    delay(5000);
+    delay(3000);
 }

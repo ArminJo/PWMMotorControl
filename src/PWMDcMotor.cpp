@@ -100,15 +100,13 @@ void PWMDcMotor::init(uint8_t aMotorNumber, bool aReadFromEeprom) {
     sAdafruitMotorShield.begin();
 #  endif
 
-    // set defaults
-    setDefaultsForFixedDistanceDriving();
-
     if (!aReadFromEeprom) {
         MotorValuesEepromStorageNumber = 0;
     } else {
         MotorValuesEepromStorageNumber = aMotorNumber;
-        readMotorValuesFromEeprom();
     }
+    // setDefaultsForFixedDistanceDriving() is called by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
+    readMotorValuesFromEeprom();
     stop(DEFAULT_STOP_MODE);
 }
 
@@ -130,7 +128,7 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
     // set defaults
     setDefaultsForFixedDistanceDriving();
 
-    readMotorValuesFromEeprom(); // checks MotorValuesEepromStorageNumber
+    readMotorValuesFromEeprom(); // reads values only if MotorValuesEepromStorageNumber / aMotorNumber is != 0
     stop(DEFAULT_STOP_MODE);
 }
 
@@ -317,6 +315,7 @@ void PWMDcMotor::setStopMode(uint8_t aStopMode) {
  *****************************************************************************************/
 /*
  * StartSpeed (at which car starts to move) for 8 volt is appr. 35 to 40, for 4.3 volt (USB supply) is appr. 90 to 100
+ * setDefaultsForFixedDistanceDriving() is called at init by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
  */
 void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
     StartSpeed = DEFAULT_START_SPEED;
@@ -516,7 +515,8 @@ bool PWMDcMotor::updateMotor() {
 
 /********************************************************************************************
  * EEPROM functions
- * uUses the start of EEPROM for storage of EepromMotorInfoStruct's for motor number 1 to n
+ * Uses the start of EEPROM for storage of EepromMotorInfoStruct's for motor number 1 to n
+ * setDefaultsForFixedDistanceDriving() is called by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
  ********************************************************************************************/
 void PWMDcMotor::readMotorValuesFromEeprom() {
     if (MotorValuesEepromStorageNumber != 0) {
@@ -527,7 +527,7 @@ void PWMDcMotor::readMotorValuesFromEeprom() {
         /*
          * Overwrite with values if valid
          */
-        if (tEepromMotorInfo.StartSpeed < 100 && tEepromMotorInfo.StartSpeed > 10) {
+        if (tEepromMotorInfo.StartSpeed < 150 && tEepromMotorInfo.StartSpeed > 20) {
             StartSpeed = tEepromMotorInfo.StartSpeed;
             if (tEepromMotorInfo.DriveSpeed > 40) {
                 DriveSpeed = tEepromMotorInfo.DriveSpeed;
@@ -537,6 +537,8 @@ void PWMDcMotor::readMotorValuesFromEeprom() {
             }
         }
         MotorValuesHaveChanged = true;
+    } else {
+        setDefaultsForFixedDistanceDriving();
     }
 }
 
