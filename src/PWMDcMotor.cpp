@@ -26,7 +26,8 @@
 
 #include "PWMDcMotor.h"
 
-bool PWMDcMotor::MotorValuesHaveChanged; // for printing
+bool PWMDcMotor::MotorValuesHaveChanged;        // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
+bool PWMDcMotor::SpeedOrMotorModeHasChanged;    // - for printing
 
 PWMDcMotor::PWMDcMotor() { // @suppress("Class members should be properly initialized")
 }
@@ -220,9 +221,9 @@ void PWMDcMotor::setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection) 
         stop(DefaultStopMode);
     } else {
         checkAndHandleDirectionChange(aRequestedDirection);
-        MotorValuesHaveChanged = true;
         if (CurrentSpeed != aSpeedRequested) {
             CurrentSpeed = aSpeedRequested; // The only statement which sets CurrentSpeed to a value != 0
+            SpeedOrMotorModeHasChanged = true;
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
             I2CSetPWM(PWMPin, 0, 16 * aSpeedRequested);
@@ -280,7 +281,7 @@ void PWMDcMotor::setSpeedCompensated(int aRequestedSpeed) {
 void PWMDcMotor::stop(uint8_t aStopMode) {
 
     CurrentSpeed = 0; // The only statement which sets CurrentSpeed to 0
-    MotorValuesHaveChanged = true;
+    SpeedOrMotorModeHasChanged = true;
     MotorMovesFixedDistance = false;
 #ifdef SUPPORT_RAMP_UP
     MotorRampState = MOTOR_STATE_STOPPED;
@@ -308,6 +309,7 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
  */
 void PWMDcMotor::setStopMode(uint8_t aStopMode) {
     DefaultStopMode = CheckStopMODE(aStopMode);
+    MotorValuesHaveChanged = true;
 }
 
 /******************************************************************************************
@@ -324,16 +326,24 @@ void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
 #ifndef USE_ENCODER_MOTOR_CONTROL
     DistanceToTimeFactor = DEFAULT_DISTANCE_TO_TIME_FACTOR;
 #endif
+    MotorValuesHaveChanged = true;
 }
 
 void PWMDcMotor::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation) {
     StartSpeed = aStartSpeed;
     DriveSpeed = aDriveSpeed;
     SpeedCompensation = aSpeedCompensation;
+    MotorValuesHaveChanged = true;
+}
+
+void PWMDcMotor::setSpeedCompensation(uint8_t aSpeedCompensation) {
+    SpeedCompensation = aSpeedCompensation;
+    MotorValuesHaveChanged = true;
 }
 
 void PWMDcMotor::setDriveSpeed(uint8_t aDriveSpeed) {
     DriveSpeed = aDriveSpeed;
+    MotorValuesHaveChanged = true;
 }
 
 #ifdef SUPPORT_RAMP_UP

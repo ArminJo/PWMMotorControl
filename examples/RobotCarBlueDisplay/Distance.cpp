@@ -195,9 +195,9 @@ int scanForTarget() {
              */
             color16_t tColor;
             tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
-            if (tCentimeter <= FOLLOWER_TARGET_SCAN_DISTANCE_CENTIMETER) {
+            if (tCentimeter <= FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
                 tColor = COLOR_GREEN;
-            } else if (tCentimeter < FOLLOWER_MIN_DISTANCE_CENTIMETER) {
+            } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
                 tColor = COLOR_YELLOW;
             }
 
@@ -208,7 +208,7 @@ int scanForTarget() {
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tScanDegree, tColor, 3);
         }
         sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
-        if (tCentimeter <= FOLLOWER_TARGET_SCAN_DISTANCE_CENTIMETER) {
+        if (tCentimeter <= FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
             tDegreeFound = tScanDegree;
             break;
         }

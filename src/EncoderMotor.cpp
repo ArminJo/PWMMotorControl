@@ -223,8 +223,6 @@ bool EncoderMotor::updateMotor() {
             if (tNewSpeed < StartSpeed) {
                 tNewSpeed = StartSpeed;
             }
-            // not really needed here since output is disabled during ramps
-            MotorValuesHaveChanged = true;
         }
     }
     // End of motor state machine

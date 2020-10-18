@@ -26,7 +26,9 @@
 #include "RobotCarGui.h"
 #include "Distance.h"
 
+#ifdef ENABLE_PATH_INFO_PAGE
 BDButton TouchButtonResetPath;
+BDButton TouchButtonBackSmall;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doResetPath(BDButton * aTheTouchedButton, int16_t aValue) {
@@ -37,6 +39,9 @@ void doResetPath(BDButton * aTheTouchedButton, int16_t aValue) {
 void initPathInfoPage(void) {
     TouchButtonResetPath.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_RED, F("Clear"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doResetPath);
+
+    TouchButtonBackSmall.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR_RED, F("Back"), TEXT_SIZE_22,
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &GUISwitchPages);
 }
 
 void drawPathInfoPage(void) {
@@ -203,3 +208,4 @@ void DrawPath() {
         tYDisplayPos += tYDisplayDelta;
     }
 }
+#endif // ENABLE_PATH_INFO_PAGE

@@ -11,7 +11,8 @@ Available as Arduino library "PWMMotorControl"
 
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
-- The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
+- The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**. 
+- To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed if you use the `setSpeedCompensation()` functions. For car control, only compensation of one motor is required.
 
 The motor is mainly controlled by 2 dimensions:
 1. Motor driver control / direction. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
@@ -20,6 +21,7 @@ The motor is mainly controlled by 2 dimensions:
 Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
 - `setSpeed(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeed(int Signed_Speed)`.
+- `setSpeedCompensation(uint8_t aSpeedCompensation)` and `setSpeedCompensated(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeedCompensated(int Signed_Speed)`.
 - `stop()` or `setSpeed(0)`.
 
 To go a specified distance (in 5mm/one encoder tick steps), use:
@@ -30,7 +32,7 @@ Maximal speed is the PWM value to use for driving a fixed distance. For encoder 
 - `updateMotor()` - call this in your loop if you use the start* functions.
 
 2 wheel car with encoders, slot-type photo interrupter, 2 LiPo batteries, Adafruit Motor Shield V2, HC-05 Bluetooth module, and servo mounted head down.
-![2 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/L298Car_TopView_small.jpg)
+![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Car_TopView_small.jpg)
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
@@ -62,6 +64,16 @@ These values are used by functions and the first 2 can be overwritten by set* fu
 | `DEFAULT_DISTANCE_TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
 | `RAMP_UP_UPDATE_INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
 | `RAMP_UP_UPDATE_INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
+
+### Modifying library properties with Arduino IDE
+First use *Sketch/Show Sketch Folder (Ctrl+K)*.<br/>
+If you did not yet stored the example as your own sketch, then you are instantly in the right library folder.<br/>
+Otherwise you have to navigate to the parallel `libraries` folder and select the library you want to access.<br/>
+In both cases the library files itself are located in the `src` directory.<br/>
+
+### Modifying library properties with Sloeber IDE
+If you are using Sloeber as your IDE, you can easily define global symbols with *Properties/Arduino/CompileOptions*.<br/>
+![Sloeber settings](https://github.com/ArminJo/ServoEasing/blob/master/pictures/SloeberDefineSymbols.png)
 
 # [Examples](tree/master/examples)
 

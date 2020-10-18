@@ -36,36 +36,43 @@ extern uint32_t sMillisOfNextVCCInfo;
 // a string buffer for BD info output
 extern char sStringBuffer[128];
 
-#define DISPLAY_WIDTH DISPLAY_HALF_VGA_WIDTH   // 320
-#define DISPLAY_HEIGHT DISPLAY_HALF_VGA_HEIGHT // 240
+#define DISPLAY_WIDTH           DISPLAY_HALF_VGA_WIDTH   // 320
+#define DISPLAY_HEIGHT          DISPLAY_HALF_VGA_HEIGHT // 240
 
-#define HEADER_X BUTTON_WIDTH_3_5_POS_2 - (TEXT_SIZE_22_WIDTH / 2)
+#define HEADER_X                BUTTON_WIDTH_3_5_POS_2 - (TEXT_SIZE_22_WIDTH / 2)
 
-#define SLIDER_TOP_MARGIN 10
-#define SPEED_SLIDER_SIZE BUTTON_HEIGHT_4_LINE_3  // 128
-#define US_SLIDER_SIZE BUTTON_HEIGHT_4_LINE_3     // 128
-#define LASER_SLIDER_SIZE BUTTON_HEIGHT_4_LINE_3  // 128
-#define DISTANCE_SLIDER_SIZE (BUTTON_HEIGHT_4_LINE_3 - BUTTON_HEIGHT_8)  // 104
+#define SLIDER_TOP_MARGIN       10
+#define SPEED_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
+#define US_SLIDER_SIZE          BUTTON_HEIGHT_4_LINE_3     // 128
+#define LASER_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
+#define DISTANCE_SLIDER_SIZE    (BUTTON_HEIGHT_4_LINE_3 - BUTTON_HEIGHT_8)  // 104
 
 #define US_DISTANCE_MAP_ORIGIN_X 200
 #define US_DISTANCE_MAP_ORIGIN_Y 150
 
-#define PAGE_HOME 0 // Manual control page
-#define PAGE_AUTOMATIC_CONTROL 1
-#define PAGE_SHOW_PATH 2
-#define PAGE_TEST 3
-#define PAGE_LAST_NUMBER PAGE_TEST
+#define PAGE_HOME               0 // Manual control page
+#define PAGE_AUTOMATIC_CONTROL  1
+#define PAGE_BT_SENSOR_CONTROL  2
+#define PAGE_TEST               3
+#define PAGE_SHOW_PATH          4
+#define PAGE_LAST_NUMBER        PAGE_SHOW_PATH
 extern uint8_t sCurrentPage;
 
 void showUSDistance(unsigned int aCentimeter, bool aForceDraw = false);
 void showIRDistance(unsigned int aCentimeter);
 
+#ifdef ENABLE_PATH_INFO_PAGE
 // from PathInfoPage
 void initPathInfoPage(void);
 void drawPathInfoPage(void);
 void startPathInfoPage(void);
 void loopPathInfoPage(void);
 void stopPathInfoPage(void);
+
+void DrawPath();
+void resetPathData();
+void insertToPath(int aLength, int aDegree, bool aAddEntry);
+#endif
 
 // from AutonomousDrivePage
 extern BDButton TouchButtonStep;
@@ -87,6 +94,16 @@ void doStartStopTestUser(BDButton * aTheTouchedButton, int16_t aValue);
 
 void doStartStopAutonomousForPathPage(BDButton * aTheTouchedButton, int16_t aValue);
 void setStepMode(uint8_t aStepMode);
+
+// from BTSensorDrivePage
+void initBTSensorDrivePage(void);
+void drawBTSensorDrivePage(void);
+void startBTSensorDrivePage(void);
+void loopBTSensorDrivePage(void);
+void stopBTSensorDrivePage(void);
+
+extern uint8_t sSensorChangeCallCountForZeroAdjustment;
+void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallbackInfo);
 
 // from TestPage
 extern bool sShowDebug;
@@ -116,10 +133,9 @@ void stopHomePage(void);
  * Page management
  */
 extern uint8_t sCurrentPage;
-extern BDButton TouchButtonNextPage;
+extern BDButton TouchButtonAutomaticDrivePage;
 extern BDButton TouchButtonReset;
 extern BDButton TouchButtonBack;
-extern BDButton TouchButtonBackSmall;
 void GUISwitchPages(BDButton * aTheTouchedButton, int16_t aValue);
 void startCurrentPage();
 
@@ -136,9 +152,10 @@ extern BDButton TouchButtonDirection;
 #ifdef USE_ENCODER_MOTOR_CONTROL
 extern BDButton TouchButtonCalibrate;
 void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue);
-#else
-extern BDButton TouchButtonCompensation;
 #endif
+extern BDButton TouchButtonCompensationRight;
+extern BDButton TouchButtonCompensationLeft;
+extern BDButton TouchButtonCompensationStore;
 
 extern BDSlider SliderSpeed;
 extern uint16_t sLastSpeedSliderValue;
@@ -176,6 +193,7 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis);
 void rotate(int16_t aRotationDegrees, bool inPlace = true);
 void showDistance(int aCentimeter);
 
+void printMotorSpeed();
 void printMotorValues();
 #ifdef USE_ENCODER_MOTOR_CONTROL
 void printMotorDebugValues();
@@ -192,10 +210,6 @@ void delayAndLoopGUI(uint16_t aDelayMillis);
 /*
  * Functions contained in RobotCarGuiOutput.cpp
  */
-void DrawPath();
-void resetPathData();
-void insertToPath(int aLength, int aDegree, bool aAddEntry);
-
 void clearPrintedForwardDistancesInfos();
 void drawForwardDistancesInfos();
 void drawCollisionDecision(int aDegreesToTurn, uint8_t aLengthOfVector, bool aDoClearVector);

@@ -63,7 +63,9 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         /*
          * Start autonomous driving.
          */
+#ifdef ENABLE_PATH_INFO_PAGE
         resetPathData();
+#endif
         clearPrintedForwardDistancesInfos();
         sDoStep = true; // enable next step
         sDriveMode = aDriveMode;
@@ -87,7 +89,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         /*
          * Stop autonomous driving.
          */
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL) && defined(ENABLE_PATH_INFO_PAGE)
         if (sStepMode != MODE_SINGLE_STEP) {
             // add last driven distance to path
             insertToPath(RobotCarMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
@@ -215,6 +217,8 @@ void driveAutonomousOneStep() {
              */
             RobotCarMotorControl.stopCarAndWaitForIt();
 #ifdef USE_ENCODER_MOTOR_CONTROL
+#ifdef ENABLE_PATH_INFO_PAGE
+
             /*
              * Insert / update last ride in path
              */
@@ -224,19 +228,25 @@ void driveAutonomousOneStep() {
                 // add last driven distance to path
                 insertToPath(RobotCarMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
             }
+#endif
         } else {
             /*
              * No stop, just continue => overwrite last path element with current riding distance and try to synchronize motors
              */
+#ifdef ENABLE_PATH_INFO_PAGE
             insertToPath(RobotCarMotorControl.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
-            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
-            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
+#endif
+//            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
+//            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
 #endif
         }
 
+#ifdef ENABLE_PATH_INFO_PAGE
         if (sCurrentPage == PAGE_SHOW_PATH) {
             drawPathInfoPage();
         }
+#endif
+
     }
 }
 

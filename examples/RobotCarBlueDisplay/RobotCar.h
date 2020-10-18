@@ -136,7 +136,7 @@ extern CarMotorControl RobotCarMotorControl;
  * Nano Layout
  */
 #  ifdef USE_ADAFRUIT_MOTOR_SHIELD
-#error "Adafruit motor shield makes no sense for a Nano board!"
+#error Adafruit motor shield makes no sense for a Nano board!
 #  endif
 #  ifdef CAR_HAS_CAMERA
 #define PIN_CAMERA_SUPPLY_CONTROL A7 // Not available on UNO board

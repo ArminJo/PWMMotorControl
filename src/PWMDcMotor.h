@@ -80,9 +80,9 @@
  *
  * DEFAULT_START_SPEED is the speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 3,6 volt (USB supply) is appr. 70 to 100
  */
-#define DEFAULT_START_SPEED_7_4_VOLT                45
-#define DEFAULT_DRIVE_SPEED_7_4_VOLT                80
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT   135 // for 2 x LIPO batteries (7.4 volt).
+#define DEFAULT_START_SPEED_7_4_VOLT                 45
+#define DEFAULT_DRIVE_SPEED_7_4_VOLT                 80
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT    135 // for 2 x LIPO batteries (7.4 volt).
 
 #define DEFAULT_START_SPEED_6_VOLT                  140
 #define DEFAULT_DRIVE_SPEED_6_VOLT                  220
@@ -90,18 +90,24 @@
 
 // Default values - used if EEPROM values are invalid
 #if defined(VIN_2_LIPO)
+#  if !defined(DEFAULT_START_SPEED)
 #define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_7_4_VOLT
+#  endif
+#  if !defined(DEFAULT_DRIVE_SPEED)
 #define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_7_4_VOLT
+#  endif
+#  if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
 #define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT
+#  endif
 
 #else
-#  if ! defined(DEFAULT_START_SPEED)
+#  if !defined(DEFAULT_START_SPEED)
 #define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_6_VOLT
 #  endif
-#  if ! defined(DEFAULT_DRIVE_SPEED)
+#  if !defined(DEFAULT_DRIVE_SPEED)
 #define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_6_VOLT
 #  endif
-#  if ! defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
+#  if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
 #define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT
 #  endif
 #endif
@@ -201,6 +207,7 @@ public:
      */
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
+    void setSpeedCompensation(uint8_t aSpeedCompensation);
     void setDriveSpeed(uint8_t aDriveSpeed);
 
 #ifdef SUPPORT_RAMP_UP
@@ -263,12 +270,14 @@ public:
     /**********************************
      * End of EEPROM values
      *********************************/
+    uint8_t DefaultStopMode; // used for speed == 0 and STOP_MODE_KEEP
+    static bool MotorValuesHaveChanged; // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
+
     uint8_t CurrentSpeed;
     uint8_t CurrentDirectionOrBrakeMode; // (of CurrentSpeed etc.) DIRECTION_FORWARD, DIRECTION_BACKWARD, MOTOR_BRAKE, MOTOR_RELEASE
-    static bool MotorValuesHaveChanged;
+    static bool SpeedOrMotorModeHasChanged;
 
-    uint8_t DefaultStopMode; // used for speed == 0 and STOP_MODE_KEEP
-    bool MotorMovesFixedDistance; // if true, stop if end distance condition reached
+    bool MotorMovesFixedDistance; // if true, stop if end distance condition is true
 
 #ifdef SUPPORT_RAMP_UP
     /*

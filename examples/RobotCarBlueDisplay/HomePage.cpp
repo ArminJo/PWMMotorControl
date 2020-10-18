@@ -34,6 +34,7 @@
 #include "Distance.h"
 
 BDButton TouchButtonTestPage;
+BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
 #ifdef ENABLE_RTTTL
 BDButton TouchButtonMelody;
@@ -87,8 +88,15 @@ void initHomePage(void) {
     TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, F("Test"),
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
 
+    TouchButtonAutomaticDrivePage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, F("Automatic\nControl"),
+    TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_AUTOMATIC_CONTROL, &GUISwitchPages);
+
+    TouchButtonBTSensorDrivePage.init(BUTTON_WIDTH_3_POS_3,
+    BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_RED,
+            F("Sensor drive"), TEXT_SIZE_12, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_BT_SENSOR_CONTROL, &GUISwitchPages);
+
 #ifdef CAR_HAS_CAMERA
-    TouchButtonCameraOnOff.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3,
+    TouchButtonCameraOnOff.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_4,
     TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Camera"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             false, &doCameraSupplyOnOff);
 #endif
@@ -100,7 +108,7 @@ void initHomePage(void) {
 #endif
 
 #ifdef CAR_HAS_LASER
-    TouchButtonLaser.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
+    TouchButtonLaser.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Laser"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doLaserOnOff);
 #endif
@@ -132,15 +140,17 @@ void drawHomePage(void) {
 #ifdef CAR_HAS_LASER
     TouchButtonLaser.drawButton();
 #endif
+    TouchButtonBTSensorDrivePage.drawButton();
     TouchButtonTestPage.drawButton();
-    TouchButtonNextPage.drawButton();
+    TouchButtonAutomaticDrivePage.drawButton();
 
     TouchButtonDirection.drawButton();
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.drawButton();
-#else
-    TouchButtonCompensation.drawButton();
 #endif
+    TouchButtonCompensationLeft.drawButton();
+    TouchButtonCompensationRight.drawButton();
+    TouchButtonCompensationStore.drawButton();
 
     SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
     SliderUSPosition.drawSlider();
@@ -170,11 +180,7 @@ void startHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4);
-#else
-    TouchButtonCompensation.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4);
 #endif
-    TouchButtonNextPage.setCaption(F("Automatic\nControl"));
-
     drawHomePage();
 }
 
@@ -182,11 +188,9 @@ void loopHomePage(void) {
 }
 
 void stopHomePage(void) {
-    TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_5);
+    TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_6);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
-#else
-    TouchButtonCompensation.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
     startStopRobotCar(false);
 }

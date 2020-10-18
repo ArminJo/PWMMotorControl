@@ -128,9 +128,9 @@ void loop() {
     unsigned int tCentimeter = getDistanceAndPlayTone();
     unsigned int tSpeed;
 
-    if (tCentimeter > DISTANCE_TARGET_SCAN_CENTIMETER) {
+    if (tCentimeter == 0 || tCentimeter > DISTANCE_TARGET_SCAN_CENTIMETER) {
         /*
-         * Distance too high / target not found -> search for target at different directions and turn f found
+         * Distance too high or timeout / target not found -> search for target at different directions and turn if found
          */
         noTone(PIN_BUZZER);
         if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
@@ -144,7 +144,8 @@ void loop() {
         for (uint8_t i = 70; i < 111; i += 40) {
             DistanceServo.write(i);
             delay(200); // To let the servo reach its position
-            if (getUSDistanceAsCentiMeter() < DISTANCE_TARGET_SCAN_CENTIMETER) {
+            unsigned int tCentimeterCheck = getUSDistanceAsCentiMeter();
+            if (tCentimeterCheck != 0 && tCentimeterCheck < DISTANCE_TARGET_SCAN_CENTIMETER) {
                 /*
                  * Target found -> turn and proceed
                  */
@@ -233,6 +234,11 @@ unsigned int getDistanceAndPlayTone() {
      * Get distance
      */
     unsigned int tCentimeter = getUSDistanceAsCentiMeter();
+    if (tCentimeter > 0) {
+        // Timeout, just try again, it may be a dropout
+        delay(20);
+        tCentimeter = getUSDistanceAsCentiMeter();
+    }
 #ifdef PLOTTER_OUTPUT
     Serial.print(tCentimeter);
     Serial.print(' ');
@@ -244,7 +250,11 @@ unsigned int getDistanceAndPlayTone() {
     /*
      * Play tone
      */
-    int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
-    tone(PIN_BUZZER, tFrequency);
+    if (tCentimeter > 0) {
+        int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
+        tone(PIN_BUZZER, tFrequency);
+    } else {
+        noTone(PIN_BUZZER);
+    }
     return tCentimeter;
 }

@@ -39,7 +39,6 @@
 #include <PlayRtttl.h>
 #endif
 
-
 /****************************************************************************
  * Change this if you have reprogrammed the hc05 module for other baud rate
  ***************************************************************************/
@@ -153,12 +152,13 @@ void setup() {
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
     RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-            PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true); // true -> read from EEPROM
+    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true); // true -> read from EEPROM
 #  else
     RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, false); // false -> do NOT read from EEPROM
 #  endif
 #endif
+    RobotCarMotorControl.stopMotors(); // in case motors were running before
 
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized
@@ -172,8 +172,12 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
 
-    if (!BlueDisplay1.isConnectionEstablished()) {
-#if defined (USE_STANDARD_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
+    if (BlueDisplay1.isConnectionEstablished()) {
+        // Just to know which program is running on my Arduino
+        BlueDisplay1.debug("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
+//        BlueDisplay1.debug("sMCUSR=", sMCUSR);
+    } else {
+#if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
 #if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
     delay(2000); // To be able to connect Serial monitor after reset and before first printout
 #endif
@@ -182,10 +186,6 @@ void setup() {
         Serial.print(F("sMCUSR=0x"));
         Serial.println(sMCUSR, HEX);
 #endif
-    } else {
-        // Just to know which program is running on my Arduino
-        BlueDisplay1.debug("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
-//        BlueDisplay1.debug("sMCUSR=", sMCUSR);
     }
 
 #ifdef CAR_HAS_CAMERA
@@ -195,7 +195,9 @@ void setup() {
     initServos(); // must be after RobotCarMotorControl.init() since it uses is2WDCar set there.
 
 // reset all values
+#ifdef ENABLE_PATH_INFO_PAGE
     resetPathData();
+#endif
     initDistance();
 
 #if defined(MONITOR_LIPO_VOLTAGE)
@@ -269,11 +271,10 @@ void loop() {
 
 #endif
 
-    if (sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST) {
+    if (sCurrentPage == PAGE_TEST) {
         /*
          * Direct speed control by GUI
          */
-
         if (RobotCarMotorControl.updateMotors()) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
             // At least one motor is moving here
@@ -281,7 +282,6 @@ void loop() {
             MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
 #endif
         }
-
     }
 
     if (sRuningAutonomousDrive) {

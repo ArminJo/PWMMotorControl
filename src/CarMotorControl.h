@@ -62,7 +62,9 @@ public:
 
     void setDefaultsForFixedDistanceDriving();
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
+    void setSpeedCompensation(int8_t aSpeedCompensationRight);
     void setDriveSpeed(uint8_t aDriveSpeed);
+    void writeMotorvaluesToEeprom();
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
     void calibrate();
@@ -134,6 +136,7 @@ public:
      * Functions, which directly call motor functions for both motors
      */
     void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
+    void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection, int8_t aLeftRightSpeed);
     void stopMotors(uint8_t aStopMode = STOP_MODE_KEEP);
 
     void setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);

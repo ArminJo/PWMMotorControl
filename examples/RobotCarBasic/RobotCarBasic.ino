@@ -81,26 +81,28 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 100);
     delay(2000);
+    RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_FORWARD);
 }
 
 void loop() {
 
     /*
-     * Drive until distance too low, then stop, and turn random amount.
+     * Drive until distance too low, then stop, go back, turn random amount and drive again.
      */
-
     unsigned int tCentimeter = getUSDistanceAsCentiMeter();
 
-    if (tCentimeter < 10) {
+    if (tCentimeter < 20) {
         RobotCarMotorControl.stopMotors();
-        delay(200);
+        delay(2000);
+        RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_BACKWARD);
+        delay(400);
+        RobotCarMotorControl.stopMotors();
+        delay(2000);
         RobotCarMotorControl.rotateCar(random(180), TURN_IN_PLACE);
-        delay(1000);
-    } else {
+        delay(2000);
         RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_FORWARD);
     }
 
     delay(50);
-
 }
 

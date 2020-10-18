@@ -59,6 +59,7 @@ void doRotation(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 
 /*
+ * Callback handler for user speed input
  * Store user speed input as DriveSpeed
  */
 void doStoreSpeed(float aValue) {
@@ -66,17 +67,15 @@ void doStoreSpeed(float aValue) {
     if (tValue > 10 && tValue < 256) {
         // must use value for compensation not compensated value
         RobotCarMotorControl.rightCarMotor.DriveSpeed = tValue;
-        RobotCarMotorControl.rightCarMotor.writeMotorvaluesToEeprom();
-
         // use the same value here !
         RobotCarMotorControl.leftCarMotor.DriveSpeed = tValue;
-        RobotCarMotorControl.leftCarMotor.writeMotorvaluesToEeprom();
+        RobotCarMotorControl.writeMotorvaluesToEeprom();
     }
     printMotorValues();
 }
 
 /*
- * Request speed value as number
+ * Request speed value as number from user
  */
 void doGetSpeedAsNumber(BDButton * aTheTouchedButton, int16_t aValue) {
     BlueDisplay1.getNumberWithShortPrompt(&doStoreSpeed, "Drive speed [11-255]", sLastSpeedSliderValue);
@@ -114,22 +113,20 @@ void initTestPage(void) {
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 20, &doDistance);
     TouchButton40cm.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE, F("40cm"),
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 40, &doDistance);
+    TouchButtonDebug.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_RED, F("dbg"),
+    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doShowDebug);
 
     TouchButton45DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 45, &doRotation); // \xB0 is degree character
     TouchButton45DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("-45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -45, &doRotation); // \xB0 is degree character
-
-    TouchButton90DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
-            F("90\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 90, &doRotation); // \xB0 is degree character
-    TouchButton90DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
-            F("-90\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -90, &doRotation); // \xB0 is degree character
-
     TouchButton360Degree.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("360\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 360, &doRotation); // \xB0 is degree character
 
-    TouchButtonDebug.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_RED, F("dbg"),
-    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doShowDebug);
+    TouchButton90DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+            F("90\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 90, &doRotation); // \xB0 is degree character
+    TouchButton90DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+            F("-90\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -90, &doRotation); // \xB0 is degree character
 }
 
 void drawTestPage(void) {
@@ -140,19 +137,27 @@ void drawTestPage(void) {
     TouchButtonReset.drawButton();
     TouchButtonBack.drawButton();
 
-    TouchButtonDirection.drawButton();
-    TouchButtonDebug.drawButton();
-
     TouchButton5cm.drawButton();
     TouchButton10cm.drawButton();
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    TouchButtonCalibrate.drawButton();
+#endif
+
     TouchButton20cm.drawButton();
     TouchButton40cm.drawButton();
+    TouchButtonDebug.drawButton();
 
     TouchButton45DegreeLeft.drawButton();
     TouchButton45DegreeRight.drawButton();
+    TouchButton360Degree.drawButton();
+
+    TouchButtonCompensationLeft.drawButton();
+    TouchButtonCompensationRight.drawButton();
+    TouchButtonCompensationStore.drawButton();
+
     TouchButton90DegreeLeft.drawButton();
     TouchButton90DegreeRight.drawButton();
-    TouchButton360Degree.drawButton();
+    TouchButtonDirection.drawButton();
 
     SliderSpeed.drawSlider();
 #ifdef USE_ENCODER_MOTOR_CONTROL
@@ -168,11 +173,7 @@ void drawTestPage(void) {
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     SliderIRDistance.drawSlider();
 #  endif
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    TouchButtonCalibrate.drawButton();
-#else
-    TouchButtonCompensation.drawButton();
-#endif
+
     PWMDcMotor::MotorValuesHaveChanged = true; // trigger drawing of values
 }
 

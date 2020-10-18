@@ -74,7 +74,7 @@ void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBac
 #endif
 
 /*
- * Sets default values for min and max speed, factor for distance to time conversion for non encoder motors and reset compensation
+ * Sets default values for min and max speed, factor for distance to time conversion for non encoder motors and reset speed compensation
  * Is called automatically at init if parameter aReadFromEeprom is set to false
  */
 void CarMotorControl::setDefaultsForFixedDistanceDriving() {
@@ -83,7 +83,8 @@ void CarMotorControl::setDefaultsForFixedDistanceDriving() {
 }
 
 /**
- * @param aSpeedCompensationRight if positive, this value is subtracted from the speed of the right motor, if negative, -value is subtracted from the left speed.
+ * @param aSpeedCompensationRight if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
+ *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
 void CarMotorControl::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight) {
     if (aSpeedCompensationRight > 0) {
@@ -93,6 +94,28 @@ void CarMotorControl::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint
         rightCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, 0);
         leftCarMotor.setValuesForFixedDistanceDriving(aStartSpeed, aDriveSpeed, -aSpeedCompensationRight);
     }
+}
+
+/**
+ * @param aSpeedCompensationRight if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
+ *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
+ */
+void CarMotorControl::setSpeedCompensation(int8_t aSpeedCompensationRight) {
+    if (aSpeedCompensationRight > 0) {
+        if (leftCarMotor.SpeedCompensation >= aSpeedCompensationRight) {
+            leftCarMotor.SpeedCompensation -= aSpeedCompensationRight;
+        } else {
+            rightCarMotor.SpeedCompensation += aSpeedCompensationRight;
+        }
+    } else {
+        aSpeedCompensationRight = -aSpeedCompensationRight;
+        if (rightCarMotor.SpeedCompensation >= aSpeedCompensationRight) {
+            rightCarMotor.SpeedCompensation -= aSpeedCompensationRight;
+        } else {
+            leftCarMotor.SpeedCompensation += aSpeedCompensationRight;
+        }
+    }
+    PWMDcMotor::MotorValuesHaveChanged = true;
 }
 
 void CarMotorControl::setDriveSpeed(uint8_t aDriveSpeed) {
@@ -147,6 +170,34 @@ void CarMotorControl::setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequ
 }
 
 /*
+ * Sets speed adjusted by current compensation value and handle motor state and flags
+ * @param aLeftRightSpeed if positive, this value is subtracted from the left motor value, if negative subtracted from the right motor value
+ *
+ */
+void CarMotorControl::setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection, int8_t aLeftRightSpeed) {
+    checkAndHandleDirectionChange(aRequestedDirection);
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    EncoderMotor * tMotorWithModifiedSpeed;
+#else
+    PWMDcMotor * tMotorWithModifiedSpeed;
+#endif
+    if (aLeftRightSpeed >= 0) {
+        rightCarMotor.setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
+        tMotorWithModifiedSpeed = &leftCarMotor;
+    } else {
+        aLeftRightSpeed = -aLeftRightSpeed;
+        leftCarMotor.setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
+        tMotorWithModifiedSpeed = &rightCarMotor;
+    }
+
+    if (aRequestedSpeed >= aLeftRightSpeed) {
+        tMotorWithModifiedSpeed->setSpeedCompensated(aRequestedSpeed - aLeftRightSpeed, aRequestedDirection);
+    } else {
+        tMotorWithModifiedSpeed->setSpeedCompensated(0, aRequestedDirection);
+    }
+}
+
+/*
  *  Direct motor control, no state or flag handling
  */
 void CarMotorControl::setSpeed(int aRequestedSpeed) {
@@ -164,6 +215,11 @@ void CarMotorControl::setSpeedCompensated(int aRequestedSpeed) {
 
 uint8_t CarMotorControl::getCarDirectionOrBrakeMode() {
     return CarDirectionOrBrakeMode;;
+}
+
+void CarMotorControl::writeMotorvaluesToEeprom(){
+    rightCarMotor.writeMotorvaluesToEeprom();
+    leftCarMotor.writeMotorvaluesToEeprom();
 }
 
 /*
@@ -333,9 +389,9 @@ void CarMotorControl::stopCarAndWaitForIt(void (*aLoopCallback)(void)) {
     }
 #if defined(USE_ENCODER_MOTOR_CONTROL) && defined(SUPPORT_RAMP_UP)
     /*
-    * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE_SPEED to MOTOR_STATE_RAMP_DOWN
-    * Use DistanceCountAfterRampUp as ramp down count
-    */
+     * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE_SPEED to MOTOR_STATE_RAMP_DOWN
+     * Use DistanceCountAfterRampUp as ramp down count
+     */
     rightCarMotor.NextChangeMaxTargetCount = rightCarMotor.EncoderCount;
     rightCarMotor.TargetDistanceCount = rightCarMotor.EncoderCount + rightCarMotor.DistanceCountAfterRampUp;
     leftCarMotor.NextChangeMaxTargetCount = leftCarMotor.EncoderCount;
@@ -486,11 +542,11 @@ void CarMotorControl::setDistanceToTimeFactorForFixedDistanceDriving(unsigned in
 /*
  * Get count / distance value from right motor
  */
-unsigned int CarMotorControl::getDistanceCount(){
+unsigned int CarMotorControl::getDistanceCount() {
     return (rightCarMotor.EncoderCount);
 }
 
-int CarMotorControl::getDistanceCentimeter(){
+int CarMotorControl::getDistanceCentimeter() {
     return (rightCarMotor.EncoderCount / FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT);
 }
 
@@ -543,9 +599,7 @@ void CarMotorControl::calibrate() {
      * TODO calibrate StopSpeed separately
      */
 
-    rightCarMotor.writeMotorvaluesToEeprom();
-    leftCarMotor.writeMotorvaluesToEeprom();
-
+    writeMotorvaluesToEeprom();
     stopMotors();
 }
 

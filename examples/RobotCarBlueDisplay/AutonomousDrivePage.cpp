@@ -36,6 +36,9 @@ const char * const sStepModeButtonCaptionStringArray[] PROGMEM = { sStepModeButt
 BDButton TouchButtonStep;
 BDButton TouchButtonSingleScan;
 BDButton TouchButtonScanSpeed;
+#ifdef ENABLE_PATH_INFO_PAGE
+BDButton TouchButtonPathInfoPage;
+#endif
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 BDButton TouchButtonScanMode;
@@ -195,6 +198,10 @@ void initAutonomousDrivePage(void) {
             &doStartStopTestUser);
     TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop\nUser"));
 
+#ifdef ENABLE_PATH_INFO_PAGE
+    TouchButtonPathInfoPage.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR_RED, F("Show\nPath"), TEXT_SIZE_22,
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_SHOW_PATH, &GUISwitchPages);
+#endif
 }
 
 void drawAutonomousDrivePage(void) {
@@ -202,7 +209,7 @@ void drawAutonomousDrivePage(void) {
 
     BlueDisplay1.drawText(HEADER_X - (TEXT_SIZE_22_WIDTH / 2), (2 * TEXT_SIZE_22_HEIGHT), F("Auto drive"));
 
-    TouchButtonBackSmall.drawButton();
+    TouchButtonBack.drawButton();
 
     TouchButtonStepMode.drawButton();
     TouchButtonSingleScan.drawButton();
@@ -216,7 +223,9 @@ void drawAutonomousDrivePage(void) {
 
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
     TouchButtonStartStopUserAutonomousDrive.drawButton();
-    TouchButtonNextPage.drawButton(); // Show Path button
+#ifdef ENABLE_PATH_INFO_PAGE
+    TouchButtonPathInfoPage.drawButton();
+#endif
 }
 
 void startAutonomousDrivePage(void) {
@@ -226,7 +235,6 @@ void startAutonomousDrivePage(void) {
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     setScanModeButtonCaption();
 #endif
-    TouchButtonNextPage.setCaption(F("Show\nPath"));
 
     drawAutonomousDrivePage();
 }
