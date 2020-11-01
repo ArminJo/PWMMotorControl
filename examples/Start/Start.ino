@@ -23,14 +23,13 @@
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
 /*
  * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
- * Pins 9 + 10 are already used for Servo
- * 2 + 3 are already used for encoder input
+ * 2 + 3 are reserved for encoder input
  */
 #define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
 #define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
 #define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
 #define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
@@ -50,7 +49,6 @@ void setup() {
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
 
-
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     // For Adafruit Motor Shield v2
     leftMotor.init(1);
@@ -68,6 +66,12 @@ void setup() {
     // set Factor for 2 LIPOS
     leftMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
     rightMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+
+    Serial.print(F("Start speed="));
+    Serial.print(rightMotor.StartSpeed);
+    Serial.print(F(", drive speed="));
+    Serial.print(rightMotor.DriveSpeed);
+    Serial.println();
 
     delay(2000);
 }

@@ -28,7 +28,9 @@
  */
 BDButton TouchButtonReset;
 
+#ifdef SUPPORT_EEPROM_STORAGE
 BDButton TouchButtonGetAndStoreSpeed;
+#endif
 
 BDButton TouchButtonDebug;
 
@@ -55,9 +57,26 @@ void doShowDebug(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 
 void doRotation(BDButton * aTheTouchedButton, int16_t aValue) {
-    RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection, true);
+    if (aValue == 360) {
+        // use in place for 360 degree and change turn direction according to sRobotCarDirection
+        if (sRobotCarDirection != DIRECTION_FORWARD) {
+            aValue = -aValue;
+        }
+#ifdef USE_ENCODER_MOTOR_CONTROL
+        RobotCarMotorControl.startRotateCar(aValue, TURN_IN_PLACE, true);
+#else
+        RobotCarMotorControl.startRotateCar(aValue, TURN_IN_PLACE);
+#endif
+    } else {
+#ifdef USE_ENCODER_MOTOR_CONTROL
+        RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection, true);
+#else
+        RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection);
+#endif
+    }
 }
 
+#ifdef SUPPORT_EEPROM_STORAGE
 /*
  * Callback handler for user speed input
  * Store user speed input as DriveSpeed
@@ -69,10 +88,11 @@ void doStoreSpeed(float aValue) {
         RobotCarMotorControl.rightCarMotor.DriveSpeed = tValue;
         // use the same value here !
         RobotCarMotorControl.leftCarMotor.DriveSpeed = tValue;
-        RobotCarMotorControl.writeMotorvaluesToEeprom();
+        RobotCarMotorControl.writeMotorValuesToEeprom();
     }
     printMotorValues();
 }
+
 
 /*
  * Request speed value as number from user
@@ -80,14 +100,7 @@ void doStoreSpeed(float aValue) {
 void doGetSpeedAsNumber(BDButton * aTheTouchedButton, int16_t aValue) {
     BlueDisplay1.getNumberWithShortPrompt(&doStoreSpeed, "Drive speed [11-255]", sLastSpeedSliderValue);
 }
-
-/*
- * stop and reset motors
- */
-void doReset(BDButton * aTheTouchedButton, int16_t aValue) {
-    startStopRobotCar(false);
-    RobotCarMotorControl.resetControlValues();
-}
+#endif
 
 void initTestPage(void) {
     /*
@@ -97,9 +110,10 @@ void initTestPage(void) {
     TouchButtonReset.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
     COLOR_BLUE, F("Reset"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doReset);
 
+#ifdef SUPPORT_EEPROM_STORAGE
     TouchButtonGetAndStoreSpeed.init(0, BUTTON_HEIGHT_4_LINE_4 - BUTTON_HEIGHT_6 - BUTTON_DEFAULT_SPACING_QUARTER, BUTTON_WIDTH_6,
     BUTTON_HEIGHT_6, COLOR_BLUE, F("Set\nspeed"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doGetSpeedAsNumber);
-
+#endif
     /*
      * Test buttons
      * Many calls requires 36 bytes code + sometimes 52 bytes to clean up the stack.
@@ -116,11 +130,11 @@ void initTestPage(void) {
     TouchButtonDebug.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_RED, F("dbg"),
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doShowDebug);
 
-    TouchButton45DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+    TouchButton45DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 45, &doRotation); // \xB0 is degree character
-    TouchButton45DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+    TouchButton45DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("-45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -45, &doRotation); // \xB0 is degree character
-    TouchButton360Degree.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+    TouchButton360Degree.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("360\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 360, &doRotation); // \xB0 is degree character
 
     TouchButton90DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
@@ -153,7 +167,9 @@ void drawTestPage(void) {
 
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
+#ifdef SUPPORT_EEPROM_STORAGE
     TouchButtonCompensationStore.drawButton();
+#endif
 
     TouchButton90DegreeLeft.drawButton();
     TouchButton90DegreeRight.drawButton();
@@ -164,7 +180,9 @@ void drawTestPage(void) {
     SliderSpeedRight.drawSlider();
     SliderSpeedLeft.drawSlider();
 #endif
+#ifdef SUPPORT_EEPROM_STORAGE
     TouchButtonGetAndStoreSpeed.drawButton();
+#endif
 
     SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
     SliderUSPosition.drawSlider();

@@ -36,14 +36,12 @@ bool sSensorCallbacksEnabled;
 uint8_t sCurrentPage;
 BDButton TouchButtonBack;
 BDButton TouchButtonAutomaticDrivePage;
-#ifdef USE_ENCODER_MOTOR_CONTROL
 BDButton TouchButtonCalibrate;
-#else
-BDButton TouchButtonCompensation;
-#endif
 BDButton TouchButtonCompensationRight;
 BDButton TouchButtonCompensationLeft;
+#ifdef SUPPORT_EEPROM_STORAGE
 BDButton TouchButtonCompensationStore;
+#endif
 
 BDButton TouchButtonRobotCarStartStop;
 //bool sRobotCarMoving; // main start flag. If true motors are running and will be updated by main loop.
@@ -156,7 +154,7 @@ void startStopRobotCar(bool aDoStart) {
              * Start for sensor drive
              */
             sSensorChangeCallCountForZeroAdjustment = 0;
-            registerSensorChangeCallback(FLAG_SENSOR_TYPE_ACCELEROMETER, FLAG_SENSOR_DELAY_UI, FLAG_SENSOR_NO_FILTER,
+            registerSensorChangeCallback(FLAG_SENSOR_TYPE_ACCELEROMETER, FLAG_SENSOR_DELAY_NORMAL, FLAG_SENSOR_NO_FILTER,
                     &doSensorChange);
             // Lock the screen orientation to avoid screen flip while rotating the smartphone
             BlueDisplay1.setScreenOrientationLock(FLAG_SCREEN_ORIENTATION_LOCK_CURRENT);
@@ -179,7 +177,7 @@ void startStopRobotCar(bool aDoStart) {
             /*
              * Global stop for sensor drive
              */
-            registerSensorChangeCallback(FLAG_SENSOR_TYPE_ACCELEROMETER, FLAG_SENSOR_DELAY_UI, FLAG_SENSOR_NO_FILTER, NULL);
+            registerSensorChangeCallback(FLAG_SENSOR_TYPE_ACCELEROMETER, FLAG_SENSOR_DELAY_NORMAL, FLAG_SENSOR_NO_FILTER, NULL);
             BlueDisplay1.setScreenOrientationLock(FLAG_SCREEN_ORIENTATION_LOCK_UNLOCK);
             sSensorCallbacksEnabled = false;
         }
@@ -201,10 +199,21 @@ void doRobotCarStartStop(BDButton * aTheTouchedButton, int16_t aDoStart) {
     startStopRobotCar(aDoStart);
 }
 
+/*
+ * stop and reset motors
+ */
+void doReset(BDButton * aTheTouchedButton, int16_t aValue) {
+    startStopRobotCar(false);
+    RobotCarMotorControl.resetControlValues();
+}
+
 #ifdef USE_ENCODER_MOTOR_CONTROL
 void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue) {
     RobotCarMotorControl.calibrate();
     printMotorValues();
+#ifdef SUPPORT_EEPROM_STORAGE
+    RobotCarMotorControl.writeMotorValuesToEeprom();
+#endif
 }
 #endif
 
@@ -212,7 +221,7 @@ void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue) {
  * Minimum Speed is 30 for USB power and no load, 50 for load
  * Minimum Speed is 20 for 2 Lithium 18650 battery power and no load, 25 for load
  */
-void doSpeedSlider(BDSlider * aTheTouchedSlider, uint16_t aValue) {
+void doSpeedSlider(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     if (aValue != sLastSpeedSliderValue) {
         sLastSpeedSliderValue = aValue;
 
@@ -225,7 +234,7 @@ void doSpeedSlider(BDSlider * aTheTouchedSlider, uint16_t aValue) {
     }
 }
 
-void doUSServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue) {
+void doUSServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     DistanceServoWriteAndDelay(aValue);
 }
 
@@ -234,8 +243,8 @@ void doUSServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue) {
  * Display velocity as slider values
  */
 void displayVelocitySliderValues() {
-    EncoderMotor * tMotorInfo = &RobotCarMotorControl.leftCarMotor;
-    BDSlider * tSliderPtr = &SliderSpeedLeft;
+    EncoderMotor *tMotorInfo = &RobotCarMotorControl.leftCarMotor;
+    BDSlider *tSliderPtr = &SliderSpeedLeft;
     uint16_t tXPos = 0;
     for (int i = 0; i < 2; ++i) {
         if (EncoderMotor::EncoderTickCounterHasChanged) {
@@ -262,22 +271,18 @@ void doSetDirection(BDButton * aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
 }
 
-void doStoreRightMotorSpeedCompensation(float aRightMotorSpeedCompensation) {
-    int8_t tRightMotorSpeedCompensation = aRightMotorSpeedCompensation;
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(RobotCarMotorControl.rightCarMotor.StartSpeed,
-            RobotCarMotorControl.rightCarMotor.DriveSpeed, tRightMotorSpeedCompensation);
-}
-
 /*
- * Request speed value as number
+ * changes speed compensation by +1 or -1
  */
 void doSetCompensation(BDButton * aTheTouchedButton, int16_t aRightMotorSpeedCompensation) {
-    RobotCarMotorControl.setSpeedCompensation(aRightMotorSpeedCompensation);
+    RobotCarMotorControl.changeSpeedCompensation(aRightMotorSpeedCompensation);
 }
 
+#ifdef SUPPORT_EEPROM_STORAGE
 void doStoreCompensation(BDButton * aTheTouchedButton, int16_t aRightMotorSpeedCompensation) {
-    RobotCarMotorControl.writeMotorvaluesToEeprom();
+    RobotCarMotorControl.writeMotorValuesToEeprom();
 }
+#endif
 
 void startCurrentPage() {
     switch (sCurrentPage) {
@@ -340,9 +345,6 @@ void GUISwitchPages(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 
 void initRobotCarDisplay(void) {
-// Stop any demo movement.
-    RobotCarMotorControl.stopMotors();
-    sRuningAutonomousDrive = false;
 
     BlueDisplay1.setFlagsAndSize(BD_FLAG_FIRST_RESET_ALL | BD_FLAG_TOUCH_BASIC_DISABLE | BD_FLAG_USE_MAX_SIZE, DISPLAY_WIDTH,
     DISPLAY_HEIGHT);
@@ -371,14 +373,16 @@ void initRobotCarDisplay(void) {
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, true, &doSetDirection);
     TouchButtonDirection.setCaptionForValueTrue("\x87");
 
-    TouchButtonCompensationLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5,
+    TouchButtonCompensationLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4,
     BUTTON_WIDTH_8 + (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8, COLOR_BLUE, F("<-Co"), TEXT_SIZE_11,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, -1, &doSetCompensation);
-    TouchButtonCompensationRight.init(BUTTON_WIDTH_8_POS_5 - (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8_LINE_5,
+    TouchButtonCompensationRight.init(BUTTON_WIDTH_8_POS_5 - (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8_LINE_4,
     BUTTON_WIDTH_8 + (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8, COLOR_BLUE, F("mp->"), TEXT_SIZE_11,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doSetCompensation);
-    TouchButtonCompensationStore.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
+#ifdef SUPPORT_EEPROM_STORAGE
+    TouchButtonCompensationStore.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR_BLUE,
             F("Store"), TEXT_SIZE_10, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doStoreCompensation);
+#endif
     /*
      * Speed Sliders
      */
@@ -433,7 +437,7 @@ void initRobotCarDisplay(void) {
     // Small US distance slider with captions and without cm units
     SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
             (BUTTON_WIDTH_10 / 2) - 2,
-            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
+            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
             FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW, 2, COLOR_BLACK,
     COLOR_WHITE);
@@ -444,11 +448,11 @@ void initRobotCarDisplay(void) {
 #else
     // Big US distance slider without caption but with cm units POS_X_THIRD_SLIDER because it is the position of the left edge
     SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, BUTTON_WIDTH_10,
-    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
-            FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
+    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
+            SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setValueUnitString("cm");
 #endif
-    SliderUSDistance.setScaleFactor(2); // Slider is virtually 2 times larger, values were divided by 2
+    SliderUSDistance.setScaleFactor(DISTANCE_SLIDER_SCALE_FACTOR); // Slider is virtually 2 times larger, values were divided by 2
     SliderUSDistance.setBarThresholdColor(DISTANCE_TIMEOUT_COLOR);
 
     /*
@@ -458,9 +462,9 @@ void initRobotCarDisplay(void) {
     // Small IR distance slider with captions and without cm units
     SliderIRDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
             (BUTTON_WIDTH_10 / 2) - 2,
-            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
+            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR,
             FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
-    SliderIRDistance.setScaleFactor(2); // Slider is virtually 2 times larger, values were divided by 2
+    SliderIRDistance.setScaleFactor(DISTANCE_SLIDER_SCALE_FACTOR); // Slider is virtually 2 times larger, values were divided by 2
     SliderIRDistance.setBarThresholdColor(DISTANCE_TIMEOUT_COLOR);
     // Caption properties
     SliderIRDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW, 2, COLOR_BLACK,
@@ -484,8 +488,7 @@ void initRobotCarDisplay(void) {
 
 #ifdef CAR_HAS_TILT_SERVO
     SliderTilt.init(POS_X_TILT_SLIDER - BUTTON_WIDTH_12, SLIDER_TOP_MARGIN, BUTTON_WIDTH_12, LASER_SLIDER_SIZE, 90,
-    TILT_SERVO_MIN_VALUE, COLOR_YELLOW,
-    SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE, &doVerticalServoPosition);
+    TILT_SERVO_MIN_VALUE, COLOR_YELLOW, SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE, &doVerticalServoPosition);
     SliderTilt.setBarThresholdColor(COLOR_BLUE);
     // scale slider values
     SliderTilt.setScaleFactor(180.0 / LASER_SLIDER_SIZE); // Values from 0 to 180 degrees
@@ -547,7 +550,7 @@ void checkForLowVoltage() {
     }
     if (sLowVoltageCount > 2) {
         // Here more than 2 consecutive times (for 6 seconds) low voltage detected
-        RobotCarMotorControl.stopMotors();
+        startStopRobotCar(false);
 
         if (BlueDisplay1.isConnectionEstablished()) {
             drawCommonGui();
@@ -614,12 +617,12 @@ void printMotorValues() {
         BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_WHITE);
 
         tYPos += TEXT_SIZE_11;
-        sprintf_P(sStringBuffer, PSTR("min. %3d %3d"), RobotCarMotorControl.leftCarMotor.StartSpeed,
+        sprintf_P(sStringBuffer, PSTR("start%3d %3d"), RobotCarMotorControl.leftCarMotor.StartSpeed,
                 RobotCarMotorControl.rightCarMotor.StartSpeed);
         BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 
         tYPos += TEXT_SIZE_11;
-        sprintf_P(sStringBuffer, PSTR("max. %3d %3d"), RobotCarMotorControl.leftCarMotor.DriveSpeed,
+        sprintf_P(sStringBuffer, PSTR("drv. %3d %3d"), RobotCarMotorControl.leftCarMotor.DriveSpeed,
                 RobotCarMotorControl.rightCarMotor.DriveSpeed);
         BlueDisplay1.drawText(BUTTON_WIDTH_6 + 4, tYPos, sStringBuffer);
 #ifdef USE_ENCODER_MOTOR_CONTROL

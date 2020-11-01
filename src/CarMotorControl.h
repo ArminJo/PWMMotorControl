@@ -30,7 +30,8 @@
 #if ! defined(FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT)
 #define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  2 // Exact value is 1.86, but integer saves program space and time
 #endif
-// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm, Distance between two wheels is around 13 cm
+// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm
+// Distance between two wheels is around 14 cm -> 360 degree are 82 cm
 #define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.4277777
 #define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.8 // estimated, with slip
 
@@ -54,17 +55,19 @@ public:
 //    virtual ~CarMotorControl();
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    void init(bool aReadFromEeprom = false);
+    void init();
 #else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
-            uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, bool aReadFromEeprom = false);
-#endif
+            uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
+#endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
-    void setSpeedCompensation(int8_t aSpeedCompensationRight);
+    void changeSpeedCompensation(int8_t aSpeedCompensationRight);
     void setDriveSpeed(uint8_t aDriveSpeed);
-    void writeMotorvaluesToEeprom();
+
+    void writeMotorValuesToEeprom();
+    void readMotorValuesFromEeprom();
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
     void calibrate();
@@ -109,8 +112,12 @@ public:
      * Functions for rotation
      */
     void setFactorDegreeToCount(float aFactorDegreeToCount);
-    void startRotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = true);
-    void rotateCar(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    void startRotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed);
+#else
+    void startRotateCar(int aRotationDegrees, uint8_t aTurnDirection);
+#endif
+    void rotateCar(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
             void (*aLoopCallback)(void) = NULL);
     float FactorDegreeToCount;
 

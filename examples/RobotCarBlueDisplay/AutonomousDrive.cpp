@@ -26,9 +26,10 @@
 
 #include "RobotCar.h"
 #include "RobotCarGui.h"
+#include "Distance.h"
 
 #include "HCSR04.h"
-#include "Distance.h"
+#include "pitches.h"
 
 uint8_t sDriveMode = MODE_MANUAL_DRIVE; // one of MODE_MANUAL_DRIVE, MODE_AUTONOMOUS_DRIVE_BUILTIN, MODE_AUTONOMOUS_DRIVE_USER or MODE_FOLLOWER
 
@@ -145,7 +146,6 @@ void driveAutonomousOneStep() {
             } else {
                 // rotate and go
                 RobotCarMotorControl.rotateCar(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
-//                RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_FORWARD, true, &loopGUI);
                 // wait to really stop after turning
                 delay(100);
                 sLastDegreesTurned = sNextDegreesToTurn;
@@ -344,7 +344,6 @@ void driveFollowerModeOneStep() {
              * we had a pending turn
              */
             RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_FORWARD, true);
-            //RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_IN_PLACE, true);
             sNextDegreesToTurn = 0;
 
         } else {
@@ -401,11 +400,11 @@ unsigned int __attribute__((weak)) getDistanceAndPlayTone() {
     /*
      * Get distance; timeout is 1 meter
      */
-    unsigned int tCentimeter = getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM_FOLLOWER);
+    unsigned int tCentimeter = getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM_FOLLOWER, true);
     /*
      * play tone
      */
-    int tFrequency = map(tCentimeter, 0, 100, 100, 2000);
-    tone(PIN_BUZZER, tFrequency);
+    uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
+    tone(PIN_BUZZER, NoteC5ToC7Pentatonic[tIndex]);
     return tCentimeter;
 }

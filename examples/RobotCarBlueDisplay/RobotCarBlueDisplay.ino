@@ -43,8 +43,8 @@
  * Change this if you have reprogrammed the hc05 module for other baud rate
  ***************************************************************************/
 #ifndef BLUETOOTH_BAUD_RATE
-#define BLUETOOTH_BAUD_RATE BAUD_115200
-//#define BLUETOOTH_BAUD_RATE BAUD_9600
+//#define BLUETOOTH_BAUD_RATE BAUD_115200
+#define BLUETOOTH_BAUD_RATE BAUD_9600
 #endif
 
 #define VERSION_EXAMPLE "3.0"
@@ -148,17 +148,18 @@ void setup() {
 
     // initialize motors
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarMotorControl.init(true); // true -> read from EEPROM
+    RobotCarMotorControl.init();
 #else
-#  ifdef USE_ENCODER_MOTOR_CONTROL
     RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, true); // true -> read from EEPROM
-#  else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, false); // false -> do NOT read from EEPROM
-#  endif
+    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
 #endif
+
+#ifdef SUPPORT_EEPROM_STORAGE
+    RobotCarMotorControl.readMotorValuesFromEeprom();
+#endif
+
     RobotCarMotorControl.stopMotors(); // in case motors were running before
+    sRuningAutonomousDrive = false;
 
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized

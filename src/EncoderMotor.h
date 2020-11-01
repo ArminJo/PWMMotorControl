@@ -40,9 +40,9 @@ public:
 
     EncoderMotor();
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    void init(uint8_t aMotorNumber, bool aReadFromEeprom = false);
+    void init(uint8_t aMotorNumber);
 #else
-    void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aMotorNumber = 0);
+    void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
 #endif
 //    virtual ~EncoderMotor();
 
@@ -57,7 +57,7 @@ public:
     /*
      * Functions especially for encoder motors
      */
-    void synchronizeMotor(EncoderMotor * aOtherMotorControl, unsigned int aCheckInterval); // Computes motor speed compensation value in order to go exactly straight ahead
+    void synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned int aCheckInterval); // Computes motor speed compensation value in order to go exactly straight ahead
     static void calibrate(); // Generates a rising ramp and detects the first movement -> this sets StartSpeed / dead band
 
     /*

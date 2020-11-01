@@ -14,24 +14,24 @@ Available as Arduino library "PWMMotorControl"
 - The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**. 
 - To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed if you use the `setSpeedCompensation()` functions. For car control, only compensation of one motor is required.
 
-The motor is mainly controlled by 2 dimensions:
-1. Motor driver control / direction. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
-2. Speed / PWM which is ignored for BRAKE or RELEASE. Some functions allow a signed speed parameter, which incudes the direction as sign (positive -> FORWARD).
+#### The motor is mainly controlled by 2 dimensions:
+1. **Direction** / motor driver control. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
+2. **Speed** / PWM which is ignored for BRAKE or RELEASE. Some functions allow a signed speed parameter, which incudes the direction as sign (positive -> FORWARD).
 
-Basic commands are:
+#### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
 - `setSpeed(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeed(int Signed_Speed)`.
 - `setSpeedCompensation(uint8_t aSpeedCompensation)` and `setSpeedCompensated(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeedCompensated(int Signed_Speed)`.
 - `stop()` or `setSpeed(0)`.
 
-To go a specified distance (in 5mm/one encoder tick steps), use:
+#### To go a specified distance (in 5mm/one encoder tick steps), use:
 - `setDefaultsForFixedDistanceDriving()` to set minimal speed and maximal speed. Minimal speed is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
 Maximal speed is the PWM value to use for driving a fixed distance. For encoder equipped motors the software generates a ramp up from minimal to maximal at the start of the movement and a ramp down to stop.
 - `calibrate()` to automatically set minimal speed for encoder motors.
 - `initGoDistanceCount(uint8_t Unsigned_DistanceCount,uint8_tDirection)` or `setSpeed(intSigned_DistanceCount)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
 - `updateMotor()` - call this in your loop if you use the start* functions.
 
-2 wheel car with encoders, slot-type photo interrupter, 2 LiPo batteries, Adafruit Motor Shield V2, HC-05 Bluetooth module, and servo mounted head down.
+2 wheel car from LAVFIN with 2 LiPo batteries case, and IR receiver, wires not shortened.
 ![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Car_TopView_small.jpg)
 
 # Compile options / macros for this library
@@ -43,8 +43,8 @@ Some options which are enabed by default can be disabled by defining a *inhibit*
 |-|-|-|-|
 | `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
-| `USE_OWN_LIBRARY_FOR_`<br/>`ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Saves around 694 bytes program memory.<br/>Disable macro=`USE_STANDARD_LIBRARY_`<br/>`FOR_ADAFRUIT_MOTOR_SHIELD` |
-| `SUPPORT_RAMP_UP` | enabled | PWMDcMotor.h | Saves around 300 bytes program memory.<br/>Disable macro=`DO_NOT_SUPPORT_RAMP_UP` |
+| `USE_OWN_LIBRARY_FOR_`<br/>`ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Disable macro=`USE_STANDARD_LIBRARY_`<br/>`FOR_ADAFRUIT_MOTOR_SHIELD`.<br/>Disabling savesaves around 694 bytes program memory. |
+| `SUPPORT_RAMP_UP` | enabled | PWMDcMotor.h | Disable macro=`DO_NOT_SUPPORT_RAMP_UP`.<br/>Disabling saves around 300 bytes program memory. |
 
 # Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
@@ -56,14 +56,21 @@ These values are for a standard 2 WD car as can be seen on the pictures below.
 | `FACTOR_DEGREE_TO_COUNT_DEFAULT` | 0.4277777 for 2 wheel drive cars, 0.8 for 4 WD cars | CarMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
 
 # Other default values for this library
-These values are used by functions and the first 2 can be overwritten by set* functions.
+These values are used by functions and some can be overwritten by set* functions.
 | Macro | Default | File | Description |
 |-|-|-|-|
-| `DEFAULT_START_SPEED` | 45/150 for 7.4/6.0 volt supply | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
-| `DEFAULT_DRIVE_SPEED` | 80/255(max speed) for 7.4/6.0 volt supply | PWMDCMotor.h | The speed PWM value for going fixed distance. |
-| `DEFAULT_DISTANCE_TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
-| `RAMP_UP_UPDATE_INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
-| `RAMP_UP_UPDATE_INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
+| `VIN_2_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
+| `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | PWMDCMotor.h | The supply voltage used for the full bridge. |
+| `MOSFET_BRIDGE_USED` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 0. |
+| `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | PWMDCMotor.h | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
+| `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | PWMDCMotor.h | The effective voltage available for the motor. |
+| `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | PWMDCMotor.h | The DC Voltage at which the motor start to move / dead band voltage. |
+| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
+| `DEFAULT_START_SPEED` | `((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)` | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
+| `DEFAULT_DRIVE_SPEED` | `((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)` | PWMDCMotor.h | The speed PWM value for going fixed distance. |
+| `DEFAULT_DISTANCE_`<br/>`TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
+| `RAMP_UP_UPDATE_`<br/>`INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
+| `RAMP_UP_UPDATE_`<br/>`INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
 
 ### Modifying library properties with Arduino IDE
 First use *Sketch/Show Sketch Folder (Ctrl+K)*.<br/>
@@ -75,11 +82,22 @@ In both cases the library files itself are located in the `src` directory.<br/>
 If you are using Sloeber as your IDE, you can easily define global symbols with *Properties/Arduino/CompileOptions*.<br/>
 ![Sloeber settings](https://github.com/ArminJo/ServoEasing/blob/master/pictures/SloeberDefineSymbols.png)
 
+# Full bridges
+This library was tested with the bipolar full bridge IC L298 and the MOSFET IC MTB6612.
+![L298 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Board_small.jpg)
+![TB6612 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/TB6612Board_small.jpg)
+
+The L298 has a loss of around 2 volt, which the reason for the attached heat sink, the MTB6612 has almost no loss.
+
+# Internals
+- PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
+- PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
+
 # [Examples](tree/master/examples)
 
 ## Start
 **To check the default values of StartSpeed and DriveSpeed**. One motor starts with StartSpeed for one second, then runs 1 second with DriveSpeed.
-After stooping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
+After stopping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
 For the next loop, the direction is switched to backwards.
 
 ## Square
@@ -124,8 +142,8 @@ To customize the RobotCar example to cover different extensions, there are some 
 # Pictures
 Connection schematic of the L298 board for the examples. If motor drives in opposite direction, you must flip the motor to L298 connections.
 ![L298 connections](https://github.com/ArminJo/PWMMotorControl/blob/master/extras/L298_Connections_Steckplatine.png)
-Connections on the Arduino and on the L298 board.
-![Uno connections](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/UnoConnections_small.jpg)
+Connections on the Arduino and on the L298 board.<br/>
+![Sensor shield connections](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298CarConnections_small.jpg)
 ![L298 connections](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Connections_small.jpg)
 
 2 wheel car with encoders, slot-type photo interrupter, 2 LiPo batteries, Adafruit Motor Shield V2, HC-05 Bluetooth module, and servo mounted head down.
@@ -153,10 +171,10 @@ Automatic control page with detected wall at right
 - The tiny black bar is the rotation chosen by doCollisionDetection() function.
 
 # Revision History
-### Version 1.1.1
-- Improved examples
-
-### Version 1.1.0
+### Version 1.2.0 - work in progress
+- Support of off the shelf smart cars.
 - Added and renamed functions.
+
+### Version 1.0.0
 - Initial Arduino library version.
 

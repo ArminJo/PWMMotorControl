@@ -46,6 +46,7 @@ extern char sStringBuffer[128];
 #define US_SLIDER_SIZE          BUTTON_HEIGHT_4_LINE_3     // 128
 #define LASER_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
 #define DISTANCE_SLIDER_SIZE    (BUTTON_HEIGHT_4_LINE_3 - BUTTON_HEIGHT_8)  // 104
+#define DISTANCE_SLIDER_SCALE_FACTOR    2 // Slider is virtually 2 times larger, values were divided by 2
 
 #define US_DISTANCE_MAP_ORIGIN_X 200
 #define US_DISTANCE_MAP_ORIGIN_Y 150
@@ -120,8 +121,8 @@ extern BDButton TouchButtonMelody;
 extern bool sPlayMelody;
 #endif
 
-extern void doHorizontalServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue);
-extern void doVerticalServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue);
+extern void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
+extern void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
 
 void initHomePage(void);
 void drawHomePage(void);
@@ -146,6 +147,7 @@ extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
 void doRobotCarStartStop(BDButton * aTheTochedButton, int16_t aDoStart);
+void doReset(BDButton * aTheTochedButton, int16_t aValue);
 
 extern BDButton TouchButtonDirection;
 
@@ -155,7 +157,9 @@ void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue);
 #endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
+#ifdef SUPPORT_EEPROM_STORAGE
 extern BDButton TouchButtonCompensationStore;
+#endif
 
 extern BDSlider SliderSpeed;
 extern uint16_t sLastSpeedSliderValue;

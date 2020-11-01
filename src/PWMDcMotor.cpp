@@ -7,6 +7,9 @@
  * 1. Speed / PWM which is ignored for BRAKE or RELEASE. This library also accepts signed speed (including the direction as sign).
  * 2. Direction / MotorDriverMode. Can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
  *
+ * PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
+ * PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
+ *
  *  Created on: 12.05.2019
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -26,7 +29,7 @@
 
 #include "PWMDcMotor.h"
 
-bool PWMDcMotor::MotorValuesHaveChanged;        // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
+bool PWMDcMotor::MotorValuesHaveChanged; // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
 bool PWMDcMotor::SpeedOrMotorModeHasChanged;    // - for printing
 
 PWMDcMotor::PWMDcMotor() { // @suppress("Class members should be properly initialized")
@@ -68,8 +71,7 @@ Adafruit_MotorShield sAdafruitMotorShield = Adafruit_MotorShield();
  * aMotorNumber from 1 to 2
  * Currently motors 3 and 4 are not required/supported by own library for Adafruit Motor Shield
  */
-void PWMDcMotor::init(uint8_t aMotorNumber, bool aReadFromEeprom) {
-
+void PWMDcMotor::init(uint8_t aMotorNumber) {
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
     if (aMotorNumber == 1) {
         // Set PCA9685 channel numbers for Adafruit Motor Shield
@@ -101,22 +103,12 @@ void PWMDcMotor::init(uint8_t aMotorNumber, bool aReadFromEeprom) {
     sAdafruitMotorShield.begin();
 #  endif
 
-    if (!aReadFromEeprom) {
-        MotorValuesEepromStorageNumber = 0;
-    } else {
-        MotorValuesEepromStorageNumber = aMotorNumber;
-    }
-    // setDefaultsForFixedDistanceDriving() is called by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
-    readMotorValuesFromEeprom();
+    setDefaultsForFixedDistanceDriving();
     stop(DEFAULT_STOP_MODE);
 }
 
 #else // USE_ADAFRUIT_MOTOR_SHIELD
-/*
- * @param aMotorNumber if 0 do not read from EEPROM, otherwise block number
- */
-void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aMotorNumber) {
-    MotorValuesEepromStorageNumber = aMotorNumber;
+void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin) {
     ForwardPin = aForwardPin;
     BackwardPin = aBackwardPin;
     PWMPin = aPWMPin;
@@ -128,8 +120,6 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
 
     // set defaults
     setDefaultsForFixedDistanceDriving();
-
-    readMotorValuesFromEeprom(); // reads values only if MotorValuesEepromStorageNumber / aMotorNumber is != 0
     stop(DEFAULT_STOP_MODE);
 }
 
@@ -215,6 +205,8 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
  *  @brief  Control the DC Motor speed/throttle
  *  @param  speed The 8-bit PWM value, 0 is off, 255 is on forward -255 is on backward
  *  First set driver mode, then set PWM
+ *  PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
+ *  PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
  */
 void PWMDcMotor::setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection) {
     if (aSpeedRequested == 0) {
@@ -317,7 +309,7 @@ void PWMDcMotor::setStopMode(uint8_t aStopMode) {
  *****************************************************************************************/
 /*
  * StartSpeed (at which car starts to move) for 8 volt is appr. 35 to 40, for 4.3 volt (USB supply) is appr. 90 to 100
- * setDefaultsForFixedDistanceDriving() is called at init by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
+ * setDefaultsForFixedDistanceDriving() is called at init
  */
 void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
     StartSpeed = DEFAULT_START_SPEED;
@@ -526,42 +518,35 @@ bool PWMDcMotor::updateMotor() {
 /********************************************************************************************
  * EEPROM functions
  * Uses the start of EEPROM for storage of EepromMotorInfoStruct's for motor number 1 to n
- * setDefaultsForFixedDistanceDriving() is called by readMotorValuesFromEeprom() if MotorValuesEepromStorageNumber == 0
  ********************************************************************************************/
-void PWMDcMotor::readMotorValuesFromEeprom() {
-    if (MotorValuesEepromStorageNumber != 0) {
-        EepromMotorInfoStruct tEepromMotorInfo;
-        eeprom_read_block((void*) &tEepromMotorInfo, (void*) ((MotorValuesEepromStorageNumber - 1) * sizeof(EepromMotorInfoStruct)),
-                sizeof(EepromMotorInfoStruct));
+void PWMDcMotor::readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber) {
+    EepromMotorInfoStruct tEepromMotorInfo;
+    eeprom_read_block((void*) &tEepromMotorInfo, (void*) ((aMotorValuesEepromStorageNumber) * sizeof(EepromMotorInfoStruct)),
+            sizeof(EepromMotorInfoStruct));
 
-        /*
-         * Overwrite with values if valid
-         */
-        if (tEepromMotorInfo.StartSpeed < 150 && tEepromMotorInfo.StartSpeed > 20) {
-            StartSpeed = tEepromMotorInfo.StartSpeed;
-            if (tEepromMotorInfo.DriveSpeed > 40) {
-                DriveSpeed = tEepromMotorInfo.DriveSpeed;
-            }
-            if (tEepromMotorInfo.SpeedCompensation < 24) {
-                SpeedCompensation = tEepromMotorInfo.SpeedCompensation;
-            }
+    /*
+     * Overwrite with values if valid
+     */
+    if (tEepromMotorInfo.StartSpeed < 150 && tEepromMotorInfo.StartSpeed > 20) {
+        StartSpeed = tEepromMotorInfo.StartSpeed;
+        if (tEepromMotorInfo.DriveSpeed > 40) {
+            DriveSpeed = tEepromMotorInfo.DriveSpeed;
         }
-        MotorValuesHaveChanged = true;
-    } else {
-        setDefaultsForFixedDistanceDriving();
+        if (tEepromMotorInfo.SpeedCompensation < 24) {
+            SpeedCompensation = tEepromMotorInfo.SpeedCompensation;
+        }
     }
+    MotorValuesHaveChanged = true;
 }
 
-void PWMDcMotor::writeMotorvaluesToEeprom() {
-    if (MotorValuesEepromStorageNumber != 0) {
-        EepromMotorInfoStruct tEepromMotorInfo;
-        tEepromMotorInfo.StartSpeed = StartSpeed;
-        tEepromMotorInfo.DriveSpeed = DriveSpeed;
-        tEepromMotorInfo.SpeedCompensation = SpeedCompensation;
+void PWMDcMotor::writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber) {
+    EepromMotorInfoStruct tEepromMotorInfo;
+    tEepromMotorInfo.StartSpeed = StartSpeed;
+    tEepromMotorInfo.DriveSpeed = DriveSpeed;
+    tEepromMotorInfo.SpeedCompensation = SpeedCompensation;
 
-        eeprom_write_block((void*) &tEepromMotorInfo,
-                (void*) ((MotorValuesEepromStorageNumber - 1) * sizeof(EepromMotorInfoStruct)), sizeof(EepromMotorInfoStruct));
-    }
+    eeprom_write_block((void*) &tEepromMotorInfo, (void*) ((aMotorValuesEepromStorageNumber) * sizeof(EepromMotorInfoStruct)),
+            sizeof(EepromMotorInfoStruct));
 }
 
 //void PanicWithLed(unsigned int aDelay, uint8_t aCount) {

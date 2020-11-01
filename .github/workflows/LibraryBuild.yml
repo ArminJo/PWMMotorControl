@@ -49,7 +49,6 @@ jobs:
             build-properties: # the flags were put in compiler.cpp.extra_flags
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
-                -DUSE_STANDARD_SERIAL
                 -DUSE_US_SENSOR_1_PIN_MODE
                 -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
                 -DENABLE_MOTOR_LIST_FUNCTIONS

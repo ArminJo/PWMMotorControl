@@ -54,13 +54,13 @@ BDSlider SliderTilt;
 
 // Here we get values from 0 to 180 degrees from scaled slider
 #ifdef CAR_HAS_PAN_SERVO
-void doHorizontalServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue) {
+void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     PanServo.write(aValue);
 }
 #endif
 
 #ifdef CAR_HAS_TILT_SERVO
-void doVerticalServoPosition(BDSlider * aTheTouchedSlider, uint16_t aValue) {
+void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     TiltServo.write(aValue);
 }
 #endif
@@ -85,19 +85,19 @@ void doPlayMelody(BDButton * aTheTouchedButton, int16_t aValue) {
 
 void initHomePage(void) {
 
-    TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, F("Test"),
-    TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
+    TouchButtonBTSensorDrivePage.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED,
+            F("Sensor\nDrive"), TEXT_SIZE_18, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_BT_SENSOR_CONTROL, &GUISwitchPages);
 
-    TouchButtonAutomaticDrivePage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, F("Automatic\nControl"),
-    TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_AUTOMATIC_CONTROL, &GUISwitchPages);
+    TouchButtonAutomaticDrivePage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED,
+            F("Automatic\nControl"), TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_AUTOMATIC_CONTROL, &GUISwitchPages);
 
-    TouchButtonBTSensorDrivePage.init(BUTTON_WIDTH_3_POS_3,
+    TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_3,
     BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_RED,
-            F("Sensor drive"), TEXT_SIZE_12, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_BT_SENSOR_CONTROL, &GUISwitchPages);
+            F("Test"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
 
 #ifdef CAR_HAS_CAMERA
-    TouchButtonCameraOnOff.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_4,
-    TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Camera"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
+    TouchButtonCameraOnOff.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8,
+    TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Cam"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             false, &doCameraSupplyOnOff);
 #endif
 
@@ -127,8 +127,12 @@ void drawHomePage(void) {
 #else
     char tCarTypeString[] = "2WD";
 #endif
-
-    BlueDisplay1.drawText(HEADER_X + (3 * TEXT_SIZE_22_WIDTH), (3 * TEXT_SIZE_22_HEIGHT), tCarTypeString);
+#ifdef CAR_HAS_CAMERA
+    BlueDisplay1.drawText(HEADER_X + (2 * TEXT_SIZE_22_WIDTH), (2 * TEXT_SIZE_22_HEIGHT) + TEXT_SIZE_11_HEIGHT - 2, tCarTypeString,
+            TEXT_SIZE_11, COLOR_RED, COLOR_NO_BACKGROUND);
+#else
+    BlueDisplay1.drawText(HEADER_X + (2 * TEXT_SIZE_22_WIDTH), (3 * TEXT_SIZE_22_HEIGHT), tCarTypeString);
+#endif
 
     TouchButtonRobotCarStartStop.drawButton();
 #ifdef CAR_HAS_CAMERA
@@ -150,7 +154,9 @@ void drawHomePage(void) {
 #endif
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
+#ifdef SUPPORT_EEPROM_STORAGE
     TouchButtonCompensationStore.drawButton();
+#endif
 
     SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
     SliderUSPosition.drawSlider();
@@ -177,9 +183,12 @@ void drawHomePage(void) {
 }
 
 void startHomePage(void) {
-    TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_4);
+    TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5);
 #ifdef USE_ENCODER_MOTOR_CONTROL
-    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_4);
+    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
+#endif
+#ifdef CAR_HAS_TILT_SERVO
+    TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5);
 #endif
     drawHomePage();
 }
@@ -191,6 +200,9 @@ void stopHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_6);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
+#endif
+#ifdef CAR_HAS_TILT_SERVO
+    TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4);
 #endif
     startStopRobotCar(false);
 }

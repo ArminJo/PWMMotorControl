@@ -33,9 +33,9 @@ CarMotorControl::CarMotorControl() { // @suppress("Class members should be prope
 }
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-void CarMotorControl::init(bool aReadFromEeprom) {
-    leftCarMotor.init(1, aReadFromEeprom);
-    rightCarMotor.init(2, aReadFromEeprom);
+void CarMotorControl::init() {
+    leftCarMotor.init(1);
+    rightCarMotor.init(2);
 
 #if defined(CAR_HAS_4_WHEELS)
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT;
@@ -53,14 +53,9 @@ void CarMotorControl::init(bool aReadFromEeprom) {
 
 #else
 void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
-        uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, bool aReadFromEeprom) {
-    if (aReadFromEeprom) {
-        leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin, 1);
-        rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin, 2);
-    } else {
-        leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin);
-        rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
-    }
+        uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin) {
+    leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin);
+    rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
 
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_DEFAULT;
 
@@ -100,7 +95,7 @@ void CarMotorControl::setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint
  * @param aSpeedCompensationRight if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
  *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
-void CarMotorControl::setSpeedCompensation(int8_t aSpeedCompensationRight) {
+void CarMotorControl::changeSpeedCompensation(int8_t aSpeedCompensationRight) {
     if (aSpeedCompensationRight > 0) {
         if (leftCarMotor.SpeedCompensation >= aSpeedCompensationRight) {
             leftCarMotor.SpeedCompensation -= aSpeedCompensationRight;
@@ -177,9 +172,9 @@ void CarMotorControl::setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequ
 void CarMotorControl::setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection, int8_t aLeftRightSpeed) {
     checkAndHandleDirectionChange(aRequestedDirection);
 #ifdef USE_ENCODER_MOTOR_CONTROL
-    EncoderMotor * tMotorWithModifiedSpeed;
+    EncoderMotor *tMotorWithModifiedSpeed;
 #else
-    PWMDcMotor * tMotorWithModifiedSpeed;
+    PWMDcMotor *tMotorWithModifiedSpeed;
 #endif
     if (aLeftRightSpeed >= 0) {
         rightCarMotor.setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
@@ -217,9 +212,14 @@ uint8_t CarMotorControl::getCarDirectionOrBrakeMode() {
     return CarDirectionOrBrakeMode;;
 }
 
-void CarMotorControl::writeMotorvaluesToEeprom(){
-    rightCarMotor.writeMotorvaluesToEeprom();
-    leftCarMotor.writeMotorvaluesToEeprom();
+void CarMotorControl::readMotorValuesFromEeprom() {
+    leftCarMotor.readMotorValuesFromEeprom(0);
+    rightCarMotor.readMotorValuesFromEeprom(1);
+}
+
+void CarMotorControl::writeMotorValuesToEeprom() {
+    leftCarMotor.writeMotorValuesToEeprom(0);
+    rightCarMotor.writeMotorValuesToEeprom(1);
 }
 
 /*
@@ -445,7 +445,12 @@ void CarMotorControl::setFactorDegreeToCount(float aFactorDegreeToCount) {
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
  * @param  aUseSlowSpeed true -> use slower speed (1.5 times StartSpeed) instead of DriveSpeed for rotation to be more exact
  */
-void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed) {
+#ifdef USE_ENCODER_MOTOR_CONTROL
+void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed)
+#else
+void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirection)
+#endif
+        {
     int tDistanceCountRight;
     int tDistanceCountLeft;
     unsigned int tDistanceCount;
@@ -492,12 +497,13 @@ void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirectio
         }
     }
 
-    // This in turn sets CurrentDriveSpeed to DriveSpeed.
+    // This sets CurrentDriveSpeed to DriveSpeed.
     rightCarMotor.startGoDistanceCount(tDistanceCountRight, tTurnDirectionRightMotor);
     leftCarMotor.startGoDistanceCount(tDistanceCountLeft, tTurnDirectionLeftMotor);
+#ifdef USE_ENCODER_MOTOR_CONTROL
     if (aUseSlowSpeed) {
         // adjust CurrentDriveSpeed
-#if defined(SUPPORT_RAMP_UP)
+#  if defined(SUPPORT_RAMP_UP)
         // avoid overflow, the reduced speed is almost max speed then.
         if (rightCarMotor.StartSpeed < 160) {
             rightCarMotor.CurrentDriveSpeed = rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2;
@@ -505,7 +511,7 @@ void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirectio
         if (leftCarMotor.StartSpeed < 160) {
             leftCarMotor.CurrentDriveSpeed = leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2;
         }
-#else
+#  else
         if (tDistanceCountRight > 0) {
             rightCarMotor.setSpeedCompensated(rightCarMotor.StartSpeed + rightCarMotor.StartSpeed / 2,
                     rightCarMotor.CurrentDirectionOrBrakeMode);
@@ -514,19 +520,26 @@ void CarMotorControl::startRotateCar(int aRotationDegrees, uint8_t aTurnDirectio
             leftCarMotor.setSpeedCompensated(leftCarMotor.StartSpeed + leftCarMotor.StartSpeed / 2,
                     leftCarMotor.CurrentDirectionOrBrakeMode);
         }
-#endif
+#  endif
     }
+#endif
 }
 
 /**
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE (default)
  * @param  aUseSlowSpeed true (default) -> use slower speed (1.5 times StartSpeed) instead of DriveSpeed for rotation to be more exact
+ *         only sensible for encoder motors
  * @param  aLoopCallback avoid blocking and call aLoopCallback on waiting for stop
  */
 void CarMotorControl::rotateCar(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed, void (*aLoopCallback)(void)) {
     if (aRotationDegrees != 0) {
+#ifdef USE_ENCODER_MOTOR_CONTROL
         startRotateCar(aRotationDegrees, aTurnDirection, aUseSlowSpeed);
+#else
+        (void) aUseSlowSpeed;
+        startRotateCar(aRotationDegrees, aTurnDirection);
+#endif
         waitUntilCarStopped(aLoopCallback);
     }
 }
@@ -598,8 +611,6 @@ void CarMotorControl::calibrate() {
     /*
      * TODO calibrate StopSpeed separately
      */
-
-    writeMotorvaluesToEeprom();
     stopMotors();
 }
 

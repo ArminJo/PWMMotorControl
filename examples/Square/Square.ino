@@ -21,17 +21,23 @@
 #include <Arduino.h>
 #include "CarMotorControl.h"
 
+/*
+ * Speed compensation to enable driving straight ahead.
+ * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
+ * If negative, -value is subtracted from the left speed -> the car turns slightly left.
+ */
+#define SPEED_COMPENSATION_RIGHT    0
+
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
 /*
  * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
- * Pins 9 + 10 are already used for Servo
- * 2 + 3 are already used for encoder input
+ * 2 + 3 are reserved for encoder input
  */
 #define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
 #define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
 #define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
 #define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
@@ -62,7 +68,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0); // Set compensation to 0
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
     // set factor for converting distance to drive time
     RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR); // 300
 #if defined(CAR_HAS_4_WHEELS)
@@ -93,7 +99,7 @@ void loop() {
     /*
      * Turn car around and switch direction
      */
-    RobotCarMotorControl.rotateCar(180, TURN_IN_PLACE, true);
+    RobotCarMotorControl.rotateCar(180, TURN_IN_PLACE);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

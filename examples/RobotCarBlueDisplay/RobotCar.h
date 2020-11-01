@@ -49,6 +49,11 @@
  */
 // #define ENABLE_RTTTL
 //
+/*
+ * Activates the buttons to store compensation and drive speed
+ */
+//#define SUPPORT_EEPROM_STORAGE
+
 #include "CarMotorControl.h"
 extern CarMotorControl RobotCarMotorControl;
 
@@ -65,16 +70,16 @@ extern CarMotorControl RobotCarMotorControl;
  *   6  O   Left motor PWM / NC for UNO board   - connected to ENA
  *   7  O   Right motor back / NC for UNO board - connected to IN3
  *   8  O   Left motor fwd / NC for UNO board   - connected to IN2
- *   9  O   Servo US distance - Servo Nr. 2 on Adafruit Motor Shield
- *   10 O   Servo laser pan   - Servo Nr. 1 on Adafruit Motor Shield
- *   11 O   Servo laser tilt / Speaker for UNO board
- *   12 O   Left motor back / NC for UNO board  - connected to IN1
+ *   9  O   Left motor back / NC for UNO board  - connected to IN1
+ *   10 O   Servo US distance - Servo Nr. 2 on Adafruit Motor Shield
+ *   11 O   Servo laser pan
+ *   12 O   Servo laser tilt / Speaker for UNO board
  *   13 O   Laser power
  *
  *   A0 O   US trigger (and echo in 1 pin US sensor mode)
- *   A1 I   IR distance (needs 1 pin US sensor mode) / US echo
- *   A2 I   VIN/11, 1MOhm to VIN, 100kOhm to ground.
- *   A3 IP  NC
+ *   A1 I   US echo
+ *   A2 I   VIN/11, 1MOhm to VIN, 100kOhm to ground
+ *   A3 I   IR remote control signal in / IR distance
  *   A4 SDA NC for Nano / I2C for UNO board motor shield
  *   A5 SCL NC for Nano / I2C for UNO board motor shield
  *   A6 O   Speaker for Nano board / not available on UNO board
@@ -91,21 +96,20 @@ extern CarMotorControl RobotCarMotorControl;
 #define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
 #define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
 
-#define PIN_LEFT_MOTOR_FORWARD     12 // IN1 - Pin 9 is already reserved for distance servo
+#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
 #define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
-
 /*
  * Servo pins
  */
-#define PIN_DISTANCE_SERVO       9 // Servo Nr. 2 on Adafruit Motor Shield
+#define PIN_DISTANCE_SERVO      10 // Servo Nr. 1 on Adafruit Motor Shield
 #ifdef CAR_HAS_PAN_SERVO
-#define PIN_PAN_SERVO           10 // Servo Nr. 1 on Adafruit Motor Shield
+#define PIN_PAN_SERVO           11
 #endif
 #ifdef CAR_HAS_TILT_SERVO
-#define PIN_TILT_SERVO          11
+#define PIN_TILT_SERVO          12
 #endif
 
 #if defined(MONITOR_LIPO_VOLTAGE)
@@ -150,7 +154,7 @@ extern CarMotorControl RobotCarMotorControl;
 #  ifdef CAR_HAS_CAMERA
 #define PIN_CAMERA_SUPPLY_CONTROL  4
 #  endif
-#define PIN_BUZZER                11
+#define PIN_BUZZER                12
 #endif
 
 /**************************
@@ -179,7 +183,6 @@ extern Servo PanServo;
 #define TILT_SERVO_MIN_VALUE     7 // since lower values will make an insane sound at my pan tilt device
 extern Servo TiltServo;
 #endif
-
 
 /************************************************************************************
  * Definitions and declarations only used for GUI in RobotCarBlueDisplay.cpp example

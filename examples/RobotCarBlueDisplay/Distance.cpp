@@ -179,7 +179,7 @@ int scanForTarget() {
      */
     for (uint8_t i = 0; i < 3; ++i) {
         DistanceServoWriteAndDelay(tScanDegree, true);
-        tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_FOLLOWER);
+        tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_FOLLOWER, true);
 
         uint8_t tCurrentIndex;
         if (tDeltaDegree > 0) {
@@ -282,8 +282,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             // User sent an event -> stop and return now
             return true;
         }
-
-        unsigned int tCentimeter = getDistanceAsCentiMeter(false);
+        unsigned int tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
         if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimeterPerScanTimesTwo) {
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
@@ -337,7 +336,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
  * Negative means we are heading away from wall
  */
 uint8_t computeNeigbourValue(uint8_t aDegreesPerStepValue, uint8_t a2DegreesPerStepValue, uint8_t aClipValue,
-        int8_t * aDegreeOfEndpointConnectingLine) {
+        int8_t *aDegreeOfEndpointConnectingLine) {
 
     /*
      * Name of the variables are for DEGREES_PER_STEP = 20 only for better understanding.
@@ -443,7 +442,7 @@ void doWallDetection() {
              * i.e. put 20 degrees to 40 degrees parameter and vice versa in order to use the 0 degree value as the 60 degrees one
              */
             uint8_t tNextDistanceComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
-                    DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
+            DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
 #ifdef TRACE
             BlueDisplay1.debug("i=", i);
             BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
@@ -520,7 +519,7 @@ void doWallDetection() {
                  * Use computeNeigbourValue in the intended way, so do not change sign of tDegreeOfConnectingLine!
                  */
                 uint8_t tNextValueComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
-                        DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
+                DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
 #ifdef TRACE
                 BlueDisplay1.debug("i=", i);
                 BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
@@ -613,15 +612,19 @@ void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
         long tMillis = millis();
         if (sLastUSMeasurementMillis + aPeriodMillis < tMillis) {
             sLastUSMeasurementMillis = tMillis;
-            getDistanceAsCentiMeter(true);
+            getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM, false);
         }
     }
 }
 
 /*
  * Timeout is DISTANCE_TIMEOUT_CM (1 meter)
+ * aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
  */
-unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout) {
+unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout, bool aWaitForCurrentMeasurementToEnd) {
+#if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
+    (void) aWaitForCurrentMeasurementToEnd; // not used
+#endif
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
     if (sScanMode != SCAN_MODE_US) {
         sToFDistanceSensor.VL53L1X_StartRanging();
@@ -629,6 +632,9 @@ unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout) {
 #endif
 
     unsigned int tCentimeter = getUSDistanceAsCentiMeterWithCentimeterTimeout(aDistanceTimeout);
+    if (tCentimeter == 0) {
+        tCentimeter = aDistanceTimeout;
+    }
     if (doShow) {
         showUSDistance(tCentimeter);
     }
@@ -637,7 +643,7 @@ unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout) {
     if (sScanMode != SCAN_MODE_US) {
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
         if (sScanMode != SCAN_MODE_US) {
-            tIRCentimeter = getIRDistanceAsCentimeter();
+            tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
             if (doShow) {
                 showIRDistance(tIRCentimeter);
             }
@@ -672,8 +678,24 @@ unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout) {
 /*
  * The 1080 needs 39 ms for each measurement cycle
  */
-uint8_t getIRDistanceAsCentimeter() {
-    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR);
+uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
+    // check for voltage changed then a new measurement is started
+    if (aWaitForCurrentMeasurementToEnd) {
+        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+        uint32_t tStartMillis = millis();
+        do {
+            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+            if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
+                // assume, that voltage has changed because of the end of a measurement
+                break;
+            }
+            loopGUI();
+        } while (millis() - tStartMillis <= IR_SENSOR_MEASUREMENT_TIME_MILLIS);
+        // now a new measurement has started, wait for the result
+        delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
+    }
+
+    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
     // * 0.004887585 for 1023 = 5V
     // Model 1080 / GP2Y0A21YK0F
     return (29.988 * pow(tVolt * 0.004887585, -1.173)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp

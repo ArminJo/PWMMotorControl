@@ -23,8 +23,6 @@
 #include "RobotCar.h"
 #include "RobotCarGui.h"
 
-//#pragma GCC diagnostic ignored "-Wunused-parameter"
-
 // 4 Sliders for accelerometer
 BDSlider SliderForward;     // Y negative
 BDSlider SliderBackward;    // Y positive
@@ -38,11 +36,12 @@ BDSlider SliderLeft;        // X positive
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
 #define SLIDER_SPEED_THRESHOLD      DEFAULT_START_SPEED
+#define SPEED_SENSOR_DEAD_BAND      20
 #define SPEED_DEAD_BAND             (DEFAULT_START_SPEED / 2)
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
 #define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 4)
-#define LEFT_RIGHT_DEAD_BAND        4
+#define LEFT_RIGHT_SENSOR_DEAD_BAND 10
 
 #define SENSOR_SLIDER_CENTER_X      ((DISPLAY_WIDTH - SENSOR_SLIDER_WIDTH) / 2)
 #define SENSOR_SLIDER_CENTER_Y      ((DISPLAY_HEIGHT / 2) + (DISPLAY_HEIGHT / 16))
@@ -55,16 +54,76 @@ uint8_t sSensorChangeCallCountForZeroAdjustment;
 float sYZeroValueAdded; // The accumulator for the values of the first 8 calls.
 float sYZeroValue = 0;
 
-int sLastSpeedValue = 0;
-int sLastLeftRightValue = 0;
-
-uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeed) {
-    // overflow handling since analogWrite only accepts byte values
-    if (aSpeed > 0xFF) {
-        aSpeed = 0xFF;
+#if (VERSION_BLUE_DISPLAY_MAJOR <= 2) && (VERSION_BLUE_DISPLAY_MINOR <= 1)
+/*
+ * To show a signed value on two sliders positioned back to back (one of it is inverse or has a negative length value)
+ */
+struct positiveNegativeSlider {
+    BDSlider *positiveSliderPtr;
+    BDSlider *negativeSliderPtr;
+    int lastSliderValue;      // positive value with sensor dead band applied
+    BDSlider *lastZeroSlider; // to decide if we draw new zero slider
+};
+/*
+ * @return aValue with aSliderDeadBand applied
+ */
+int setPositiveNegativeSliders(struct positiveNegativeSlider *aSliderStructPtr, int aValue, uint8_t aSliderDeadBand) {
+    BDSlider *tValueSlider = aSliderStructPtr->positiveSliderPtr;
+    BDSlider *tZeroSlider = aSliderStructPtr->negativeSliderPtr;
+    if (aValue < 0) {
+        aValue = -aValue;
+        tValueSlider = tZeroSlider;
+        tZeroSlider = aSliderStructPtr->positiveSliderPtr;
     }
-    if (aSpeed <= SPEED_DEAD_BAND) {
-        aSpeed = 0;
+
+    /*
+     * Now we have a positive value for dead band and slider length
+     */
+    if (aValue > aSliderDeadBand) {
+        // dead band subtraction -> resulting values start at 0
+        aValue -= aSliderDeadBand;
+    } else {
+        aValue = 0;
+    }
+
+    /*
+     * Draw slider value if values changed
+     */
+    if (aSliderStructPtr->lastSliderValue != aValue) {
+        aSliderStructPtr->lastSliderValue = aValue;
+        tValueSlider->setValueAndDrawBar(aValue);
+        if (aSliderStructPtr->lastZeroSlider != tZeroSlider) {
+            aSliderStructPtr->lastZeroSlider = tZeroSlider;
+            // the sign has changed, clear old value
+            tZeroSlider->setValueAndDrawBar(0);
+        }
+    }
+
+    /*
+     * Restore sign for aValue with dead band applied
+     */
+    if (tZeroSlider == aSliderStructPtr->positiveSliderPtr) {
+        aValue = -aValue;
+    }
+    return aValue;
+}
+#endif
+
+struct positiveNegativeSlider sAccelerationLeftRightSliders;
+struct positiveNegativeSlider sAccelerationForwardBackwardSliders;
+
+int speedOverflowAndDeadBandHandling(int aSpeed) {
+    if (aSpeed > 0) {
+        aSpeed += SPEED_DEAD_BAND;
+        // overflow handling since analogWrite only accepts byte values
+        if (aSpeed > MAX_SPEED) {
+            aSpeed = MAX_SPEED;
+        }
+    } else if (aSpeed < 0) {
+        aSpeed -= SPEED_DEAD_BAND;
+        if (aSpeed < -MAX_SPEED) {
+            aSpeed = -MAX_SPEED;
+        }
     }
     return aSpeed;
 }
@@ -80,6 +139,8 @@ uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeed) {
  * negative -> right down
  */
 void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallbackInfo) {
+    (void) aSensorType; // to avoid -Wunused-parameter
+
     if (sSensorChangeCallCountForZeroAdjustment < CALLS_FOR_ZERO_ADJUSTMENT) {
         if (sSensorChangeCallCountForZeroAdjustment == 0) {
             // init values
@@ -95,69 +156,32 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallback
         sYZeroValue = sYZeroValueAdded / CALLS_FOR_ZERO_ADJUSTMENT;
         BlueDisplay1.playTone(24); // feedback for zero value acquired
     } else {
+
         /*
          * regular operation here
          * left right handling
          */
-        // Scale value
-        int tLeftRightValue = aSensorCallbackInfo->ValueX * 8.0;
-
-        BDSlider * tValueSlider = &SliderLeft;
-        BDSlider * tZeroSlider = &SliderRight;
-        if (tLeftRightValue < 0) {
-            tLeftRightValue = -tLeftRightValue;
-            tValueSlider = &SliderRight;
-            tZeroSlider = &SliderLeft;
-        }
-        if (tLeftRightValue > LEFT_RIGHT_DEAD_BAND) {
-            // dead band subtraction
-            tLeftRightValue -= LEFT_RIGHT_DEAD_BAND;
-        } else {
-            tLeftRightValue = 0;
-        }
-
-        if (sLastLeftRightValue != tLeftRightValue) {
-            sLastLeftRightValue = tLeftRightValue;
-
-            tValueSlider->setValueAndDrawBar(tLeftRightValue);
-            tZeroSlider->setValueAndDrawBar(0);
-        }
-
-        /*
-         * restore sign for speed setting below
-         */
-        if (tZeroSlider == &SliderLeft) {
-            tLeftRightValue = -tLeftRightValue;
-        }
+#ifdef CAR_HAS_4_WHEELS
+        int tLeftRightValue = aSensorCallbackInfo->ValueX * 12.0;
+#else
+        int tLeftRightValue = aSensorCallbackInfo->ValueX * 8.0; // Scale value
+#endif
+        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, LEFT_RIGHT_SENSOR_DEAD_BAND);
 
         /*
          * forward backward handling
          */
-        int tSpeedValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED / 7));
-        if (sLastSpeedValue != tSpeedValue) {
-            sLastSpeedValue = tSpeedValue;
-            if (tSpeedValue >= 0) {
-                // Forward
-                tSpeedValue = speedOverflowAndDeadBandHandling(tSpeedValue);
+        int tSpeedValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED / 10)); // Scale value
+        tSpeedValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedValue, SPEED_SENSOR_DEAD_BAND);
 
-                RobotCarMotorControl.setSpeedCompensated(tSpeedValue, DIRECTION_FORWARD, tLeftRightValue);
-                SliderBackward.setValueAndDrawBar(0);
-                SliderForward.setValueAndDrawBar(tSpeedValue);
+        /*
+         * Print speed as value of bottom slider
+         */
+        sprintf(sStringBuffer, "%4d", tSpeedValue);
+        SliderBackward.printValue(sStringBuffer);
 
-            } else {
-                // Backward
-                tSpeedValue = speedOverflowAndDeadBandHandling(-tSpeedValue);
-
-                RobotCarMotorControl.setSpeedCompensated(tSpeedValue, DIRECTION_BACKWARD, tLeftRightValue);
-                SliderForward.setValueAndDrawBar(0);
-                SliderBackward.setValueAndDrawBar(tSpeedValue);
-            }
-            /*
-             * Print speed as value of bottom slider
-             */
-            sprintf(sStringBuffer, "%3d", tSpeedValue);
-            SliderBackward.printValue(sStringBuffer);
-        }
+        RobotCarMotorControl.rightCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue + tLeftRightValue));
+        RobotCarMotorControl.leftCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue - tLeftRightValue));
     }
 }
 
@@ -178,6 +202,8 @@ void initBTSensorDrivePage(void) {
 //    SliderBackward.setBarThresholdColor(SLIDER_THRESHOLD_COLOR);
     SliderForward.setScaleFactor((float) MAX_SPEED / (float) VERTICAL_SLIDER_LENTGH);
     SliderBackward.setScaleFactor((float) MAX_SPEED / (float) VERTICAL_SLIDER_LENTGH);
+    sAccelerationForwardBackwardSliders.positiveSliderPtr = &SliderForward;
+    sAccelerationForwardBackwardSliders.negativeSliderPtr = &SliderBackward;
 
 // Position slider right from  at middle of screen
     SliderRight.init(SENSOR_SLIDER_CENTER_X + SENSOR_SLIDER_WIDTH, SENSOR_SLIDER_CENTER_Y - (SENSOR_SLIDER_WIDTH / 2),
@@ -192,6 +218,8 @@ void initBTSensorDrivePage(void) {
 //    SliderLeft.setBarThresholdColor(SLIDER_THRESHOLD_COLOR);
     SliderRight.setScaleFactor(1.2);
     SliderLeft.setScaleFactor(1.2);
+    sAccelerationLeftRightSliders.positiveSliderPtr = &SliderLeft;
+    sAccelerationLeftRightSliders.negativeSliderPtr = &SliderRight;
 }
 
 void drawBTSensorDrivePage(void) {
@@ -207,6 +235,7 @@ void drawBTSensorDrivePage(void) {
 }
 
 void startBTSensorDrivePage(void) {
+    doReset(NULL, 0);
     drawBTSensorDrivePage();
 }
 

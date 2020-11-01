@@ -1,10 +1,13 @@
 /*
  * PWMDCMotor.h
  *
- * Motor control has 2 technical dimensions
- * 1. Motor driver control / direction. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened)
- *    or RELEASE (motor connections are high impedance).
- * 2. Speed / PWM which is ignored for BRAKE or RELEASE.
+ * Motor control has 2 parameters:
+ * 1. Speed / PWM which is ignored for BRAKE or RELEASE. This library also accepts signed speed (including the direction as sign).
+ * 2. Direction / MotorDriverMode. Can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
+ *
+ * PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
+ * PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
+
  *
  *  Created on: 12.05.2019
  *  Copyright (C) 2019-2020  Armin Joachimsmeyer
@@ -39,8 +42,8 @@
 //#define USE_ENCODER_MOTOR_CONTROL
 //
 /*
- * Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.
- * This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
+ * Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+ * This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
  * For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6.
  */
 //#define USE_ADAFRUIT_MOTOR_SHIELD
@@ -72,44 +75,49 @@
 #define DEFAULT_COUNTS_PER_FULL_ROTATION    40
 #define DEFAULT_MILLIMETER_PER_COUNT         5
 
+#ifdef SUPPORT_RAMP_UP
+#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 180 // constant value for the for the formula below
+#else
 #define DEFAULT_MOTOR_START_UP_TIME_MILLIS 150 // constant value for the for the formula below
-/*
+#endif/*
  * DEFAULT_DISTANCE_TO_TIME_FACTOR is the factor used to convert distance in 5mm steps to motor on time in milliseconds. I depends on motor supply voltage.
  * Currently formula is:
  * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed));
- *
- * DEFAULT_START_SPEED is the speed PWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 3,6 volt (USB supply) is appr. 70 to 100
  */
-#define DEFAULT_START_SPEED_7_4_VOLT                 45
-#define DEFAULT_DRIVE_SPEED_7_4_VOLT                 80
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT    135 // for 2 x LIPO batteries (7.4 volt).
 
-#define DEFAULT_START_SPEED_6_VOLT                  140
-#define DEFAULT_DRIVE_SPEED_6_VOLT                  220
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT      300 // for 4 x AA batteries (6 volt).
+#if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
+#  if defined(VIN_2_LIPO)
+#define FULL_BRIDGE_INPUT_MILLIVOLT         7500 // for 2 x LIPO batteries (7.4 volt).
+#  else
+#define FULL_BRIDGE_INPUT_MILLIVOLT         6000 // for 4 x AA batteries (6 volt).
+#  endif
+#endif
+
+#if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
+#  if defined(MOSFET_BRIDGE_USED)
+#define FULL_BRIDGE_LOSS_MILLIVOLT             0
+#  else
+#define FULL_BRIDGE_LOSS_MILLIVOLT          2000 // Voltage loss for bipolar full bridges like L298
+#  endif
+#endif
+
+#if !defined(FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define FULL_BRIDGE_OUTPUT_MILLIVOLT        (FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)
+#endif
+
+#define DEFAULT_START_MILLIVOLT             1100 // Start voltage -motors start to turn- is 1.1 volt
+#define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage is 2.0 volt
 
 // Default values - used if EEPROM values are invalid
-#if defined(VIN_2_LIPO)
-#  if !defined(DEFAULT_START_SPEED)
-#define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_7_4_VOLT
-#  endif
-#  if !defined(DEFAULT_DRIVE_SPEED)
-#define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_7_4_VOLT
-#  endif
-#  if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_7_4_VOLT
-#  endif
-
-#else
-#  if !defined(DEFAULT_START_SPEED)
-#define DEFAULT_START_SPEED                 DEFAULT_START_SPEED_6_VOLT
-#  endif
-#  if !defined(DEFAULT_DRIVE_SPEED)
-#define DEFAULT_DRIVE_SPEED                 DEFAULT_DRIVE_SPEED_6_VOLT
-#  endif
-#  if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR     DEFAULT_DISTANCE_TO_TIME_FACTOR_6_VOLT
-#  endif
+#if !defined(DEFAULT_START_SPEED)
+// DEFAULT_START_SPEED is the speed PWM value at which motor starts to move.
+#define DEFAULT_START_SPEED                 ((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#endif
+#if !defined(DEFAULT_DRIVE_SPEED)
+#define DEFAULT_DRIVE_SPEED                 ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#endif
+#if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
+#define DEFAULT_DISTANCE_TO_TIME_FACTOR     120
 #endif
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
@@ -130,16 +138,16 @@
 #include <Wire.h>
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 // some PCA9685 specific constants
-#define PCA9685_GENERAL_CALL_ADDRESS 0x00
-#define PCA9685_SOFTWARE_RESET      6
-#define PCA9685_DEFAULT_ADDRESS     0x40
-#define PCA9685_MAX_CHANNELS        16 // 16 PWM channels on each PCA9685 expansion module
-#define PCA9685_MODE1_REGISTER      0x0
-#define PCA9685_MODE_1_RESTART        7
-#define PCA9685_MODE_1_AUTOINCREMENT  5
-#define PCA9685_MODE_1_SLEEP          4
-#define PCA9685_FIRST_PWM_REGISTER  0x06
-#define PCA9685_PRESCALE_REGISTER   0xFE
+#define PCA9685_GENERAL_CALL_ADDRESS  0x00
+#define PCA9685_SOFTWARE_RESET          6
+#define PCA9685_DEFAULT_ADDRESS      0x40
+#define PCA9685_MAX_CHANNELS           16 // 16 PWM channels on each PCA9685 expansion module
+#define PCA9685_MODE1_REGISTER       0x00
+#define PCA9685_MODE_1_RESTART          7
+#define PCA9685_MODE_1_AUTOINCREMENT    5
+#define PCA9685_MODE_1_SLEEP            4
+#define PCA9685_FIRST_PWM_REGISTER   0x06
+#define PCA9685_PRESCALE_REGISTER    0xFE
 
 #define PCA9685_PRESCALER_FOR_1600_HZ ((25000000L /(4096L * 1600))-1) // = 3 at 1600 Hz
 
@@ -157,12 +165,13 @@ struct EepromMotorInfoStruct {
 };
 
 /*
- * For ramp control
+ * Ramp control
+ * Ramp up speed in 16 steps every 16 millis from from StartSpeed to CurrentDriveSpeed.
  */
 #define MOTOR_STATE_STOPPED     0
 #define MOTOR_STATE_START       1
 #define MOTOR_STATE_RAMP_UP     2
-#define MOTOR_STATE_DRIVE_SPEED  3
+#define MOTOR_STATE_DRIVE_SPEED 3
 #define MOTOR_STATE_RAMP_DOWN   4
 
 #ifdef SUPPORT_RAMP_UP
@@ -176,7 +185,7 @@ public:
     PWMDcMotor();
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    void init(uint8_t aMotorNumber, bool aReadFromEeprom = false);
+    void init(uint8_t aMotorNumber);
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
     /*
      * Own internal functions for communicating with the PCA9685 Expander IC on the Adafruit motor shield
@@ -185,10 +194,10 @@ public:
     void I2CSetPWM(uint8_t aPin, uint16_t aOn, uint16_t aOff);
     void I2CSetPin(uint8_t aPin, bool aSetToOn);
 #  else
-    Adafruit_DCMotor * Adafruit_MotorShield_DcMotor;
+    Adafruit_DCMotor *Adafruit_MotorShield_DcMotor;
 #  endif
 #else
-    void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aMotorNumber = 0);
+    void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
 #endif
 
     /*
@@ -235,8 +244,8 @@ public:
     /*
      * EEPROM functions to read and store control values (DriveSpeed, SpeedCompensation)
      */
-    void readMotorValuesFromEeprom();
-    void writeMotorvaluesToEeprom();
+    void readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber);
+    void writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber);
 
     /*
      * Internal functions
@@ -250,9 +259,8 @@ public:
     uint8_t BackwardPin;
 #endif
 
-    int8_t MotorValuesEepromStorageNumber; // number of EEPROM EepromMotorInfoStruct block address for one PWMDcMotor. 0 means no corresponding EEPROM block. Set by init.
     /**********************************
-     * Start of EEPROM values
+     * Start of values for EEPROM
      *********************************/
     /*
      * Minimum speed setting at which motor starts moving. Depend on current voltage, load and surface.
