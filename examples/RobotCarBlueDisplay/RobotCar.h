@@ -101,6 +101,11 @@ extern CarMotorControl RobotCarMotorControl;
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
+#ifdef USE_ENCODER_MOTOR_CONTROL
+#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
+#define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
+#endif
+
 /*
  * Servo pins
  */

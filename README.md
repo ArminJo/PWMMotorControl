@@ -33,6 +33,10 @@ Maximal speed is the PWM value to use for driving a fixed distance. For encoder 
 
 2 wheel car from LAVFIN with 2 LiPo batteries case, and IR receiver, wires not shortened.
 ![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Car_TopView_small.jpg)
+Diagram of PWM, velocity and encoder count for USB 5 volt supply and a Mosfet bridge.
+![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/PWM_Speed_5Volt.jpg)
+Diagram of PWM, velocity and encoder count for 2 LiPo (7.5 volt) supply and a Mosfet bridge.
+![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/PWM_Speed_2LiPos.png)
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>

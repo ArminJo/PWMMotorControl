@@ -69,11 +69,11 @@
 #define MAX_SPEED   255
 
 /*
- * This values are chosen to be compatible with 20 slot encoder discs, giving 20 on and 20 off counts per full rotation.
- * At a circumference of around 20 cm (21.5 cm actual) this gives 5 mm per count.
+ * This values are chosen to be compatible with 20 slot encoder discs.
+ * At a circumference of around 21.5 cm this gives 11 mm per count.
  */
-#define DEFAULT_COUNTS_PER_FULL_ROTATION    40
-#define DEFAULT_MILLIMETER_PER_COUNT         5
+#define DEFAULT_COUNTS_PER_FULL_ROTATION    20
+#define DEFAULT_CIRCUMFERENCE_MILLIMETER   215
 
 #ifdef SUPPORT_RAMP_UP
 #define DEFAULT_MOTOR_START_UP_TIME_MILLIS 180 // constant value for the for the formula below

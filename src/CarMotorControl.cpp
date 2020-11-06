@@ -26,32 +26,29 @@
 
 //#define DEBUG // Only for development
 
-CarMotorControl * sCarMotorControlPointerForISR;
-
 CarMotorControl::CarMotorControl() { // @suppress("Class members should be properly initialized")
-    sCarMotorControlPointerForISR = this;
 }
 
+/*
+ * If no parameter and we have encoder motors, we use a fixed assignment of rightCarMotor interrupts to INT0 / Pin2 and leftCarMotor to INT1 / Pin3
+ */
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
 void CarMotorControl::init() {
     leftCarMotor.init(1);
     rightCarMotor.init(2);
+#  ifdef USE_ENCODER_MOTOR_CONTROL
+    leftCarMotor.init(1, INT1);
+    rightCarMotor.init(2, INT0);
+#  endif
 
 #if defined(CAR_HAS_4_WHEELS)
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT;
 #else
     FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT;
 #endif
-
-#  ifdef USE_ENCODER_MOTOR_CONTROL
-    /*
-     * For slot type optocoupler interrupts on pin PD2 + PD3
-     */
-    EncoderMotor::enableINT0AndINT1Interrupts();
-#  endif
 }
 
-#else
+#else // USE_ADAFRUIT_MOTOR_SHIELD
 void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
         uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin) {
     leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin);
@@ -63,9 +60,24 @@ void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBac
     /*
      * For slot type optocoupler interrupts on pin PD2 + PD3
      */
-    EncoderMotor::enableINT0AndINT1Interrupts();
+    rightCarMotor.attachInterrupt(INT0);
+    leftCarMotor.attachInterrupt(INT1);
 #  endif
 }
+
+#  ifdef USE_ENCODER_MOTOR_CONTROL
+/*
+ * With parameters aRightInterruptNumber + aLeftInterruptNumber
+ */
+void CarMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
+        uint8_t aRightInterruptNumber, uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin,
+        uint8_t aLeftInterruptNumber) {
+    leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin, aLeftInterruptNumber);
+    rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin, aRightInterruptNumber);
+
+    FactorDegreeToCount = FACTOR_DEGREE_TO_COUNT_DEFAULT;
+}
+#  endif
 #endif
 
 /*
@@ -612,15 +624,5 @@ void CarMotorControl::calibrate() {
      * TODO calibrate StopSpeed separately
      */
     stopMotors();
-}
-
-// ISR for PIN PD2 / RIGHT
-ISR(INT0_vect) {
-    sCarMotorControlPointerForISR->rightCarMotor.handleEncoderInterrupt();
-}
-
-// ISR for PIN PD3 / LEFT
-ISR(INT1_vect) {
-    sCarMotorControlPointerForISR->leftCarMotor.handleEncoderInterrupt();
 }
 #endif // USE_ENCODER_MOTOR_CONTROL

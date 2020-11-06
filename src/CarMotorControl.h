@@ -28,12 +28,17 @@
  * Some factors depending on wheel diameter and encoder resolution
  */
 #if ! defined(FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT)
-#define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  2 // Exact value is 1.86, but integer saves program space and time
+// Exact value is 215 mm / 20 but integer saves program space and time
+#define FACTOR_MILLIMETER_TO_COUNT_INTEGER_DEFAULT  (DEFAULT_CIRCUMFERENCE_MILLIMETER / DEFAULT_COUNTS_PER_FULL_ROTATION) // = 21
+#define FACTOR_CENTIMETER_TO_COUNT_INTEGER_DEFAULT  (FACTOR_MILLIMETER_TO_COUNT_INTEGER_DEFAULT / 10) // = 2
 #endif
-// Values for 20 slot encoder discs -> 40 ticks per turn. Circumference of the wheel is 21.5 cm
-// Distance between two wheels is around 14 cm -> 360 degree are 82 cm
-#define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.4277777
-#define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.8 // estimated, with slip
+/*
+ * Values for 20 slot encoder discs. Circumference of the wheel is 21.5 cm
+ * Distance between two wheels is around 14 cm -> 360 degree are 82 cm
+ * 360 degree are (82 / 21.5) * 20 counts
+ */
+#define FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT      0.2118863
+#define FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT      0.4 // estimated, with slip
 
 #if ! defined(FACTOR_DEGREE_TO_COUNT_DEFAULT)
 #  if defined(CAR_HAS_4_WHEELS)
@@ -59,6 +64,8 @@ public:
 #else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
             uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
+    void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aRightInterruptNumber,
+            uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, uint8_t aLeftInterruptNumber);
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
@@ -159,9 +166,6 @@ public:
     PWMDcMotor leftCarMotor;
 #endif
 };
-
-// Pointer to the last and only! instance for use by ISR
-extern CarMotorControl * sCarMotorControlPointerForISR;
 
 #endif /* CARMOTORCONTROL_H_ */
 

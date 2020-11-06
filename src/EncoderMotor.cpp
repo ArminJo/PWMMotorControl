@@ -29,7 +29,10 @@
 #include <Arduino.h>
 #include "EncoderMotor.h"
 
-volatile bool EncoderMotor::EncoderTickCounterHasChanged;
+volatile bool EncoderMotor::EncoderCountHasChanged;
+
+EncoderMotor * sPointerForInt0ISR;
+EncoderMotor * sPointerForInt1ISR;
 
 EncoderMotor::EncoderMotor() : // @suppress("Class members should be properly initialized")
         PWMDcMotor() {
@@ -56,14 +59,30 @@ EncoderMotor::EncoderMotor() : // @suppress("Class members should be properly in
 }
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
+/*
+ * aMotorNumber from 1 to 2
+ * If no parameter, we use a fixed assignment of rightCarMotor interrupts to INT0 / Pin2 and leftCarMotor to INT1 / Pin3
+ * Currently motors 3 and 4 are not required/supported by own library for Adafruit Motor Shield
+ */
 void EncoderMotor::init(uint8_t aMotorNumber) {
     PWMDcMotor::init(aMotorNumber);  // create with the default frequency 1.6KHz
     resetControlValues();
+}
+void EncoderMotor::init(uint8_t aMotorNumber, uint8_t aInterruptNumber) {
+    PWMDcMotor::init(aMotorNumber);  // create with the default frequency 1.6KHz
+    resetControlValues();
+    attachInterrupt(aInterruptNumber);
 }
 #else
 void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin) {
     PWMDcMotor::init(aForwardPin, aBackwardPin, aPWMPin);
     resetControlValues();
+}
+
+void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aInterruptNumber) {
+    PWMDcMotor::init(aForwardPin, aBackwardPin, aPWMPin);
+    resetControlValues();
+    attachInterrupt(aInterruptNumber);
 }
 #endif
 
@@ -96,8 +115,8 @@ void EncoderMotor::startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aR
         MotorRampState = MOTOR_STATE_DRIVE_SPEED;
         uint8_t tDistanceCountForRampDown = DistanceCountAfterRampUp;
         // guarantee minimal ramp down length
-        if (tDistanceCountForRampDown < 3 && TargetDistanceCount > 6) {
-            tDistanceCountForRampDown = 3;
+        if (tDistanceCountForRampDown < 2 && TargetDistanceCount > 3) {
+            tDistanceCountForRampDown = 2;
         }
         NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
 #endif
@@ -144,7 +163,7 @@ bool EncoderMotor::updateMotor() {
         NextRampChangeMillis = tMillis + RAMP_UP_UPDATE_INTERVAL_MILLIS;
         NextChangeMaxTargetCount = TargetDistanceCount / 2;
         // initialize for timeout detection
-        EncoderTickLastMillis = tMillis - ENCODER_SENSOR_MASK_MILLIS - 1;
+        LastEncoderInterruptMicros = tMillis - ENCODER_SENSOR_RING_MICROS - 1;
 
         RampDelta = RAMP_UP_VALUE_DELTA; // 16 steps a 16 millis for ramp up => 256 milliseconds
         if (RampDelta < 2) {
@@ -237,7 +256,7 @@ bool EncoderMotor::updateMotor() {
      */
     if (CurrentSpeed > 0) {
         if (MotorMovesFixedDistance
-                && (EncoderCount >= TargetDistanceCount || tMillis > (EncoderTickLastMillis + ENCODER_TICKS_TIMEOUT_MILLIS))) {
+                && (EncoderCount >= TargetDistanceCount || tMillis > (LastEncoderInterruptMicros + ENCODER_TICKS_TIMEOUT_MILLIS))) {
 #ifdef SUPPORT_RAMP_UP
             DebugSpeedAtTargetCountReached = CurrentSpeed;
             MotorRampState = MOTOR_STATE_STOPPED;
@@ -322,35 +341,122 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
  * Reset all control values as distances, debug values etc. to 0x00
  */
 void EncoderMotor::resetControlValues() {
-    memset(reinterpret_cast<uint8_t*>(&CurrentVelocity), 0,
-            (((uint8_t *) &Debug) + sizeof(Debug)) - reinterpret_cast<uint8_t*>(&CurrentVelocity));
+    memset(reinterpret_cast<uint8_t*>(&TargetDistanceCount), 0,
+            (((uint8_t *) &Debug) + sizeof(Debug)) - reinterpret_cast<uint8_t*>(&TargetDistanceCount));
 // to force display of initial values
-    EncoderTickCounterHasChanged = true;
+    EncoderCountHasChanged = true;
 }
 
 /***************************************************
  * Encoder functions
  ***************************************************/
-void EncoderMotor::handleEncoderInterrupt() {
-    long tMillis = millis();
-    unsigned int tDeltaMillis = tMillis - EncoderTickLastMillis;
-    if (tDeltaMillis <= ENCODER_SENSOR_MASK_MILLIS) {
-// signal is ringing
-        CurrentVelocity = 99;
+/*
+ * Attaches INT0 or INT1 interrupt to this EncoderMotor
+ * Interrupt is enabled on rising edges
+ * We can not use both edges since the on and off times of the opto interrupter are too different
+ * aInterruptNumber can be one of INT0 (at pin D2) or INT1 (at pin D3) for Atmega328
+ */
+void EncoderMotor::attachInterrupt(uint8_t aInterruptNumber) {
+    if (aInterruptNumber > 1) {
+        return;
+    }
+
+    if (aInterruptNumber == 0) {
+        sPointerForInt0ISR = this;
+// interrupt on any logical change
+        EICRA |= (_BV(ISC00) | _BV(ISC01));
+// clear interrupt bit
+        EIFR |= _BV(INTF0);
+// enable interrupt on next change
+        EIMSK |= _BV(INT0);
     } else {
-        EncoderTickLastMillis = tMillis;
-        EncoderCount++;
-        LastRideEncoderCount++;
-        CurrentVelocity = VELOCITY_SCALE_VALUE / tDeltaMillis;
-        EncoderTickCounterHasChanged = true;
+        sPointerForInt1ISR = this;
+        EICRA |= (_BV(ISC10) | _BV(ISC11));
+        EIFR |= _BV(INTF1);
+        EIMSK |= _BV(INT1);
     }
 }
 
-// The code for the interrupt is placed at the calling class since we need a fixed relation between ISR and EncoderMotor
-// //ISR for PIN PD2 / RIGHT
-// ISR(INT0_vect) {
-//    myCar.rightMotorControl.handleEncoderInterrupt();
-// }
+/*
+ *
+ */
+int EncoderMotor::getVelocity() {
+    unsigned long tEncoderInterruptDeltaMicros = EncoderInterruptDeltaMicros;
+    if (tEncoderInterruptDeltaMicros == 0) {
+        return 0;
+    }
+    if (CurrentDirectionOrBrakeMode == DIRECTION_BACKWARD) {
+        return (-(VELOCITY_SCALE_VALUE / tEncoderInterruptDeltaMicros));
+    } else {
+        return (VELOCITY_SCALE_VALUE / tEncoderInterruptDeltaMicros);
+    }
+}
+
+#ifdef SUPPORT_AVERAGE_VELOCITY
+int EncoderMotor::getAverageVelocity() {
+    if (!AverageVelocityIsValid) {
+        return 0;
+    }
+    int8_t tMicrosArrayIndex = MicrosArrayIndex;
+    // tMicrosArrayIndex points to the next value to write == the oldest value to overwrite
+    unsigned long tOldestEncoderInterruptMicros = EncoderInterruptMicrosArray[tMicrosArrayIndex];
+
+    // get index of current value
+    tMicrosArrayIndex--;
+    if (tMicrosArrayIndex < 0) {
+        // wrap around
+        tMicrosArrayIndex = (sizeof(EncoderInterruptMicrosArray) / sizeof(EncoderInterruptMicrosArray[0])) - 1;
+    }
+    unsigned long tAverageVelocity = (VELOCITY_SCALE_VALUE * 10) / (EncoderInterruptMicrosArray[tMicrosArrayIndex] - tOldestEncoderInterruptMicros);
+    if (CurrentDirectionOrBrakeMode == DIRECTION_BACKWARD) {
+        return -tAverageVelocity;
+    } else {
+        return tAverageVelocity;
+    }
+}
+#endif
+
+void EncoderMotor::handleEncoderInterrupt() {
+    long tMicros = micros();
+    unsigned long tDeltaMicros = tMicros - LastEncoderInterruptMicros;
+    if (tDeltaMicros <= ENCODER_SENSOR_RING_MICROS) {
+        // assume signal is ringing and do nothing
+    } else {
+        LastEncoderInterruptMicros = tMicros;
+#ifdef SUPPORT_AVERAGE_VELOCITY
+        uint8_t tMicrosArrayIndex = MicrosArrayIndex;
+        EncoderInterruptMicrosArray[tMicrosArrayIndex++] = tMicros;
+        if (tMicrosArrayIndex >= sizeof(EncoderInterruptMicrosArray) / sizeof(EncoderInterruptMicrosArray[0])) {
+            tMicrosArrayIndex = 0;
+            AverageVelocityIsValid = true;
+        }
+        MicrosArrayIndex = tMicrosArrayIndex;
+#endif
+        if (tDeltaMicros < ENCODER_SENSOR_TIMEOUT_MICROS) {
+            EncoderInterruptDeltaMicros = tDeltaMicros;
+        } else {
+            // timeout
+            EncoderInterruptDeltaMicros = 0;
+#ifdef SUPPORT_AVERAGE_VELOCITY
+            MicrosArrayIndex = 0;
+            AverageVelocityIsValid = false;
+#endif
+        }
+        EncoderCount++;
+        LastRideEncoderCount++;
+        EncoderCountHasChanged = true;
+    }
+}
+
+// ISR for PIN PD2 / RIGHT
+ISR(INT0_vect) {
+    sPointerForInt0ISR->handleEncoderInterrupt();
+}
+
+// ISR for PIN PD3 / LEFT
+ISR(INT1_vect) {
+    sPointerForInt1ISR->handleEncoderInterrupt();
+}
 
 /******************************************************************************************
  * Static methods
@@ -358,37 +464,14 @@ void EncoderMotor::handleEncoderInterrupt() {
 /*
  * Enable both interrupts INT0/D2 or INT1/D3
  */
-void EncoderMotor::enableINT0AndINT1Interrupts() {
+void EncoderMotor::enableINT0AndINT1InterruptsOnRisingEdge() {
 
 // interrupt on any logical change
-    EICRA |= (_BV(ISC00) | _BV(ISC10));
+    EICRA |= (_BV(ISC00) | _BV(ISC01) | _BV(ISC10) | _BV(ISC11));
 // clear interrupt bit
     EIFR |= (_BV(INTF0) | _BV(INTF1));
 // enable interrupt on next change
     EIMSK |= (_BV(INT0) | _BV(INT1));
-}
-
-/*
- * Enable only one interrupt
- * aIntPinNumber can be one of INT0/D2 or INT1/D3 for Atmega328
- */
-void EncoderMotor::enableInterruptOnBothEdges(uint8_t aIntPinNumber) {
-    if (aIntPinNumber > 1) {
-        return;
-    }
-
-    if (aIntPinNumber == 0) {
-// interrupt on any logical change
-        EICRA |= (_BV(ISC00));
-// clear interrupt bit
-        EIFR |= _BV(INTF0);
-// enable interrupt on next change
-        EIMSK |= _BV(INT0);
-    } else {
-        EICRA |= (_BV(ISC10));
-        EIFR |= _BV(INTF1);
-        EIMSK |= _BV(INT1);
-    }
 }
 
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS

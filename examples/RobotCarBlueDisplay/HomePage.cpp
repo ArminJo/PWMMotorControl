@@ -187,7 +187,7 @@ void startHomePage(void) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5);
 #endif
     drawHomePage();
@@ -201,7 +201,7 @@ void stopHomePage(void) {
 #ifdef USE_ENCODER_MOTOR_CONTROL
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4);
 #endif
     startStopRobotCar(false);

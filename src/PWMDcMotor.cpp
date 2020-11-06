@@ -379,6 +379,7 @@ void PWMDcMotor::startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aReq
 //        PanicWithLed(400, 22);
 //    }
     if (aRequestedDistanceCount == 0) {
+        stop(DefaultStopMode); // In case motor was running
         return;
     }
 

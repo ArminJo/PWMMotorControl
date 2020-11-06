@@ -69,8 +69,10 @@ void setup() {
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
+#if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR); // 300
+    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+#endif
 #if defined(CAR_HAS_4_WHEELS)
     RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT);
 #else

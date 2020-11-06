@@ -49,6 +49,11 @@
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
+#ifdef USE_ENCODER_MOTOR_CONTROL
+#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
+#define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
+#endif
+
 #define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield
 
 #define PIN_BUZZER                 12
@@ -60,6 +65,8 @@
 CarMotorControl RobotCarMotorControl;
 
 Servo DistanceServo;
+
+void simpleObjectAvoidance();
 
 /*
  * Start of robot car control program
@@ -73,16 +80,23 @@ void setup() {
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     RobotCarMotorControl.init();
 #else
+#  ifdef USE_ENCODER_MOTOR_CONTROL
+    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
+    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
+#  else
     RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
+#  endif
 #endif
 
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
+#if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR); // 300
+    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+#endif
 
     /*
      * Set US servo to forward position
@@ -101,11 +115,21 @@ void setup() {
     DistanceServo.write(90);
     delay(2000);
 
-    RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_FORWARD);
 }
 
 void loop() {
 
+    RobotCarMotorControl.goDistanceCentimeter(20, DIRECTION_FORWARD);
+    delay(2000);
+    /*
+     * Try to turn by 90 degree.
+     */
+    RobotCarMotorControl.rotateCar(90, DIRECTION_FORWARD);
+    delay(2000);
+
+}
+
+void simpleObjectAvoidance() {
     /*
      * Drive until distance too low, then stop, go back, turn random amount and drive again.
      */

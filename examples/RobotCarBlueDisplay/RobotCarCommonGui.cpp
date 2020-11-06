@@ -125,8 +125,8 @@ void loopGUI(void) {
                 /*
                  * Print changed tick values
                  */
-                if (EncoderMotor::EncoderTickCounterHasChanged) {
-                    EncoderMotor::EncoderTickCounterHasChanged = false;
+                if (EncoderMotor::EncoderCountHasChanged) {
+                    EncoderMotor::EncoderCountHasChanged = false;
                     printMotorDistanceValues();
                 }
 #endif
@@ -247,8 +247,8 @@ void displayVelocitySliderValues() {
     BDSlider *tSliderPtr = &SliderSpeedLeft;
     uint16_t tXPos = 0;
     for (int i = 0; i < 2; ++i) {
-        if (EncoderMotor::EncoderTickCounterHasChanged) {
-            tSliderPtr->setValueAndDrawBar(tMotorInfo->CurrentVelocity);
+        if (EncoderMotor::EncoderCountHasChanged) {
+            tSliderPtr->setValueAndDrawBar(tMotorInfo->getVelocity());
         }
         tMotorInfo = &RobotCarMotorControl.rightCarMotor;
         tSliderPtr = &SliderSpeedRight;

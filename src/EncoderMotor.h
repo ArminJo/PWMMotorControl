@@ -22,18 +22,20 @@
 #include "PWMDcMotor.h"
 #include <stdint.h>
 
+#define SUPPORT_AVERAGE_VELOCITY
+
 // maybe useful especially for more than 2 motors
 //#define ENABLE_MOTOR_LIST_FUNCTIONS
 
 /*
- * Encoders generate 110 Hz at max speed => 8 ms per period
- * since duty cycle of encoder disk impulse is 1/3 choose 3 millis as ringing mask.
- * 3 ms means 2.1 to 3.0 ms depending on the Arduino ms trigger.
+ * Encoders generate 10 Hz at min speed and 110 Hz at max speed => 100 to 8 ms per period
  */
-#define ENCODER_SENSOR_MASK_MILLIS 3
-#define VELOCITY_SCALE_VALUE 500 // for computing of CurrentVelocity
+#define ENCODER_SENSOR_TIMEOUT_MICROS 200000L
+#define ENCODER_SENSOR_RING_MICROS 4000
+
+#define VELOCITY_SCALE_VALUE 2000000L // for computing of CurrentVelocity
 // Timeout for encoder ticks if motor is running
-#define ENCODER_TICKS_TIMEOUT_MILLIS 500
+#define ENCODER_TICKS_TIMEOUT_MILLIS 200
 
 class EncoderMotor: public PWMDcMotor {
 public:
@@ -41,8 +43,10 @@ public:
     EncoderMotor();
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     void init(uint8_t aMotorNumber);
+    void init(uint8_t aMotorNumber, uint8_t aInterruptNumber);
 #else
     void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
+    void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aInterruptNumber);
 #endif
 //    virtual ~EncoderMotor();
 
@@ -64,8 +68,13 @@ public:
      * Encoder interrupt handling
      */
     void handleEncoderInterrupt();
-    static void enableINT0AndINT1Interrupts();
-    static void enableInterruptOnBothEdges(uint8_t aIntPinNumber);
+    void attachInterrupt(uint8_t aInterruptPinNumber);
+    static void enableINT0AndINT1InterruptsOnRisingEdge();
+
+    int getVelocity();
+#ifdef SUPPORT_AVERAGE_VELOCITY
+    int getAverageVelocity();
+#endif
 
     void resetControlValues(); // Shutdown and reset all control values and sets direction to forward
 
@@ -95,19 +104,14 @@ public:
     EncoderMotor * NextMotorControl;
 #endif
 
-    /*
-     * Flags for display update control
-     */
-    volatile static bool EncoderTickCounterHasChanged;
+
 
     /**********************************************************
      * Variables required for going a fixed distance
      **********************************************************/
     /*
-     * Reset() resets all members from CurrentVelocity to (including) Debug to 0
+     * Reset() resets all members from TargetDistanceCount to (including) Debug to 0
      */
-    int CurrentVelocity; // VELOCITY_SCALE_VALUE / tDeltaMillis
-
     unsigned int TargetDistanceCount;
     unsigned int LastTargetDistanceCount;
 
@@ -116,8 +120,18 @@ public:
      */
     volatile unsigned int EncoderCount;
     volatile unsigned int LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
+    // Flag e.g. for display update control
+    volatile static bool EncoderCountHasChanged;
     // The next value is volatile, but volatile increases the code size by 20 bites without any logical improvement
-    unsigned long EncoderTickLastMillis; // used for debouncing and lock/timeout detection
+    unsigned long LastEncoderInterruptMicros; // used internal for debouncing and lock/timeout detection
+    volatile unsigned long EncoderInterruptDeltaMicros; // Used to get velocity which is 1/EncoderInterruptDeltaMicros
+#ifdef SUPPORT_AVERAGE_VELOCITY
+    volatile unsigned long EncoderInterruptMicrosArray[11]; // store for 10 deltas
+    volatile uint8_t MicrosArrayIndex; // Index of the next value to write  == the oldest value to overwrite
+    volatile bool AverageVelocityIsValid; // true if 11 values are written since last timeout
+#endif
+
+
 
 #ifdef SUPPORT_RAMP_UP
     /*
@@ -135,6 +149,9 @@ public:
     unsigned int Debug;
 
 };
+
+extern EncoderMotor * sPointerForInt0ISR;
+extern EncoderMotor * sPointerForInt1ISR;
 
 #endif /* SRC_ENCODERMOTORCONTROL_H_ */
 

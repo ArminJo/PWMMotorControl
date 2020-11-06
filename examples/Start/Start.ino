@@ -63,9 +63,12 @@ void setup() {
      */
     leftMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0); // Set compensation to 0
     rightMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0);
+
+    #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set Factor for 2 LIPOS
     leftMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
     rightMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+#endif
 
     Serial.print(F("Start speed="));
     Serial.print(rightMotor.StartSpeed);
