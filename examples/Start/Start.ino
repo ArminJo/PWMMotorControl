@@ -7,6 +7,11 @@
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -64,12 +69,6 @@ void setup() {
     leftMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0); // Set compensation to 0
     rightMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0);
 
-    #if ! defined(USE_ENCODER_MOTOR_CONTROL)
-    // set Factor for 2 LIPOS
-    leftMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
-    rightMotor.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
-#endif
-
     Serial.print(F("Start speed="));
     Serial.print(rightMotor.StartSpeed);
     Serial.print(F(", drive speed="));
@@ -100,7 +99,7 @@ void loop() {
     /*
      * Try to go a whole turn (21.5 cm for my wheels)
      */
-    rightMotor.goDistanceCount(DEFAULT_COUNTS_PER_FULL_ROTATION, sMotorDirection);
+    rightMotor.goDistanceCount(ENCODER_COUNTS_PER_FULL_ROTATION, sMotorDirection);
     delay(2000);
 
     /*
@@ -112,7 +111,7 @@ void loop() {
     delay(1000);
     leftMotor.stop();
     delay(1000);
-    leftMotor.goDistanceCount(DEFAULT_COUNTS_PER_FULL_ROTATION, sMotorDirection);
+    leftMotor.goDistanceCount(ENCODER_COUNTS_PER_FULL_ROTATION, sMotorDirection);
 
     /*
      * switch direction

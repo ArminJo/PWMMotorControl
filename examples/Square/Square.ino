@@ -8,6 +8,11 @@
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -69,16 +74,15 @@ void setup() {
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
-#if ! defined(USE_ENCODER_MOTOR_CONTROL)
-    // set factor for converting distance to drive time
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
-#endif
 #if defined(CAR_HAS_4_WHEELS)
     RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT);
 #else
     RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT);
 #endif
-    delay(2000);
+    // Print info
+    PWMDcMotor::printSettings(&Serial);
+
+    delay(5000);
 }
 
 void loop() {
@@ -95,13 +99,14 @@ void loop() {
         /*
          * Try to turn by 90 degree.
          */
-        RobotCarMotorControl.rotateCar(90, sMotorDirection);
+        RobotCarMotorControl.rotate(90, sMotorDirection, true);
+        delay(400);
     }
 
     /*
      * Turn car around and switch direction
      */
-    RobotCarMotorControl.rotateCar(180, TURN_IN_PLACE);
+    RobotCarMotorControl.rotate(180, TURN_IN_PLACE);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

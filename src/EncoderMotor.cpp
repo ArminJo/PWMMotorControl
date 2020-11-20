@@ -11,11 +11,16 @@
  *
  *  Tested for Adafruit Motor Shield and plain TB6612 breakout board.
  *
- *  Created on: 16.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Created on: 12.05.2019
+ *  Copyright (C) 2019-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
+ *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -66,22 +71,22 @@ EncoderMotor::EncoderMotor() : // @suppress("Class members should be properly in
  */
 void EncoderMotor::init(uint8_t aMotorNumber) {
     PWMDcMotor::init(aMotorNumber);  // create with the default frequency 1.6KHz
-    resetControlValues();
+    resetEncoderControlValues();
 }
 void EncoderMotor::init(uint8_t aMotorNumber, uint8_t aInterruptNumber) {
     PWMDcMotor::init(aMotorNumber);  // create with the default frequency 1.6KHz
-    resetControlValues();
+    resetEncoderControlValues();
     attachInterrupt(aInterruptNumber);
 }
 #else
 void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin) {
     PWMDcMotor::init(aForwardPin, aBackwardPin, aPWMPin);
-    resetControlValues();
+    resetEncoderControlValues();
 }
 
 void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aInterruptNumber) {
     PWMDcMotor::init(aForwardPin, aBackwardPin, aPWMPin);
-    resetControlValues();
+    resetEncoderControlValues();
     attachInterrupt(aInterruptNumber);
 }
 #endif
@@ -91,34 +96,33 @@ void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMP
  */
 void EncoderMotor::startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount,
         uint8_t aRequestedDirection) {
-//    if (aRequestedDistanceCount > DEFAULT_COUNTS_PER_FULL_ROTATION * 10) {
-//        PanicWithLed(400, 22);
-//    }
     if (aRequestedDistanceCount == 0) {
+        stop(DefaultStopMode); // In case motor was running
         return;
     }
     if (CurrentSpeed == 0) {
-        TargetDistanceCount = aRequestedDistanceCount;
 #ifdef SUPPORT_RAMP_UP
-        MotorRampState = MOTOR_STATE_START;  // This in turn resets EncoderCount etc. at first call of updateMotor()
-        CurrentDriveSpeed = aRequestedSpeed;
-        setMotorDriverMode(aRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
+        startRampUp(aRequestedSpeed, aRequestedDirection);
 #else
         setSpeedCompensated(aRequestedSpeed, aRequestedDirection);
 #endif
+        TargetDistanceCount = aRequestedDistanceCount;
     } else {
         TargetDistanceCount = EncoderCount + aRequestedDistanceCount;
-        /*
-         * prolong NextChangeMaxTargetCount for the new distance
-         */
 #ifdef SUPPORT_RAMP_UP
-        MotorRampState = MOTOR_STATE_DRIVE_SPEED;
-        uint8_t tDistanceCountForRampDown = DistanceCountAfterRampUp;
-        // guarantee minimal ramp down length
-        if (tDistanceCountForRampDown < 2 && TargetDistanceCount > 3) {
-            tDistanceCountForRampDown = 2;
+        if (MotorRampState == MOTOR_STATE_DRIVE_SPEED) {
+            /*
+             * prolong NextChangeMaxTargetCount for the new distance
+             */
+            MotorRampState = MOTOR_STATE_DRIVE_SPEED;
+            uint8_t tDistanceCountForRampDown = DistanceCountAfterRampUp;
+            // guarantee minimal ramp down length
+            if (tDistanceCountForRampDown < 2 && TargetDistanceCount > 3) {
+                tDistanceCountForRampDown = 2;
+            }
+            NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
         }
-        NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
+        // else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
 #endif
         PWMDcMotor::setSpeed(aRequestedSpeed, aRequestedDirection);
     }
@@ -154,46 +158,41 @@ bool EncoderMotor::updateMotor() {
     if (MotorRampState == MOTOR_STATE_START) {
         //  --> RAMP_UP
         MotorRampState = MOTOR_STATE_RAMP_UP;
-        LastRideEncoderCount = 0;
-        EncoderCount = 0;
+        /*
+         * Set ramp values
+         */
+        NextRampChangeMillis = tMillis + RAMP_UP_INTERVAL_MILLIS;
         /*
          * Start motor
          */
-        tNewSpeed = StartSpeed;
-        NextRampChangeMillis = tMillis + RAMP_UP_UPDATE_INTERVAL_MILLIS;
-        NextChangeMaxTargetCount = TargetDistanceCount / 2;
-        // initialize for timeout detection
-        LastEncoderInterruptMicros = tMillis - ENCODER_SENSOR_RING_MICROS - 1;
+        tNewSpeed = StartSpeed; // start immediately with StartSpeed
 
-        RampDelta = RAMP_UP_VALUE_DELTA; // 16 steps a 16 millis for ramp up => 256 milliseconds
-        if (RampDelta < 2) {
-            RampDelta = 2;
-        }
+        /*
+         * Init Encoder values
+         */
+        LastRideEncoderCount = 0;
+        EncoderCount = 0;
         DebugCount = 0;
         Debug = 0;
+        NextChangeMaxTargetCount = TargetDistanceCount / 2;
+        // initialize for timeout detection
+        LastEncoderInterruptMillis = tMillis - ENCODER_SENSOR_RING_MILLIS - 1;
     }
 
     // do not use else if since state can be changed in code before
     if (MotorRampState == MOTOR_STATE_RAMP_UP) {
         /*
-         * Increase motor speed RAMP_UP_UPDATE_INTERVAL_STEPS (16) times every RAMP_UP_UPDATE_INTERVAL_MILLIS (16) milliseconds
+         * Increase motor speed RAMP_UP_UPDATE_INTERVAL_STEPS times every RAMP_UP_INTERVAL_MILLIS milliseconds
          * or until more than half of distance is done
-         * Distance required for ramp is 0 to 10 or more, increasing with increasing CurrentDriveSpeed
          */
         if (tMillis >= NextRampChangeMillis) {
-            NextRampChangeMillis += RAMP_UP_UPDATE_INTERVAL_MILLIS;
-            tNewSpeed = tNewSpeed + RampDelta;
-            // Clip value and check for 8 bit overflow
-            if (tNewSpeed > CurrentDriveSpeed || tNewSpeed <= RampDelta) {
-                tNewSpeed = CurrentDriveSpeed;
-            }
-
+            NextRampChangeMillis += RAMP_UP_INTERVAL_MILLIS;
             /*
              * Transition criteria is:
-             * Max Speed reached or more than half of distance is done
+             * Drive Speed reached or more than half of distance is done
              */
             if (tNewSpeed == CurrentDriveSpeed || (MotorMovesFixedDistance && EncoderCount >= NextChangeMaxTargetCount)) {
-                //  --> DRIVE_SPEED
+                //  CurrentDriveSpeed reached switch to --> DRIVE_SPEED
                 MotorRampState = MOTOR_STATE_DRIVE_SPEED;
 
                 DistanceCountAfterRampUp = EncoderCount;
@@ -203,6 +202,13 @@ bool EncoderMotor::updateMotor() {
                     tDistanceCountForRampDown = 3;
                 }
                 NextChangeMaxTargetCount = TargetDistanceCount - tDistanceCountForRampDown;
+
+            } else {
+                tNewSpeed = tNewSpeed + RampDelta;
+                // Clip value and check for 8 bit overflow
+                if (tNewSpeed > CurrentDriveSpeed || tNewSpeed <= RampDelta) {
+                    tNewSpeed = CurrentDriveSpeed;
+                }
             }
         }
     }
@@ -246,27 +252,37 @@ bool EncoderMotor::updateMotor() {
     }
     // End of motor state machine
 
+#  ifdef TRACE
+        Serial.print(F("St="));
+        Serial.println(MotorRampState);
+#  endif
     if (tNewSpeed != CurrentSpeed) {
+#  ifdef TRACE
+        Serial.print(F("Ns="));
+        Serial.println(tNewSpeed);
+#  endif
         PWMDcMotor::setSpeed(tNewSpeed, CurrentDirectionOrBrakeMode);
     }
-#endif
+#endif // SUPPORT_RAMP_UP
 
     /*
      * Check if target count is reached or encoder tick timeout
      */
     if (CurrentSpeed > 0) {
         if (MotorMovesFixedDistance
-                && (EncoderCount >= TargetDistanceCount || tMillis > (LastEncoderInterruptMicros + ENCODER_TICKS_TIMEOUT_MILLIS))) {
+                && (EncoderCount >= TargetDistanceCount || tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS))) {
 #ifdef SUPPORT_RAMP_UP
             DebugSpeedAtTargetCountReached = CurrentSpeed;
-            MotorRampState = MOTOR_STATE_STOPPED;
 #endif
-            stop(MOTOR_BRAKE);
-            return false;
+            stop(MOTOR_BRAKE); // this sets MOTOR_STATE_STOPPED;
+#ifdef DEBUG
+            Serial.println(F("Reached"));
+#endif
+            return false; // need no more calls to update()
         }
+        return true; // still running
     }
-
-    return true;
+    return false; // current speed == 0
 }
 
 /*
@@ -274,7 +290,7 @@ bool EncoderMotor::updateMotor() {
  * Compensate only at forward direction
  */
 void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned int aCheckInterval) {
-    if (CurrentDirectionOrBrakeMode != DIRECTION_FORWARD) {
+    if (CurrentDirectionOrBrakeMode != DIRECTION_FORWARD || aOtherMotorControl->CurrentDirectionOrBrakeMode != DIRECTION_FORWARD) {
         return;
     }
     static long sNextMotorSyncMillis;
@@ -340,7 +356,7 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
 /*
  * Reset all control values as distances, debug values etc. to 0x00
  */
-void EncoderMotor::resetControlValues() {
+void EncoderMotor::resetEncoderControlValues() {
     memset(reinterpret_cast<uint8_t*>(&TargetDistanceCount), 0,
             (((uint8_t *) &Debug) + sizeof(Debug)) - reinterpret_cast<uint8_t*>(&TargetDistanceCount));
 // to force display of initial values
@@ -377,71 +393,108 @@ void EncoderMotor::attachInterrupt(uint8_t aInterruptNumber) {
     }
 }
 
+void EncoderMotor::resetSpeedValues() {
+#ifdef SUPPORT_AVERAGE_SPEED
+    memset((void *) &EncoderInterruptDeltaMillis, 0,
+            ((uint8_t *) &AverageSpeedIsValid + sizeof(AverageSpeedIsValid)) - (uint8_t *) &EncoderInterruptDeltaMillis);
+#else
+    EncoderInterruptDeltaMillis = 0;
+#endif
+}
+
 /*
- *
+ * Speed is in rpm for a 20 slot encoder disc
  */
-int EncoderMotor::getVelocity() {
-    unsigned long tEncoderInterruptDeltaMicros = EncoderInterruptDeltaMicros;
-    if (tEncoderInterruptDeltaMicros == 0) {
+int EncoderMotor::getSpeed() {
+    /*
+     * First check for timeout
+     */
+    if (millis() - LastEncoderInterruptMillis > ENCODER_SENSOR_TIMEOUT_MILLIS) {
+        resetSpeedValues();
+    }
+    unsigned long tEncoderInterruptDeltaMillis = EncoderInterruptDeltaMillis;
+    if (tEncoderInterruptDeltaMillis == 0) {
         return 0;
     }
     if (CurrentDirectionOrBrakeMode == DIRECTION_BACKWARD) {
-        return (-(VELOCITY_SCALE_VALUE / tEncoderInterruptDeltaMicros));
+        return (-(SPEED_SCALE_VALUE / tEncoderInterruptDeltaMillis));
     } else {
-        return (VELOCITY_SCALE_VALUE / tEncoderInterruptDeltaMicros);
+        return (SPEED_SCALE_VALUE / tEncoderInterruptDeltaMillis);
     }
 }
 
-#ifdef SUPPORT_AVERAGE_VELOCITY
-int EncoderMotor::getAverageVelocity() {
-    if (!AverageVelocityIsValid) {
-        return 0;
-    }
-    int8_t tMicrosArrayIndex = MicrosArrayIndex;
-    // tMicrosArrayIndex points to the next value to write == the oldest value to overwrite
-    unsigned long tOldestEncoderInterruptMicros = EncoderInterruptMicrosArray[tMicrosArrayIndex];
-
-    // get index of current value
-    tMicrosArrayIndex--;
-    if (tMicrosArrayIndex < 0) {
-        // wrap around
-        tMicrosArrayIndex = (sizeof(EncoderInterruptMicrosArray) / sizeof(EncoderInterruptMicrosArray[0])) - 1;
-    }
-    unsigned long tAverageVelocity = (VELOCITY_SCALE_VALUE * 10) / (EncoderInterruptMicrosArray[tMicrosArrayIndex] - tOldestEncoderInterruptMicros);
-    if (CurrentDirectionOrBrakeMode == DIRECTION_BACKWARD) {
-        return -tAverageVelocity;
+#ifdef SUPPORT_AVERAGE_SPEED
+/*
+ * Speed is in rpm for a 20 slot encoder disc
+ * Average is computed over the full revolution to compensate for unequal distances of the laser cut encoder discs.
+ */
+int EncoderMotor::getAverageSpeed() {
+    int tAverageSpeed = 0;
+    /*
+     * First check for timeout
+     */
+    if (millis() - LastEncoderInterruptMillis > ENCODER_SENSOR_TIMEOUT_MILLIS) {
+        resetSpeedValues();
     } else {
-        return tAverageVelocity;
+        int8_t tMillisArrayIndex = MillisArrayIndex;
+        if (!AverageSpeedIsValid) {
+            tMillisArrayIndex--;
+            if (tMillisArrayIndex > 0) {
+                // here MillisArray is not completely filled and MillisArrayIndex had no wrap around
+                tAverageSpeed = (SPEED_SCALE_VALUE * tMillisArrayIndex)
+                        / (EncoderInterruptMillisArray[tMillisArrayIndex] - EncoderInterruptMillisArray[0]);
+            }
+        } else {
+            // tMillisArrayIndex points to the next value to write == the oldest value to overwrite
+            unsigned long tOldestEncoderInterruptMillis = EncoderInterruptMillisArray[tMillisArrayIndex];
+
+            // get index of current value
+            tMillisArrayIndex--;
+            if (tMillisArrayIndex < 0) {
+                // wrap around
+                tMillisArrayIndex = AVERAGE_SPEED_BUFFER_SIZE - 1;
+            }
+            tAverageSpeed = (SPEED_SCALE_VALUE * AVERAGE_SPEED_SAMPLE_SIZE)
+                    / (EncoderInterruptMillisArray[tMillisArrayIndex] - tOldestEncoderInterruptMillis);
+        }
+    }
+    if (CurrentDirectionOrBrakeMode == DIRECTION_BACKWARD) {
+        return -tAverageSpeed;
+    } else {
+        return tAverageSpeed;
     }
 }
 #endif
 
 void EncoderMotor::handleEncoderInterrupt() {
-    long tMicros = micros();
-    unsigned long tDeltaMicros = tMicros - LastEncoderInterruptMicros;
-    if (tDeltaMicros <= ENCODER_SENSOR_RING_MICROS) {
+    long tMillis = millis();
+    unsigned long tDeltaMillis = tMillis - LastEncoderInterruptMillis;
+    if (tDeltaMillis <= ENCODER_SENSOR_RING_MILLIS) {
         // assume signal is ringing and do nothing
     } else {
-        LastEncoderInterruptMicros = tMicros;
-#ifdef SUPPORT_AVERAGE_VELOCITY
-        uint8_t tMicrosArrayIndex = MicrosArrayIndex;
-        EncoderInterruptMicrosArray[tMicrosArrayIndex++] = tMicros;
-        if (tMicrosArrayIndex >= sizeof(EncoderInterruptMicrosArray) / sizeof(EncoderInterruptMicrosArray[0])) {
-            tMicrosArrayIndex = 0;
-            AverageVelocityIsValid = true;
-        }
-        MicrosArrayIndex = tMicrosArrayIndex;
+        LastEncoderInterruptMillis = tMillis;
+#ifdef SUPPORT_AVERAGE_SPEED
+        uint8_t tMillisArrayIndex = MillisArrayIndex;
 #endif
-        if (tDeltaMicros < ENCODER_SENSOR_TIMEOUT_MICROS) {
-            EncoderInterruptDeltaMicros = tDeltaMicros;
+        if (tDeltaMillis < ENCODER_SENSOR_TIMEOUT_MILLIS) {
+            EncoderInterruptDeltaMillis = tDeltaMillis;
         } else {
             // timeout
-            EncoderInterruptDeltaMicros = 0;
-#ifdef SUPPORT_AVERAGE_VELOCITY
-            MicrosArrayIndex = 0;
-            AverageVelocityIsValid = false;
+            EncoderInterruptDeltaMillis = 0;
+#ifdef SUPPORT_AVERAGE_SPEED
+            tMillisArrayIndex = 0;
+            AverageSpeedIsValid = false;
 #endif
         }
+#ifdef SUPPORT_AVERAGE_SPEED
+        EncoderInterruptMillisArray[tMillisArrayIndex++] = tMillis;
+        if (tMillisArrayIndex >= AVERAGE_SPEED_BUFFER_SIZE) {
+            tMillisArrayIndex = 0;
+            AverageSpeedIsValid = true;
+        }
+        MillisArrayIndex = tMillisArrayIndex;
+#endif
+
         EncoderCount++;
         LastRideEncoderCount++;
         EncoderCountHasChanged = true;

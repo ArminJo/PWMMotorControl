@@ -287,7 +287,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
              */
-            RobotCarMotorControl.stopMotors();
+            RobotCarMotorControl.stop();
         }
 
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {

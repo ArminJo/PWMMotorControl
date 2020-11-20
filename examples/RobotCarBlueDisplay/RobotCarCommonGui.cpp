@@ -181,7 +181,7 @@ void startStopRobotCar(bool aDoStart) {
             BlueDisplay1.setScreenOrientationLock(FLAG_SCREEN_ORIENTATION_LOCK_UNLOCK);
             sSensorCallbacksEnabled = false;
         }
-        RobotCarMotorControl.stopMotors();
+        RobotCarMotorControl.stop();
     }
 
     bool tShowValues = sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST;
@@ -248,7 +248,7 @@ void displayVelocitySliderValues() {
     uint16_t tXPos = 0;
     for (int i = 0; i < 2; ++i) {
         if (EncoderMotor::EncoderCountHasChanged) {
-            tSliderPtr->setValueAndDrawBar(tMotorInfo->getVelocity());
+            tSliderPtr->setValueAndDrawBar(tMotorInfo->getSpeed());
         }
         tMotorInfo = &RobotCarMotorControl.rightCarMotor;
         tSliderPtr = &SliderSpeedRight;
@@ -265,7 +265,7 @@ void doSetDirection(BDButton * aTheTouchedButton, int16_t aValue) {
 
 // Stop fixed directions and turns using RobotCarMotorControl
     if (!RobotCarMotorControl.isStopped()) {
-        RobotCarMotorControl.stopMotors();
+        RobotCarMotorControl.stop();
     }
 // Stop direct movement by slider
     startStopRobotCar(false);

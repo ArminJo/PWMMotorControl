@@ -1,11 +1,16 @@
 /*
  * EncoderMotor.h
  *
- *  Created on: 16.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Created on: 12.05.2019
+ *  Copyright (C) 2019-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
+ *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,20 +27,21 @@
 #include "PWMDcMotor.h"
 #include <stdint.h>
 
-#define SUPPORT_AVERAGE_VELOCITY
+#define SUPPORT_AVERAGE_SPEED
+#define AVERAGE_SPEED_SAMPLE_SIZE 20
+#define AVERAGE_SPEED_BUFFER_SIZE 21 // one more than samples, because speed is the difference between 2 samples
 
 // maybe useful especially for more than 2 motors
 //#define ENABLE_MOTOR_LIST_FUNCTIONS
 
 /*
- * Encoders generate 10 Hz at min speed and 110 Hz at max speed => 100 to 8 ms per period
+ * 20 slot Encoder generates 10 Hz at min speed and 110 Hz at max speed => 100 to 8 ms per period
  */
-#define ENCODER_SENSOR_TIMEOUT_MICROS 200000L
-#define ENCODER_SENSOR_RING_MICROS 4000
+#define ENCODER_COUNTS_PER_FULL_ROTATION    20
+#define ENCODER_SENSOR_TIMEOUT_MILLIS       200L // Timeout for encoder ticks if motor is running
+#define ENCODER_SENSOR_RING_MILLIS          4
 
-#define VELOCITY_SCALE_VALUE 2000000L // for computing of CurrentVelocity
-// Timeout for encoder ticks if motor is running
-#define ENCODER_TICKS_TIMEOUT_MILLIS 200
+#define SPEED_SCALE_VALUE (60000L / ENCODER_COUNTS_PER_FULL_ROTATION) // for computing of CurrentSpeed in rpm
 
 class EncoderMotor: public PWMDcMotor {
 public:
@@ -71,12 +77,13 @@ public:
     void attachInterrupt(uint8_t aInterruptPinNumber);
     static void enableINT0AndINT1InterruptsOnRisingEdge();
 
-    int getVelocity();
-#ifdef SUPPORT_AVERAGE_VELOCITY
-    int getAverageVelocity();
+    int getSpeed();
+#ifdef SUPPORT_AVERAGE_SPEED
+    int getAverageSpeed();
 #endif
 
-    void resetControlValues(); // Shutdown and reset all control values and sets direction to forward
+    void resetEncoderControlValues();
+    void resetSpeedValues();
 
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS
     /*
@@ -104,11 +111,9 @@ public:
     EncoderMotor * NextMotorControl;
 #endif
 
-
-
-    /**********************************************************
-     * Variables required for going a fixed distance
-     **********************************************************/
+    /**************************************************************
+     * Variables required for going a fixed distance with encoder
+     **************************************************************/
     /*
      * Reset() resets all members from TargetDistanceCount to (including) Debug to 0
      */
@@ -122,16 +127,17 @@ public:
     volatile unsigned int LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
     // Flag e.g. for display update control
     volatile static bool EncoderCountHasChanged;
-    // The next value is volatile, but volatile increases the code size by 20 bites without any logical improvement
-    unsigned long LastEncoderInterruptMicros; // used internal for debouncing and lock/timeout detection
-    volatile unsigned long EncoderInterruptDeltaMicros; // Used to get velocity which is 1/EncoderInterruptDeltaMicros
-#ifdef SUPPORT_AVERAGE_VELOCITY
-    volatile unsigned long EncoderInterruptMicrosArray[11]; // store for 10 deltas
-    volatile uint8_t MicrosArrayIndex; // Index of the next value to write  == the oldest value to overwrite
-    volatile bool AverageVelocityIsValid; // true if 11 values are written since last timeout
+    volatile unsigned long LastEncoderInterruptMillis; // used internal for debouncing and lock/timeout detection
+
+    /*
+     * for speed computation
+     */
+    volatile unsigned long EncoderInterruptDeltaMillis; // Used to get Speed which is 1/EncoderInterruptDeltaMillis
+#ifdef SUPPORT_AVERAGE_SPEED
+    volatile unsigned int EncoderInterruptMillisArray[AVERAGE_SPEED_BUFFER_SIZE]; // store for 20 deltas
+    volatile uint8_t MillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite
+    volatile bool AverageSpeedIsValid; // true if 11 values are written since last timeout
 #endif
-
-
 
 #ifdef SUPPORT_RAMP_UP
     /*
@@ -142,7 +148,7 @@ public:
 
     uint8_t DistanceCountAfterRampUp; // number of ticks at the transition from MOTOR_STATE_RAMP_UP to MOTOR_STATE_FULL_SPEED to be used for computing ramp down start ticks
     unsigned int DebugCount;                    // for different debug purposes of ramp optimisation
-    uint8_t DebugSpeedAtTargetCountReached; // for debug of ramp down
+    uint8_t DebugSpeedAtTargetCountReached;     // for debug of ramp down
 #endif
 
     // do not delete it!!! It must be the last element in structure and is required for stopMotorAndReset()

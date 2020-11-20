@@ -95,7 +95,7 @@ void setup() {
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+    RobotCarMotorControl.setMillisPerDistanceCountForFixedDistanceDriving(DEFAULT_MILLIS_PER_DISTANCE_COUNT);
 #endif
 
     /*
@@ -124,7 +124,7 @@ void loop() {
     /*
      * Try to turn by 90 degree.
      */
-    RobotCarMotorControl.rotateCar(90, DIRECTION_FORWARD);
+    RobotCarMotorControl.rotate(90, DIRECTION_FORWARD);
     delay(2000);
 
 }
@@ -139,18 +139,18 @@ void simpleObjectAvoidance() {
     Serial.println(" cm");
 
     if (tCentimeter < 20) {
-        RobotCarMotorControl.stopMotors();
+        RobotCarMotorControl.stop();
         delay(1000);
         RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_BACKWARD);
         delay(200);
-        RobotCarMotorControl.stopMotors();
+        RobotCarMotorControl.stop();
         delay(1000);
 
         int tTurnValueDegree = random(20, 180);
         Serial.print("Turn ");
         Serial.print(tTurnValueDegree);
         Serial.println(" degree");
-        RobotCarMotorControl.rotateCar(tTurnValueDegree, TURN_IN_PLACE);
+        RobotCarMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
         RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_FORWARD);
     }

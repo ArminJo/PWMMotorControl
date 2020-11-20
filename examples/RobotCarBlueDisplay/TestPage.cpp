@@ -62,17 +62,9 @@ void doRotation(BDButton * aTheTouchedButton, int16_t aValue) {
         if (sRobotCarDirection != DIRECTION_FORWARD) {
             aValue = -aValue;
         }
-#ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startRotateCar(aValue, TURN_IN_PLACE, true);
-#else
-        RobotCarMotorControl.startRotateCar(aValue, TURN_IN_PLACE);
-#endif
+        RobotCarMotorControl.startRotate(aValue, TURN_IN_PLACE, true);
     } else {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection, true);
-#else
-        RobotCarMotorControl.startRotateCar(aValue, sRobotCarDirection);
-#endif
+        RobotCarMotorControl.startRotate(aValue, sRobotCarDirection, true);
     }
 }
 

@@ -98,7 +98,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #endif
         DistanceServoWriteAndDelay(90);
         sDriveMode = MODE_MANUAL_DRIVE;
-        RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+        RobotCarMotorControl.stop(MOTOR_RELEASE);
     }
 
     // manage on off buttons
@@ -145,7 +145,7 @@ void driveAutonomousOneStep() {
                 RobotCarMotorControl.goDistanceCentimeter(10, DIRECTION_BACKWARD, &loopGUI);
             } else {
                 // rotate and go
-                RobotCarMotorControl.rotateCar(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
+                RobotCarMotorControl.rotate(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
                 // wait to really stop after turning
                 delay(100);
                 sLastDegreesTurned = sNextDegreesToTurn;
@@ -215,7 +215,7 @@ void driveAutonomousOneStep() {
             /*
              * Stop if rotation requested or single step
              */
-            RobotCarMotorControl.stopCarAndWaitForIt();
+            RobotCarMotorControl.stopAndWaitForIt();
 #ifdef USE_ENCODER_MOTOR_CONTROL
 #ifdef ENABLE_PATH_INFO_PAGE
 
@@ -343,7 +343,7 @@ void driveFollowerModeOneStep() {
             /*
              * we had a pending turn
              */
-            RobotCarMotorControl.rotateCar(sNextDegreesToTurn, TURN_FORWARD, true);
+            RobotCarMotorControl.rotate(sNextDegreesToTurn, TURN_FORWARD, true);
             sNextDegreesToTurn = 0;
 
         } else {
@@ -356,7 +356,7 @@ void driveFollowerModeOneStep() {
             if (tCentimeter > FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
                 // trigger scanning in the next loop
                 // Stop car, clear display area and show distance
-                RobotCarMotorControl.stopMotors();
+                RobotCarMotorControl.stop();
                 clearPrintedForwardDistancesInfos();
                 // show current distance (as US distance), which triggers the scan
                 showUSDistance(tCentimeter, true);
@@ -388,7 +388,7 @@ void driveFollowerModeOneStep() {
             } else {
                 if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
 //        Serial.println(F("Stop"));
-                    RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+                    RobotCarMotorControl.stop(MOTOR_RELEASE);
                 }
             }
         }

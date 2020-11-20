@@ -15,6 +15,11 @@
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -29,9 +34,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "1.1.1"
-#define VERSION_PWMMOTORCONTROL_MAJOR 1
-#define VERSION_PWMMOTORCONTROL_MINOR 1
+#define VERSION_PWMMOTORCONTROL "2.0.0"
+#define VERSION_PWMMOTORCONTROL_MAJOR 2
+#define VERSION_PWMMOTORCONTROL_MINOR 0
 
 /*
  * Comment this out, if you have encoder interrupts attached at pin 2 and 3
@@ -66,28 +71,28 @@
  * Comment this out, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
  */
 //#define VIN_2_LIPO
+/*
+ * Helper macro for getting a macro definition as string
+ */
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 #define MAX_SPEED   255
 
 /*
- * This values are chosen to be compatible with 20 slot encoder discs.
- * At a circumference of around 21.5 cm this gives 11 mm per count.
+ * Circumference of my smart car wheel
  */
-#define DEFAULT_COUNTS_PER_FULL_ROTATION    20
 #define DEFAULT_CIRCUMFERENCE_MILLIMETER   215
 
 #ifdef SUPPORT_RAMP_UP
-#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 180 // constant value for the for the formula below
+#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
 #else
-#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 150 // constant value for the for the formula below
-#endif/*
- * DEFAULT_DISTANCE_TO_TIME_FACTOR is the factor used to convert distance in 5mm steps to motor on time in milliseconds. I depends on motor supply voltage.
- * Currently formula is:
- * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed));
- */
+#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
+#endif
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LIPO)
-#define FULL_BRIDGE_INPUT_MILLIVOLT         7500 // for 2 x LIPO batteries (7.4 volt).
+#define FULL_BRIDGE_INPUT_MILLIVOLT         7400 // for 2 x LIPO batteries (7.4 volt).
 #  else
 #define FULL_BRIDGE_INPUT_MILLIVOLT         6000 // for 4 x AA batteries (6 volt).
 #  endif
@@ -107,18 +112,27 @@
 
 #define DEFAULT_START_MILLIVOLT             1100 // Start voltage -motors start to turn- is 1.1 volt
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage is 2.0 volt
+#define SPEED_FOR_1_VOLT                    ((1000L * MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define SPEED_FOR_10_VOLT                   ((10000L * MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 
 // Default values - used if EEPROM values are invalid
 #if !defined(DEFAULT_START_SPEED)
-// DEFAULT_START_SPEED is the speed PWM value at which motor starts to move.
+// DEFAULT_START_SPEED is the speed PWM value at which motor starts to move. 70|127 for 4 volt 37|68 for 7.4 volt
 #define DEFAULT_START_SPEED                 ((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 #if !defined(DEFAULT_DRIVE_SPEED)
 #define DEFAULT_DRIVE_SPEED                 ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
-#if !defined(DEFAULT_DISTANCE_TO_TIME_FACTOR)
-#define DEFAULT_DISTANCE_TO_TIME_FACTOR     120
+
+#if !defined(DEFAULT_MILLIS_PER_DISTANCE_COUNT)
+// At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.25 rotation per second -> 25 distance/encoder counts per second -> 27 cm / second
+#define DEFAULT_DISTANCE_COUNTS_PER_SECOND    25 // at DEFAULT_DRIVE_MILLIVOLT motor supply
+#define DEFAULT_MILLIS_PER_DISTANCE_COUNT     (1000 / DEFAULT_DISTANCE_COUNTS_PER_SECOND)
 #endif
+/*
+ *  Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
+ * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerDistanceCount) / DriveSpeed));
+ */
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_FORWARD   0
@@ -175,9 +189,8 @@ struct EepromMotorInfoStruct {
 #define MOTOR_STATE_RAMP_DOWN   4
 
 #ifdef SUPPORT_RAMP_UP
-#define RAMP_UP_UPDATE_INTERVAL_MILLIS 16 // The smaller the value the steeper the ramp
-#define RAMP_UP_UPDATE_INTERVAL_STEPS  16 // Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds
-#define RAMP_UP_VALUE_DELTA ((CurrentDriveSpeed - StartSpeed) / RAMP_UP_UPDATE_INTERVAL_STEPS)
+#define RAMP_UP_INTERVAL_MILLIS 20 // The smaller the value the steeper the ramp
+#define RAMP_UP_VALUE_DELTA ((SPEED_FOR_10_VOLT * 2) / (1000 / RAMP_UP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 2.0 volt per 100 ms
 #endif
 
 class PWMDcMotor {
@@ -224,9 +237,9 @@ public:
     void startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
 #endif
 
-#ifndef USE_ENCODER_MOTOR_CONTROL
+#ifndef USE_ENCODER_MOTOR_CONTROL // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerDistanceCount for the functions below
     // This function only makes sense for non encoder motors
-    void setDistanceToTimeFactorForFixedDistanceDriving(unsigned int aDistanceToTimeFactor);
+    void setMillisPerDistanceCountForFixedDistanceDriving(uint8_t aMillisPerDistanceCount);
 
     // These functions are implemented by encoder motor too
     void startGoDistanceCount(int aRequestedDistanceCount); // Signed distance count
@@ -246,6 +259,8 @@ public:
      */
     void readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber);
     void writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber);
+
+    static void printSettings(Print *aSerial);
 
     /*
      * Internal functions
@@ -298,16 +313,16 @@ public:
     unsigned long NextRampChangeMillis;
 #endif
 
-#ifndef USE_ENCODER_MOTOR_CONTROL
+#ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
-    unsigned int DistanceToTimeFactor; // Required for non encoder motors to estimate duration for a fixed distance
+    uint8_t MillisPerDistanceCount; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED. Required for non encoder motors to estimate duration for a fixed distance
 #endif
 
 };
 
-//void PanicWithLed(unsigned int aDelay, uint8_t aCount);
 /*
- * Version 1.1.0 - 10/2020
+ * Version 2.0.0 - 11/2020
+ * - Support of off the shelf smart cars.
  * - Added and renamed functions.
  *
  * Version 1.0.0 - 9/2020

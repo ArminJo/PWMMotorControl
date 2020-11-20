@@ -163,7 +163,7 @@ void setup() {
     RobotCarMotorControl.readMotorValuesFromEeprom();
 #endif
 
-    RobotCarMotorControl.stopMotors(); // in case motors were running before
+    RobotCarMotorControl.stop(); // in case motors were running before
     sRuningAutonomousDrive = false;
 
     delay(100);
@@ -232,6 +232,7 @@ void loop() {
             && (sVINVoltage > VOLTAGE_USB_THRESHOLD)
 #endif
             ) {
+
         /*
          * Timeout just reached, play melody and start autonomous drive
          */
@@ -241,6 +242,7 @@ void loop() {
 #else
         delayAndLoopGUI(6000); // delay needed for millis() check above!
 #endif
+        // check again, maybe we are connected now
         if (!BlueDisplay1.isConnectionEstablished()) {
             // Set right page for reconnect
             GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
@@ -271,7 +273,7 @@ void loop() {
      * check for playing melody
      */
     if (sPlayMelody) {
-        RobotCarMotorControl.stopMotors();
+        RobotCarMotorControl.stop();
         playRandomMelody();
     }
 
@@ -282,11 +284,11 @@ void loop() {
          * Direct speed control by GUI
          */
         if (RobotCarMotorControl.updateMotors()) {
-#ifdef USE_ENCODER_MOTOR_CONTROL
-            // At least one motor is moving here
-            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
-            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
-#endif
+//#ifdef USE_ENCODER_MOTOR_CONTROL
+//            // At least one motor is moving here
+//            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
+//            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
+//#endif
         }
     }
 

@@ -68,7 +68,7 @@ void setStepModeButtonCaption();
  */
 void setStepMode(uint8_t aStepMode) {
     if (aStepMode == MODE_SINGLE_STEP) {
-        RobotCarMotorControl.stopCarAndWaitForIt();
+        RobotCarMotorControl.stopAndWaitForIt();
     } else if (aStepMode > MODE_SINGLE_STEP) {
         aStepMode = MODE_CONTINUOUS;
     }

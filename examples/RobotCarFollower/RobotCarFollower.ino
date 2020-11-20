@@ -9,6 +9,11 @@
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
+ *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -122,7 +127,7 @@ void setup() {
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setDistanceToTimeFactorForFixedDistanceDriving(DEFAULT_DISTANCE_TO_TIME_FACTOR);
+    RobotCarMotorControl.setMillisPerDistanceCountForFixedDistanceDriving(DEFAULT_MILLIS_PER_DISTANCE_COUNT);
 #endif
 
     DistanceServo.attach(PIN_DISTANCE_SERVO);
@@ -136,7 +141,12 @@ void setup() {
     /*
      * Do not start immediately with driving
      */
-    delay(5000);
+    delay(1000);
+#ifdef USE_MPU6050_IMU
+    RobotCarMotorControl.initIMU();
+    RobotCarMotorControl.printIMUOffsets(&Serial);
+#endif
+    delay(4000);
 
     /*
      * Tone feedback for start of driving
@@ -160,7 +170,7 @@ void loop() {
 #ifndef PLOTTER_OUTPUT
             Serial.print(F("Stop and search"));
 #endif
-            RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+            RobotCarMotorControl.stop(MOTOR_RELEASE);
         }
 
         // check additionally at 70 and 110 degree for vanished target
@@ -173,9 +183,9 @@ void loop() {
                  * Target found -> turn and proceed
                  */
 #ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-                RobotCarMotorControl.rotateCar(90 - i);
+                RobotCarMotorControl.rotate(90 - i);
 #else
-                RobotCarMotorControl.rotateCar(i - 90);
+                RobotCarMotorControl.rotate(i - 90);
 #endif
                 DistanceServo.write(90);
                 break;
@@ -240,7 +250,7 @@ void loop() {
 #ifndef PLOTTER_OUTPUT
             Serial.print(F("Stop"));
 #endif
-            RobotCarMotorControl.stopMotors(MOTOR_RELEASE);
+            RobotCarMotorControl.stop(MOTOR_RELEASE);
         }
     }
 
