@@ -149,7 +149,7 @@ void drawHomePage(void) {
     TouchButtonAutomaticDrivePage.drawButton();
 
     TouchButtonDirection.drawButton();
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.drawButton();
 #endif
     TouchButtonCompensationLeft.drawButton();
@@ -179,12 +179,12 @@ void drawHomePage(void) {
     SliderSpeedRight.drawSlider();
     SliderSpeedLeft.drawSlider();
 #endif
-    PWMDcMotor::MotorValuesHaveChanged = true; // trigger drawing of values
+    PWMDcMotor::MotorControlValuesHaveChanged = true; // trigger drawing of values
 }
 
 void startHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5);
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
 #endif
 #if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)
@@ -198,7 +198,7 @@ void loopHomePage(void) {
 
 void stopHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_6);
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
 #if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)

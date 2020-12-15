@@ -97,9 +97,9 @@ void loop() {
     rightMotor.stop();
     delay(1000);               // wait for a second
     /*
-     * Try to go a whole turn (21.5 cm for my wheels)
+     * Try to go a whole turn (22.0 cm for my wheels)
      */
-    rightMotor.goDistanceCount(ENCODER_COUNTS_PER_FULL_ROTATION, sMotorDirection);
+    rightMotor.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, sMotorDirection);
     delay(2000);
 
     /*
@@ -111,7 +111,7 @@ void loop() {
     delay(1000);
     leftMotor.stop();
     delay(1000);
-    leftMotor.goDistanceCount(ENCODER_COUNTS_PER_FULL_ROTATION, sMotorDirection);
+    leftMotor.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, sMotorDirection);
 
     /*
      * switch direction

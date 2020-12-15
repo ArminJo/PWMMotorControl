@@ -27,7 +27,7 @@
 #include "CarMotorControl.h"
 
 #if !defined(USE_ENCODER_MOTOR_CONTROL)
-//#error For this example to run, USE_ENCODER_MOTOR_CONTROL must be commented out / defined in PWMDCMotor.h line 42
+#error For this example to run, USE_ENCODER_MOTOR_CONTROL must be commented out / defined in PWMDCMotor.h line 42
 #endif
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
@@ -44,6 +44,7 @@
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
+#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
 #define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
 
 EncoderMotor MotorUnderTest;
@@ -65,9 +66,9 @@ void setup() {
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     // For Adafruit Motor Shield v2
-    MotorUnderTest.init(1, LEFT_MOTOR_INTERRUPT);
+    MotorUnderTest.init(2, RIGHT_MOTOR_INTERRUPT);
 #else
-    MotorUnderTest.init(PIN_LEFT_MOTOR_FORWARD, PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
+    MotorUnderTest.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT);
 #endif
 
 }
@@ -81,7 +82,7 @@ void loop() {
     int tLastSpeed;
     int tStartSpeed = 0;
     int tMaxSpeed = 0;
-    uint8_t tStopPWM;
+    uint8_t tStopPWM = 0;
     int tStopSpeed = 0;
     /*
      * Print value after each encoder count change and increase PWM every 40 ms
@@ -132,7 +133,7 @@ void loop() {
     tMaxSpeed = MotorUnderTest.getAverageSpeed();
     MotorUnderTest.LastRideEncoderCount = 0;
     // and decrease
-    for (uint8_t tPWM = 248; tPWM != 0; tPWM--) {
+    for (int tPWM = 248; tPWM >= 0; tPWM--) {
         MotorUnderTest.setSpeed(tPWM, sMotorDirection);
         delay(50);
         Serial.print(tPWM);
@@ -141,7 +142,7 @@ void loop() {
         int tSpeed = MotorUnderTest.getSpeed();
         if (tStopSpeed == 0 && tSpeed == 0) {
             tStopSpeed = tLastSpeed;
-            tStopPWM = tPWM -1;
+            tStopPWM = tPWM - 1;
         }
         Serial.print(tSpeed);
         tLastSpeed = tSpeed;

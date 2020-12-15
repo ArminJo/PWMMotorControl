@@ -112,7 +112,7 @@ void setup() {
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setMillisPerDistanceCountForFixedDistanceDriving(DEFAULT_MILLIS_PER_DISTANCE_COUNT);
+    RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
 #endif
     /*
      * Set US servo to forward position

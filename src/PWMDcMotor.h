@@ -7,7 +7,12 @@
  *
  * PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
  * PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
-
+ *
+ * Distance is computed in 3 different ways.
+ * Without IMU or Encoder: - distance is converted to a time for riding.
+ * With IMU: - distance is measured by IMU.
+ * With encoder: - distance is measured by Encoder.
+ *
  *
  *  Created on: 12.05.2019
  *  Copyright (C) 2019-2020  Armin Joachimsmeyer
@@ -37,6 +42,7 @@
 #define VERSION_PWMMOTORCONTROL "2.0.0"
 #define VERSION_PWMMOTORCONTROL_MAJOR 2
 #define VERSION_PWMMOTORCONTROL_MINOR 0
+// The change log is at the bottom of the file
 
 /*
  * Comment this out, if you have encoder interrupts attached at pin 2 and 3
@@ -52,19 +58,20 @@
  * For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6.
  */
 //#define USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#  if !defined(MOSFET_BRIDGE_USED)
+#define MOSFET_BRIDGE_USED
+#  endif
+#  if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
+#define FULL_BRIDGE_LOSS_MILLIVOLT             0
+#  endif
+#endif
 //
 /*
  * Own library saves me 694 bytes program memory
  */
 #if ! defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD) // if defined (externally), forces using Adafruit library
 #define USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
-#endif
-
-/*
- * Disabling SUPPORT_RAMP_UP saves 7 bytes RAM per motor and around 300 bytes program memory
- */
-#if ! DO_NOT_SUPPORT_RAMP_UP // if defined (externally), disables ramp up support
-#define SUPPORT_RAMP_UP      // 256 milliseconds for ramp, see below
 #endif
 
 /*
@@ -82,13 +89,24 @@
 /*
  * Circumference of my smart car wheel
  */
-#define DEFAULT_CIRCUMFERENCE_MILLIMETER   215
+#define DEFAULT_CIRCUMFERENCE_MILLIMETER   220
 
-#ifdef SUPPORT_RAMP_UP
+/*
+ * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
+ * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
+ * This corresponds to 5 cm/s every 20 ms
+ */
+#define RAMP_INTERVAL_MILLIS               20 // The smaller the value the steeper the ramp
+#define RAMP_VALUE_UP_OFFSET_MILLIVOLT   2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+#define RAMP_VALUE_DOWN_OFFSET_MILLIVOLT 2500 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+#define RAMP_VALUE_UP_OFFSET_SPEED       ((RAMP_VALUE_UP_OFFSET_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_DOWN_OFFSET_SPEED     ((RAMP_VALUE_DOWN_OFFSET_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_DOWN_MIN_SPEED        (((DEFAULT_DRIVE_MILLIVOLT / 2) * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_UP_VALUE_DELTA              (SPEED_FOR_8_VOLT / (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 10V/s = 1.0 volt per 100 ms
+#define RAMP_DOWN_VALUE_DELTA            ((SPEED_FOR_8_VOLT * 2)/ (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 1.0 volt per 100 ms
+#define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
+
 #define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
-#else
-#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
-#endif
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LIPO)
@@ -100,9 +118,12 @@
 
 #if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
 #  if defined(MOSFET_BRIDGE_USED)
+// Speed is almost linear to 1/2 PWM in cm/s without any offset, only with dead band
 #define FULL_BRIDGE_LOSS_MILLIVOLT             0
 #  else
-#define FULL_BRIDGE_LOSS_MILLIVOLT          2000 // Voltage loss for bipolar full bridges like L298
+// Speed is not linear to PWM and has an offset
+// Effective voltage loss includes loss by switching to high impedance at inactive for bipolar full bridges like L298
+#define FULL_BRIDGE_LOSS_MILLIVOLT          2200 // Effective voltage loss
 #  endif
 #endif
 
@@ -113,25 +134,27 @@
 #define DEFAULT_START_MILLIVOLT             1100 // Start voltage -motors start to turn- is 1.1 volt
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage is 2.0 volt
 #define SPEED_FOR_1_VOLT                    ((1000L * MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define SPEED_FOR_8_VOLT                    ((8000L * MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define SPEED_FOR_10_VOLT                   ((10000L * MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 
-// Default values - used if EEPROM values are invalid
+// Default values - used if EEPROM values are invalid or nor available
 #if !defined(DEFAULT_START_SPEED)
 // DEFAULT_START_SPEED is the speed PWM value at which motor starts to move. 70|127 for 4 volt 37|68 for 7.4 volt
 #define DEFAULT_START_SPEED                 ((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 #if !defined(DEFAULT_DRIVE_SPEED)
-#define DEFAULT_DRIVE_SPEED                 ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+// At 2 volt I measured around 32 cm/s
+#define DEFAULT_DRIVE_SPEED                 ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT) // 68 for LIPO+MosFet
 #endif
 
-#if !defined(DEFAULT_MILLIS_PER_DISTANCE_COUNT)
+#if !defined(DEFAULT_MILLIMETER_PER_SECOND)
 // At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.25 rotation per second -> 25 distance/encoder counts per second -> 27 cm / second
-#define DEFAULT_DISTANCE_COUNTS_PER_SECOND    25 // at DEFAULT_DRIVE_MILLIVOLT motor supply
-#define DEFAULT_MILLIS_PER_DISTANCE_COUNT     (1000 / DEFAULT_DISTANCE_COUNTS_PER_SECOND)
+#define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT motor supply
+#define DEFAULT_MILLIS_PER_MILLIMETER       (1000 / DEFAULT_MILLIMETER_PER_SECOND)
 #endif
 /*
  *  Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
- * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerDistanceCount) / DriveSpeed));
+ * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerMillimeter) / DriveSpeed));
  */
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
@@ -146,15 +169,15 @@
 #define STOP_MODE_AND_MASK  0x03
 #define STOP_MODE_OR_MASK   0x02
 #define DEFAULT_STOP_MODE   MOTOR_RELEASE
-#define CheckStopMODE(aStopMode) ((aStopMode & STOP_MODE_AND_MASK) | STOP_MODE_OR_MASK)
+#define ForceStopMODE(aStopMode) ((aStopMode & STOP_MODE_AND_MASK) | STOP_MODE_OR_MASK)
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
 #include <Wire.h>
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 // some PCA9685 specific constants
-#define PCA9685_GENERAL_CALL_ADDRESS  0x00
+#define PCA9685_DEFAULT_ADDRESS      0x60
+#define PCA9685_GENERAL_CALL_ADDRESS 0x00
 #define PCA9685_SOFTWARE_RESET          6
-#define PCA9685_DEFAULT_ADDRESS      0x40
 #define PCA9685_MAX_CHANNELS           16 // 16 PWM channels on each PCA9685 expansion module
 #define PCA9685_MODE1_REGISTER       0x00
 #define PCA9685_MODE_1_RESTART          7
@@ -180,18 +203,13 @@ struct EepromMotorInfoStruct {
 
 /*
  * Ramp control
- * Ramp up speed in 16 steps every 16 millis from from StartSpeed to CurrentDriveSpeed.
+ * Ramp up speed in 16 steps every 16 millis from from StartSpeed to RequestedDriveSpeed.
  */
 #define MOTOR_STATE_STOPPED     0
 #define MOTOR_STATE_START       1
 #define MOTOR_STATE_RAMP_UP     2
 #define MOTOR_STATE_DRIVE_SPEED 3
 #define MOTOR_STATE_RAMP_DOWN   4
-
-#ifdef SUPPORT_RAMP_UP
-#define RAMP_UP_INTERVAL_MILLIS 20 // The smaller the value the steeper the ramp
-#define RAMP_UP_VALUE_DELTA ((SPEED_FOR_10_VOLT * 2) / (1000 / RAMP_UP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 2.0 volt per 100 ms
-#endif
 
 class PWMDcMotor {
 public:
@@ -203,9 +221,9 @@ public:
     /*
      * Own internal functions for communicating with the PCA9685 Expander IC on the Adafruit motor shield
      */
-    void I2CWriteByte(uint8_t aAddress, uint8_t aData);
-    void I2CSetPWM(uint8_t aPin, uint16_t aOn, uint16_t aOff);
-    void I2CSetPin(uint8_t aPin, bool aSetToOn);
+    void PCA9685WriteByte(uint8_t aAddress, uint8_t aData);
+    void PCA9685SetPWM(uint8_t aPin, uint16_t aOn, uint16_t aOff);
+    void PCA9685SetPin(uint8_t aPin, bool aSetToOn);
 #  else
     Adafruit_DCMotor *Adafruit_MotorShield_DcMotor;
 #  endif
@@ -217,8 +235,10 @@ public:
      * Basic motor commands
      */
     void setSpeed(int aRequestedSpeed);
+    void changeSpeed(uint8_t aSpeedRequested); // Keeps direction
     void setSpeed(uint8_t aSpeedRequested, uint8_t aRequestedDirection);
     void setSpeedCompensated(int aRequestedSpeed);
+    void changeSpeedCompensated(uint8_t aRequestedSpeed); // Keeps direction
     void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
 
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
@@ -230,28 +250,28 @@ public:
     void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, uint8_t aSpeedCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
     void setSpeedCompensation(uint8_t aSpeedCompensation);
+    void setStartSpeed(uint8_t aStartSpeed);
     void setDriveSpeed(uint8_t aDriveSpeed);
 
-#ifdef SUPPORT_RAMP_UP
     void startRampUp(uint8_t aRequestedDirection);
     void startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
-#endif
+    void startRampDown();
 
-#ifndef USE_ENCODER_MOTOR_CONTROL // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerDistanceCount for the functions below
+#ifndef USE_ENCODER_MOTOR_CONTROL // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerMillimeter for the functions below
     // This function only makes sense for non encoder motors
-    void setMillisPerDistanceCountForFixedDistanceDriving(uint8_t aMillisPerDistanceCount);
+    void setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond);
 
     // These functions are implemented by encoder motor too
-    void startGoDistanceCount(int aRequestedDistanceCount); // Signed distance count
-    void startGoDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
-    void startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance
+    void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     bool updateMotor();
 
     /*
      * Implementation for non encoder motors. Not used by CarControl.
      */
-    void goDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
-    void goDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
+    void goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void goDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
 #endif
 
     /*
@@ -294,34 +314,37 @@ public:
      * End of EEPROM values
      *********************************/
     uint8_t DefaultStopMode; // used for speed == 0 and STOP_MODE_KEEP
-    static bool MotorValuesHaveChanged; // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
+    static bool MotorControlValuesHaveChanged; // true if DefaultStopMode, StartSpeed, DriveSpeed or SpeedCompensation have changed - for printing
+#if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
+    volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
+#endif
 
     uint8_t CurrentSpeed;
     uint8_t CurrentDirectionOrBrakeMode; // (of CurrentSpeed etc.) DIRECTION_FORWARD, DIRECTION_BACKWARD, MOTOR_BRAKE, MOTOR_RELEASE
-    static bool SpeedOrMotorModeHasChanged;
+    uint8_t LastDirection; // Used for speed and distance. Contains  DIRECTION_FORWARD, DIRECTION_BACKWARD but not MOTOR_BRAKE, MOTOR_RELEASE.
+    static bool MotorSpeedHasChanged;
 
-    bool MotorMovesFixedDistance; // if true, stop if end distance condition is true
+    bool CheckDistanceInUpdateMotor;
 
-#ifdef SUPPORT_RAMP_UP
     /*
      * For ramp control
      */
     uint8_t MotorRampState; // MOTOR_STATE_STOPPED, MOTOR_STATE_START, MOTOR_STATE_RAMP_UP, MOTOR_STATE_DRIVE_SPEED, MOTOR_STATE_RAMP_DOWN
-    uint8_t CurrentDriveSpeed; // DriveSpeed - SpeedCompensation; The DriveSpeed used for current movement. Can be set for eg. turning which better performs with reduced DriveSpeed
+    uint8_t RequestedDriveSpeed; // DriveSpeed - SpeedCompensation; The DriveSpeed used for current movement. Can be set for eg. turning which better performs with reduced DriveSpeed
 
-    uint8_t RampDelta;
+    uint8_t RampSpeedDelta; // TODO is constant???
     unsigned long NextRampChangeMillis;
-#endif
 
 #ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
-    uint8_t MillisPerDistanceCount; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED. Required for non encoder motors to estimate duration for a fixed distance
+    uint8_t MillisPerMillimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED. Required for non encoder motors to estimate duration for a fixed distance
 #endif
 
 };
 
 /*
  * Version 2.0.0 - 11/2020
+ * - IMU / MPU6050 support.
  * - Support of off the shelf smart cars.
  * - Added and renamed functions.
  *

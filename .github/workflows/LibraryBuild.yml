@@ -49,9 +49,14 @@ jobs:
             build-properties: # the flags were put in compiler.cpp.extra_flags
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
+                -DUSE_ENCODER_MOTOR_CONTROL
                 -DUSE_US_SENSOR_1_PIN_MODE
                 -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
                 -DENABLE_MOTOR_LIST_FUNCTIONS
+              PrintMotorDiagram:
+                -DUSE_ENCODER_MOTOR_CONTROL
+              TestMotorWithIMU:
+                -DUSE_MPU6050_IMU
 
       # Do not cancel all jobs / architectures if one job fails
       fail-fast: false

@@ -48,7 +48,7 @@
 #endif
 
 CarMotorControl RobotCarMotorControl;
-#define SIZE_OF_SQUARE_CM  40
+#define SIZE_OF_SQUARE_MILLIMETER  400
 
 void setup() {
 // initialize the digital pin as an output.
@@ -75,9 +75,9 @@ void setup() {
      */
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
 #if defined(CAR_HAS_4_WHEELS)
-    RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_4WD_CAR_DEFAULT);
+    RobotCarMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT);
 #else
-    RobotCarMotorControl.setFactorDegreeToCount(FACTOR_DEGREE_TO_COUNT_2WD_CAR_DEFAULT);
+    RobotCarMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT);
 #endif
     // Print info
     PWMDcMotor::printSettings(&Serial);
@@ -94,7 +94,7 @@ void loop() {
          * You can adjust the speed as well as the distance to time factor above, to get better results.
          * If you have have slot type photo interrupters assembled, you require no factor if defining USE_ENCODER_MOTOR_CONTROL in PWMDCMotor.h
          */
-        RobotCarMotorControl.goDistanceCentimeter(SIZE_OF_SQUARE_CM, sMotorDirection);
+        RobotCarMotorControl.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
         delay(400);
         /*
          * Try to turn by 90 degree.
@@ -106,7 +106,7 @@ void loop() {
     /*
      * Turn car around and switch direction
      */
-    RobotCarMotorControl.rotate(180, TURN_IN_PLACE);
+    RobotCarMotorControl.rotate(180, TURN_IN_PLACE, true);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

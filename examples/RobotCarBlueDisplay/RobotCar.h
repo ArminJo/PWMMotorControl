@@ -20,7 +20,6 @@
 #define SRC_ROBOTCAR_H_
 
 #include <Arduino.h>
-#include <Servo.h>
 
 //#define CAR_HAS_4_WHEELS
 
@@ -50,9 +49,21 @@
 // #define ENABLE_RTTTL
 //
 /*
+ * Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1MOhm to VIN, 100kOhm to ground
+ */
+//#define MONITOR_VIN_VOLTAGE
+#if !defined(VIN_VOLTAGE_CORRECTION)
+#  ifdef ARDUINO_AVR_UNO
+#define VIN_VOLTAGE_CORRECTION 0.8
+#  endif
+#endif
+/*
  * Activates the buttons to store compensation and drive speed
  */
 //#define SUPPORT_EEPROM_STORAGE
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
+#include <Servo.h>
+#endif
 
 #include "CarMotorControl.h"
 extern CarMotorControl RobotCarMotorControl;
@@ -79,10 +90,10 @@ extern CarMotorControl RobotCarMotorControl;
  *   A0 O   US trigger (and echo in 1 pin US sensor mode)
  *   A1 I   US echo
  *   A2 I   VIN/11, 1MOhm to VIN, 100kOhm to ground
- *   A3 I   IR remote control signal in / IR distance
+ *   A3 I   IR remote control signal in / IR distance / Speaker for Nano board
  *   A4 SDA NC for Nano / I2C for UNO board motor shield
  *   A5 SCL NC for Nano / I2C for UNO board motor shield
- *   A6 O   Speaker for Nano board / not available on UNO board
+ *   A6 O
  *   A7 O   Camera supply control
  */
 
@@ -117,7 +128,7 @@ extern CarMotorControl RobotCarMotorControl;
 #define PIN_TILT_SERVO          12
 #endif
 
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
 // Pin A0 for VCC monitoring - ADC channel 2
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_11TH_IN_CHANNEL      2 // = A2
@@ -195,13 +206,13 @@ extern Servo TiltServo;
 #define MINIMUM_DISTANCE_TO_SIDE 21
 #define MINIMUM_DISTANCE_TO_FRONT 35
 
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
 #include "ADCUtils.h"
 
 extern float sVINVoltage;
-#if defined(MONITOR_LIPO_VOLTAGE)
-#define VOLTAGE_LOW_THRESHOLD 6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
-#define VOLTAGE_USB_THRESHOLD 5.5
+#if defined(MONITOR_VIN_VOLTAGE)
+#define VOLTAGE_LIPO_LOW_THRESHOLD  6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
+#define VOLTAGE_USB_THRESHOLD       5.5
 #else
 #endif
 #define VOLTAGE_TOO_LOW_DELAY_ONLINE 3000 // display VIN every 500 ms for 4 seconds

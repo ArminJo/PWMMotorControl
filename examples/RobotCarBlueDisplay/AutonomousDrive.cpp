@@ -142,7 +142,7 @@ void driveAutonomousOneStep() {
              */
             if (sNextDegreesToTurn == GO_BACK_AND_SCAN_AGAIN) {
                 // go backwards and do a new scan
-                RobotCarMotorControl.goDistanceCentimeter(10, DIRECTION_BACKWARD, &loopGUI);
+                RobotCarMotorControl.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
             } else {
                 // rotate and go
                 RobotCarMotorControl.rotate(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
@@ -157,7 +157,7 @@ void driveAutonomousOneStep() {
              */
             if (sStepMode == MODE_SINGLE_STEP) {
                 // Go fixed distance
-                RobotCarMotorControl.goDistanceCentimeter(sCentimeterPerScan, DIRECTION_FORWARD, &loopGUI);
+                RobotCarMotorControl.goDistanceMillimeter(sCentimeterPerScan*10, DIRECTION_FORWARD, &loopGUI);
             } else
             /*
              * Continuous mode, start car or let it run

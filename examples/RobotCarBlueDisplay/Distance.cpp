@@ -25,7 +25,9 @@
 
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 Servo DistanceServo;
+#endif
 uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
 #ifdef CAR_HAS_TOF_DISTANCE_SENSOR
@@ -118,7 +120,11 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;
 #endif
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
     DistanceServo.write(aTargetDegrees);
+#else
+    write10(aTargetDegrees);
+#endif
 
     /*
      * Delay
@@ -604,13 +610,13 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
     }
 }
 
-void readAndShowDistancePeriodically(uint16_t aPeriodMillis) {
+void readAndShowDistancePeriodically() {
     static long sLastUSMeasurementMillis;
 
     // Do not show distanced during (time critical) acceleration or deceleration
     if (!RobotCarMotorControl.isStateRamp()) {
         long tMillis = millis();
-        if (sLastUSMeasurementMillis + aPeriodMillis < tMillis) {
+        if (tMillis - sLastUSMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
             sLastUSMeasurementMillis = tMillis;
             getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM, false);
         }
@@ -679,12 +685,15 @@ unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout, bool
  * The 1080 needs 39 ms for each measurement cycle
  */
 uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
+    uint8_t tOldADMUX = checkAndWaitForReferenceAndChannelToSwitch(PIN_IR_DISTANCE_SENSOR, DEFAULT);
     // check for voltage changed then a new measurement is started
     if (aWaitForCurrentMeasurementToEnd) {
-        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+        uint16_t tOldValue = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 4 samples
+//        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
         uint32_t tStartMillis = millis();
         do {
-            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+            int16_t tNewValue = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 100 us
+//            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
             if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
                 // assume, that voltage has changed because of the end of a measurement
                 break;
@@ -695,7 +704,10 @@ uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
         delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
     }
 
-    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+    float tVolt = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 4 samples
+//    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+    ADMUX = tOldADMUX; // Switch back (to INTERNAL)
+
     // * 0.004887585 for 1023 = 5V
     // Model 1080 / GP2Y0A21YK0F
     return (29.988 * pow(tVolt * 0.004887585, -1.173)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp

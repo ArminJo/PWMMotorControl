@@ -35,13 +35,25 @@
 //#define ENABLE_MOTOR_LIST_FUNCTIONS
 
 /*
- * 20 slot Encoder generates 10 Hz at min speed and 110 Hz at max speed => 100 to 8 ms per period
+ * 20 slot Encoder generates 4 to 5 Hz at min speed and 110 Hz at max speed => 200 to 8 ms per period
  */
 #define ENCODER_COUNTS_PER_FULL_ROTATION    20
-#define ENCODER_SENSOR_TIMEOUT_MILLIS       200L // Timeout for encoder ticks if motor is running
+#define ENCODER_SENSOR_TIMEOUT_MILLIS       400L // Timeout for encoder ticks if motor is running
 #define ENCODER_SENSOR_RING_MILLIS          4
 
-#define SPEED_SCALE_VALUE (60000L / ENCODER_COUNTS_PER_FULL_ROTATION) // for computing of CurrentSpeed in rpm
+/*
+ * Some factors depending on wheel diameter and encoder resolution
+ */
+#if ! defined(FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT)
+// Exact value is 220 mm / 20
+#define FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT  ((DEFAULT_CIRCUMFERENCE_MILLIMETER + (ENCODER_COUNTS_PER_FULL_ROTATION / 2)) / ENCODER_COUNTS_PER_FULL_ROTATION) // = 11
+#endif
+
+/*
+ * The millis per tick have the unit [ms]/ (circumference[cm]/countsPerCircumference) -> ms/cm
+ * To get cm/s, use (circumference[cm]/countsPerCircumference) * 1000 / millis per tick
+ */
+#define SPEED_SCALE_VALUE ((100L * DEFAULT_CIRCUMFERENCE_MILLIMETER) / ENCODER_COUNTS_PER_FULL_ROTATION) // 1100
 
 class EncoderMotor: public PWMDcMotor {
 public:
@@ -59,9 +71,9 @@ public:
     /*
      * Functions for going a fixed distance, they "overwrite" PWMDCMotor functions
      */
-    void startGoDistanceCount(int aRequestedDistanceCount); // Signed distance count
-    void startGoDistanceCount(unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
-    void startGoDistanceCount(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceCount, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance count
+    void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     bool updateMotor();
 
     /*
@@ -77,10 +89,20 @@ public:
     void attachInterrupt(uint8_t aInterruptPinNumber);
     static void enableINT0AndINT1InterruptsOnRisingEdge();
 
-    int getSpeed();
+    uint8_t getDirection();
+    unsigned int getDistanceMillimeter();
+    unsigned int getDistanceCentimeter();
+    unsigned int getBrakingDistanceMillimeter();
+
+    unsigned int getSpeed();
 #ifdef SUPPORT_AVERAGE_SPEED
-    int getAverageSpeed();
+    unsigned int getAverageSpeed();
+    unsigned int getAverageSpeed(uint8_t aLengthOfAverage);
 #endif
+
+    void printEncoderDataCaption(Print *aSerial);
+    bool printEncoderDataPeriodically(Print *aSerial, uint16_t aPeriodMillis);
+    void printEncoderData(Print *aSerial);
 
     void resetEncoderControlValues();
     void resetSpeedValues();
@@ -91,8 +113,8 @@ public:
      */
     static bool updateAllMotors();
 
-    static void startGoDistanceCountForAll(int aRequestedDistanceCount);
-    static void goDistanceCountForAll(int aRequestedDistanceCount, void (*aLoopCallback)(void));
+    static void startGoDistanceMillimeterForAll(int aRequestedDistanceMillimeter);
+    static void goDistanceMillimeterForAll(int aRequestedDistanceMillimeter, void (*aLoopCallback)(void));
     static void startRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void));
 
     static void stopAllMotors(uint8_t aStopMode);
@@ -117,8 +139,8 @@ public:
     /*
      * Reset() resets all members from TargetDistanceCount to (including) Debug to 0
      */
-    unsigned int TargetDistanceCount;
-    unsigned int LastTargetDistanceCount;
+    unsigned int TargetDistanceMillimeter;
+    unsigned int LastTargetDistanceMillimeter;
 
     /*
      * Distance optocoupler impulse counter. It is reset at startGoDistanceCount if motor was stopped.
@@ -126,29 +148,17 @@ public:
     volatile unsigned int EncoderCount;
     volatile unsigned int LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
     // Flag e.g. for display update control
-    volatile static bool EncoderCountHasChanged;
     volatile unsigned long LastEncoderInterruptMillis; // used internal for debouncing and lock/timeout detection
 
     /*
      * for speed computation
+     * Do not rearrange, since reset is done with memset().
      */
-    volatile unsigned long EncoderInterruptDeltaMillis; // Used to get Speed which is 1/EncoderInterruptDeltaMillis
+    volatile unsigned long EncoderInterruptDeltaMillis; // Used to get speed
 #ifdef SUPPORT_AVERAGE_SPEED
     volatile unsigned int EncoderInterruptMillisArray[AVERAGE_SPEED_BUFFER_SIZE]; // store for 20 deltas
-    volatile uint8_t MillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite
+    volatile uint8_t MillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite. 0 to 20|(AVERAGE_SPEED_BUFFER_SIZE-1)
     volatile bool AverageSpeedIsValid; // true if 11 values are written since last timeout
-#endif
-
-#ifdef SUPPORT_RAMP_UP
-    /*
-     * For ramp and state control
-     */
-    uint8_t RampDeltaPerDistanceCount;
-    unsigned int NextChangeMaxTargetCount;      // target count at which next change must be done
-
-    uint8_t DistanceCountAfterRampUp; // number of ticks at the transition from MOTOR_STATE_RAMP_UP to MOTOR_STATE_FULL_SPEED to be used for computing ramp down start ticks
-    unsigned int DebugCount;                    // for different debug purposes of ramp optimisation
-    uint8_t DebugSpeedAtTargetCountReached;     // for debug of ramp down
 #endif
 
     // do not delete it!!! It must be the last element in structure and is required for stopMotorAndReset()

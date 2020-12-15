@@ -31,7 +31,7 @@
 #define PATH_LENGTH_MAX 100
 
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
-extern uint32_t sMillisOfNextVCCInfo;
+#define PRINT_MOTOR_INFO_PERIOD_MILLIS 200
 
 // a string buffer for BD info output
 extern char sStringBuffer[128];
@@ -50,6 +50,9 @@ extern char sStringBuffer[128];
 
 #define US_DISTANCE_MAP_ORIGIN_X 200
 #define US_DISTANCE_MAP_ORIGIN_Y 150
+
+#define MOTOR_INFO_START_X (BUTTON_WIDTH_6 + 4)
+#define MOTOR_INFO_START_Y (SPEED_SLIDER_SIZE / 2 + 25)
 
 #define PAGE_HOME               0 // Manual control page
 #define PAGE_AUTOMATIC_CONTROL  1
@@ -89,11 +92,11 @@ void loopAutonomousDrivePage(void);
 void stopAutonomousDrivePage(void);
 
 void handleAutomomousDriveRadioButtons();
-void doStartStopFollowerMode(BDButton * aTheTouchedButton, int16_t aValue);
-void doStartStopAutomomousDrive(BDButton * aTheTouchedButton, int16_t aValue);
-void doStartStopTestUser(BDButton * aTheTouchedButton, int16_t aValue);
+void doStartStopFollowerMode(BDButton *aTheTouchedButton, int16_t aValue);
+void doStartStopAutomomousDrive(BDButton *aTheTouchedButton, int16_t aValue);
+void doStartStopTestUser(BDButton *aTheTouchedButton, int16_t aValue);
 
-void doStartStopAutonomousForPathPage(BDButton * aTheTouchedButton, int16_t aValue);
+void doStartStopAutonomousForPathPage(BDButton *aTheTouchedButton, int16_t aValue);
 void setStepMode(uint8_t aStepMode);
 
 // from BTSensorDrivePage
@@ -104,7 +107,7 @@ void loopBTSensorDrivePage(void);
 void stopBTSensorDrivePage(void);
 
 extern uint8_t sSensorChangeCallCountForZeroAdjustment;
-void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallbackInfo);
+void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackInfo);
 
 // from TestPage
 extern bool sShowDebug;
@@ -137,7 +140,7 @@ extern uint8_t sCurrentPage;
 extern BDButton TouchButtonAutomaticDrivePage;
 extern BDButton TouchButtonReset;
 extern BDButton TouchButtonBack;
-void GUISwitchPages(BDButton * aTheTouchedButton, int16_t aValue);
+void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue);
 void startCurrentPage();
 
 /*
@@ -146,14 +149,14 @@ void startCurrentPage();
 extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
-void doRobotCarStartStop(BDButton * aTheTochedButton, int16_t aDoStart);
-void doReset(BDButton * aTheTochedButton, int16_t aValue);
+void doStartStopRobotCar(BDButton *aTheTochedButton, int16_t aDoStart);
+void doReset(BDButton *aTheTochedButton, int16_t aValue);
 
 extern BDButton TouchButtonDirection;
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
-void doCalibrate(BDButton * aTheTouchedButton, int16_t aValue);
+void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
 #endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
@@ -181,8 +184,12 @@ extern BDSlider SliderPan;
 extern BDSlider SliderTilt;
 #endif
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
-void displayVelocitySliderValues();
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+void displayMotorSpeedSliderValues();
+void printMotorSensorValues();
+#endif
+#if defined(USE_MPU6050_IMU)
+void printIMUOffsetValues();
 #endif
 
 void drawCommonGui(void);
@@ -193,18 +200,18 @@ void setupGUI(void);
 void loopGUI(void);
 
 void initRobotCarDisplay(void);
-void readAndShowDistancePeriodically(uint16_t aPeriodMillis);
+void readAndShowDistancePeriodically();
 void rotate(int16_t aRotationDegrees, bool inPlace = true);
 void showDistance(int aCentimeter);
 
-void printMotorSpeed();
-void printMotorValues();
+void printAndDisplayMotorSpeed();
+void printMotorValuesPeriodically();
 #ifdef USE_ENCODER_MOTOR_CONTROL
 void printMotorDebugValues();
 void printMotorDistanceValues();
 #endif
 
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
 void readAndPrintVin();
 void readCheckAndPrintVinPeriodically();
 #endif

@@ -11,7 +11,7 @@ Available as Arduino library "PWMMotorControl"
 
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
-- The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**. 
+- The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
 - To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed if you use the `setSpeedCompensation()` functions. For car control, only compensation of one motor is required.
 
 #### The motor is mainly controlled by 2 dimensions:
@@ -20,16 +20,16 @@ Available as Arduino library "PWMMotorControl"
 
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
-- `setSpeed(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeed(int Signed_Speed)`.
-- `setSpeedCompensated(uint8_t Unsigned_Speed, uint8_t Direction)` or `setSpeedCompensated(int Signed_Speed)` and `setSpeedCompensation(uint8_t aSpeedCompensation)`.
+- `setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection)` or `setSpeed(int Signed_RequestedSpeed)`.
+- `setSpeedCompensated(uint8_t Unsigned_RequestedSpeed, uint8_t aRequestedDirection)` or `setSpeedCompensated(int Signed_RequestedSpeed)` and `setSpeedCompensation(uint8_t aSpeedCompensation)`.
 - `stop()` or `setSpeed(0)`.
-- `getSpeed()` and `getAverageSpeed()` for encoder motors.
+- `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for encoder motors.
 
-#### To go a specified distance (in 5mm/one encoder tick steps), use:
-- `setDefaultsForFixedDistanceDriving()` to set minimal speed and maximal speed. Minimal speed is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
-Maximal speed is the PWM value to use for driving a fixed distance. For encoder equipped motors the software generates a ramp up from minimal to maximal at the start of the movement and a ramp down to stop.
-- `calibrate()` to automatically set minimal speed for encoder motors.
-- `initGoDistanceCount(uint8_t Unsigned_DistanceCount,uint8_tDirection)` or `setSpeed(intSigned_DistanceCount)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
+#### To go a specified distance use:
+- `setDefaultsForFixedDistanceDriving()` to set start speed and driving speed. Minimal speed is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
+Drving speed is the PWM value to use for driving a fixed distance. The software generates a ramp up from start to driving speed at the start of the movement and a ramp down to stop.
+- `calibrate()` to automatically set start speed for encoder or IMU supported cars.
+- `startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)` or `setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
 - `updateMotor()` - call this in your loop if you use the start* functions.
 
 2 wheel car from LAVFIN with 2 LiPo batteries case, and IR receiver, wires not shortened.
@@ -47,46 +47,41 @@ Some options which are enabed by default can be disabled by defining a *inhibit*
 | Macro | Default | File | Description |
 |-|-|-|-|
 | `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
+| `USE_MPU6050_IMU` | disabled | CarIMUData.h | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
+| `USE_ACCELERATOR_Y_FOR_SPEED` | undefined | CarIMUData.h | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
+| `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | undefined | CarIMUData.h | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
 | `USE_OWN_LIBRARY_FOR_`<br/>`ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Disable macro=`USE_STANDARD_LIBRARY_`<br/>`FOR_ADAFRUIT_MOTOR_SHIELD`.<br/>Disabling savesaves around 694 bytes program memory. |
-| `SUPPORT_RAMP_UP` | enabled | PWMDcMotor.h | Disable macro=`DO_NOT_SUPPORT_RAMP_UP`.<br/>Disabling saves around 300 bytes program memory. |
 
 # Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
 | Macro | Default | File | Description |
 |-|-|-|-|
-| `DEFAULT_COUNTS_PER_FULL_ROTATION` | 40 | PWMDCMotor.h | This value is compatible with 20 slot encoder discs, giving 20 on and 20 off counts per full rotation. |
-| `DEFAULT_MILLIMETER_PER_COUNT` | 5 | PWMDCMotor.h | At a circumference of around 20 cm (21.5 cm actual) this gives 5 mm per count. |
-| `FACTOR_CENTIMETER_TO_`<br/>`COUNT_INTEGER_DEFAULT` | 2 | CarMotorControl.h | Exact value is 1.86, but integer saves program space and time. |
-| `FACTOR_DEGREE_TO_COUNT_DEFAULT` | 0.4277777 for 2 wheel drive cars, 0.8 for 4 WD cars | CarMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
+| `DEFAULT_CIRCUMFERENCE_MILLIMETER` | 220 | PWMDCMotor.h | At a circumference of around 220 mm this gives 11 mm per count. |
+| `ENCODER_COUNTS_PER_FULL_ROTATION` | 20 | EncoderMotor.h | This value is for 20 slot encoder discs, giving 20 on and 20 off counts per full rotation. |
+| `FACTOR_DEGREE_TO_MILLIMETER_DEFAULT` | 2.2777 for 2 wheel drive cars, 5.0 for 4 WD cars | CarMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
 
 # Other default values for this library
 These values are used by functions and some can be overwritten by set* functions.
 | Macro | Default | File | Description |
 |-|-|-|-|
-| `USE_MPU6050_IMU` | undefined | CarMotorControl.h | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
-| `USE_ACCELERATOR_Y_FOR_SPEED` | undefined | CarMotorControl.h | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the right. |
 | `VIN_2_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
 | `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | PWMDCMotor.h | The supply voltage used for the full bridge. |
 | `MOSFET_BRIDGE_USED` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 0. |
 | `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | PWMDCMotor.h | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
 | `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | PWMDCMotor.h | The effective voltage available for the motor. |
 | `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | PWMDCMotor.h | The DC Voltage at which the motor start to move / dead band voltage. |
-| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
-| `DEFAULT_START_SPEED` | `((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)` | PWMDCMotor.h | START_SPEED is the speed PWM value at which car starts to move. |
-| `DEFAULT_DRIVE_SPEED` | `((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED) / FULL_BRIDGE_OUTPUT_MILLIVOLT)` | PWMDCMotor.h | The speed PWM value for going fixed distance. |
-| `DEFAULT_DISTANCE_`<br/>`TO_TIME_FACTOR` | 135/300 for 7.4/6.0 volt supply | PWMDCMotor.h | The factor used to convert distance in 5mm steps to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
-| `RAMP_UP_UPDATE_`<br/>`INTERVAL_MILLIS` | 16 | PWMDCMotor.h | The smaller the value the steeper the ramp. |
-| `RAMP_UP_UPDATE_`<br/>`INTERVAL_STEPS` | 16 | PWMDCMotor.h | Results in a ramp up time of 16 steps * 16 millis = 256 milliseconds. |
+| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | The derived `DEFAULT_DRIVE_SPEED` is the speed PWM value used for fixed distance driving. |
+| `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | PWMDCMotor.h | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
 
-### Modifying library properties with Arduino IDE
-First use *Sketch/Show Sketch Folder (Ctrl+K)*.<br/>
+### Modifying compile options with Arduino IDE
+First use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>
 If you did not yet stored the example as your own sketch, then you are instantly in the right library folder.<br/>
 Otherwise you have to navigate to the parallel `libraries` folder and select the library you want to access.<br/>
 In both cases the library files itself are located in the `src` directory.<br/>
 
-### Modifying library properties with Sloeber IDE
-If you are using Sloeber as your IDE, you can easily define global symbols with *Properties/Arduino/CompileOptions*.<br/>
+### Modifying compile options with Sloeber IDE
+If you are using Sloeber as your IDE, you can easily define global symbols with *Properties > Arduino > CompileOptions*.<br/>
 ![Sloeber settings](https://github.com/ArminJo/ServoEasing/blob/master/pictures/SloeberDefineSymbols.png)
 
 # Full bridges
@@ -110,6 +105,17 @@ For the next loop, the direction is switched to backwards.
 ## Square
 4 times drive 40 cm, then 90 degree left turn. After the square, the car is turned by 180 degree and the direction is switched to backwards. Then the square starts again.
 
+## PrintMotorDiagram
+Prints PWM, distance and speed diagram of an encoder motor.
+| Diagram for free running motor controlled by an MosFet bridge supplied by 7.0 volt | Diagram for free running motor controlled by an L298 bridge supplied by 7.6 volt |
+| :-: | :-: |
+| ![7.0V MosFet free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.0V_MosFet_FreeRun.png) | ![7.6V L298 free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_L298_FreeRun.png) |
+
+## TestMotorWithIMU
+| Diagram for car controlled by an MosFet bridge | Diagram for car controlled by an L298 bridge |
+| :-: | :-: |
+| ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/2WD_Test.png) | ![Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/Lafvin_Test.png) |
+
 ## RobotCarBasic
 Template for your RobotCar control. Currently implemented is: drive until distance too low, then stop, and turn random amount.
 
@@ -127,7 +133,7 @@ Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the Bl
 Just overwrite the function doUserCollisionDetection() to test your own skill.<br/>
 You may also overwrite the function fillAndShowForwardDistancesInfo(), if you use your own scanning method.
 
-# Compile options for RobotCar example
+# Compile options / macros for RobotCar example
 To customize the RobotCar example to cover different extensions, there are some compile options available.
 | Option | Default | File | Description |
 |-|-|-|-|

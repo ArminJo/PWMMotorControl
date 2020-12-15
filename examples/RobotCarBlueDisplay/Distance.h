@@ -20,13 +20,20 @@
 #define DISTANCE_H_
 
 #include <Arduino.h>
+
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 #include <Servo.h>
+#else
+#include "LightweightServo.h"
+#endif
 
 /*
  * Comment this out / enable this if the distance servo is mounted head down to detect small obstacles.
  */
 //#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 extern Servo DistanceServo;
+#endif
 
 /*
  * Constants for fillAndShowForwardDistancesInfo(), doWallDetection etc.

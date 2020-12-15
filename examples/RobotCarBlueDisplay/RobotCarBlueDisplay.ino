@@ -39,6 +39,9 @@
 #include <PlayRtttl.h>
 #endif
 
+//#define DEBUG_TRACE_INIT
+//#include "AvrTracing.cpp.h"
+
 /****************************************************************************
  * Change this if you have reprogrammed the hc05 module for other baud rate
  ***************************************************************************/
@@ -146,7 +149,11 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // Booted
 
-    // initialize motors
+    initSerial(BLUETOOTH_BAUD_RATE);
+//    initTrace();
+//    printNumberOfPushesForISR();
+
+    // initialize motors, this also stops motors
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     RobotCarMotorControl.init();
 #else
@@ -163,15 +170,12 @@ void setup() {
     RobotCarMotorControl.readMotorValuesFromEeprom();
 #endif
 
-    RobotCarMotorControl.stop(); // in case motors were running before
     sRuningAutonomousDrive = false;
 
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized
 
-    sLastServoAngleInDegrees = 90;
-
-    initSerial(BLUETOOTH_BAUD_RATE);
+    sLastServoAngleInDegrees = 90; // is required before setupGUI()
 
     // Must be after RobotCarMotorControl.init, since it tries to stop motors in connect callback
     setupGUI(); // this enables output by BlueDisplay1 and lasts around 100 milliseconds
@@ -206,18 +210,16 @@ void setup() {
 #endif
     initDistance();
 
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
     readVINVoltage();
     randomSeed(sVINVoltage * 100);
 #endif
 
-//    initTrace();
-
     delay(100);
     if (sBootReasonWasPowerUp) {
-        tone(PIN_BUZZER, 2200, 50); // power up finished
+        tone(PIN_BUZZER, 1000, 50); // power up finished
     } else {
-        tone(PIN_BUZZER, 2200, 300); // long tone, reset finished - only detectable with Optiboot 8.0
+        tone(PIN_BUZZER, 1000, 300); // long tone, reset finished - only detectable with Optiboot 8.0
     }
 }
 
@@ -228,7 +230,7 @@ void loop() {
      */
     if ((!BlueDisplay1.isConnectionEstablished()) && (millis() < (TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS + 1000))
             && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
             && (sVINVoltage > VOLTAGE_USB_THRESHOLD)
 #endif
             ) {
@@ -255,6 +257,10 @@ void loop() {
     }
 
     /*
+     * Required, if we use rotation, ramps and fixed distance driving
+     */
+    RobotCarMotorControl.updateMotors();
+    /*
      * check for user input and update display output
      */
     loopGUI();
@@ -265,7 +271,11 @@ void loop() {
     if (BlueDisplay1.isConnectionEstablished() && sMillisOfLastReceivedBDEvent + TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
         sMillisOfLastReceivedBDEvent = millis() - (TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
         fillAndShowForwardDistancesInfo(true, true);
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
         DistanceServo.write(90); // set servo back to normal
+#else
+        write10(90);
+#endif
     }
 
 #ifdef ENABLE_RTTTL
@@ -279,19 +289,6 @@ void loop() {
 
 #endif
 
-    if (sCurrentPage == PAGE_TEST) {
-        /*
-         * Direct speed control by GUI
-         */
-        if (RobotCarMotorControl.updateMotors()) {
-//#ifdef USE_ENCODER_MOTOR_CONTROL
-//            // At least one motor is moving here
-//            RobotCarMotorControl.rightCarMotor.synchronizeMotor(&RobotCarMotorControl.leftCarMotor,
-//            MOTOR_DEFAULT_SYNCHRONIZE_INTERVAL_MILLIS);
-//#endif
-        }
-    }
-
     if (sRuningAutonomousDrive) {
         if (sDriveMode == MODE_FOLLOWER) {
             driveFollowerModeOneStep();
@@ -301,21 +298,18 @@ void loop() {
     }
 }
 
-#if defined(MONITOR_LIPO_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE)
 void readVINVoltage() {
-    uint8_t tOldADMUX = checkAndWaitForReferenceAndChannelToSwitch(VIN_11TH_IN_CHANNEL, INTERNAL);
-    uint16_t tVIN = readADCChannelWithReferenceOversample(VIN_11TH_IN_CHANNEL, INTERNAL, 2); // 4 samples
+    uint16_t tVIN = readADCChannelWithReferenceOversampleFast(VIN_11TH_IN_CHANNEL, INTERNAL, 2); // 4 samples
 //    BlueDisplay1.debug("VIN Raw=", tVIN);
-            // Switch back (to DEFAULT)
-    ADMUX = tOldADMUX;
 
-// assume resistor network of 1Mk / 100k (divider by 11)
-// tVCC * 0,01181640625
+// assume resistor network of 1MOhm / 100kOhm (divider by 11)
+// tVIN * 0,01182795
 #ifdef VIN_VOLTAGE_CORRECTION
     // we have a diode (requires 0.8 volt) between LIPO and VIN
-    sVINVoltage = (tVIN * ((11.0 * 1.07) / 1023)) + VIN_VOLTAGE_CORRECTION;
+    sVINVoltage = (tVIN * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
 #else
-    sVINVoltage = tVIN * ((11.0 * 1.07) / 1023);
+    sVINVoltage = tVIN * ((11.0 * 1.1) / 1023);
 #endif
 }
 #endif
@@ -331,7 +325,8 @@ void playRandomMelody() {
 //    BlueDisplay1.debug("Play melody");
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
+    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesTiny, ARRAY_SIZE_MELODIES_TINY);
+//    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
 #else
     OCR2B = 0;
     bitWrite(TIMSK2, OCIE2B, 1);            // enable interrupt for inverted pin handling
@@ -399,6 +394,7 @@ Servo TiltServo;
 #endif
 
 void resetServos() {
+    sLastServoAngleInDegrees = 0; // to force setting of 90 degree
     DistanceServoWriteAndDelay(90, false);
 #ifdef CAR_HAS_PAN_SERVO
     PanServo.write(90);
@@ -409,10 +405,16 @@ void resetServos() {
 }
 
 void initServos() {
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 //        DistanceServo.attach(PIN_DISTANCE_SERVO, DISTANCE_SERVO_MIN_PULSE_WIDTH, DISTANCE_SERVO_MAX_PULSE_WIDTH);
     DistanceServo.attach(PIN_DISTANCE_SERVO);
+#else
+    // Servo for distance sensor
+    initLightweightServoPin10();
+#endif
+
 #ifdef CAR_HAS_PAN_SERVO
-// initialize and set Laser pan servo
+// initialize and set laser pan servo
     PanServo.attach(PIN_PAN_SERVO);
 #endif
 #ifdef CAR_HAS_TILT_SERVO

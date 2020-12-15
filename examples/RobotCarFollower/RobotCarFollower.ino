@@ -127,7 +127,7 @@ void setup() {
     RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setMillisPerDistanceCountForFixedDistanceDriving(DEFAULT_MILLIS_PER_DISTANCE_COUNT);
+    RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
 #endif
 
     DistanceServo.attach(PIN_DISTANCE_SERVO);
@@ -141,10 +141,17 @@ void setup() {
     /*
      * Do not start immediately with driving
      */
-    delay(1000);
 #ifdef USE_MPU6050_IMU
+    /*
+     * Wait after pressing the reset button, or attaching the power
+     * and then take offset values for 1/2 second
+     */
+    delay(1000);
+    tone(PIN_BUZZER, 2200, 50);
+    delay(100);
     RobotCarMotorControl.initIMU();
     RobotCarMotorControl.printIMUOffsets(&Serial);
+    tone(PIN_BUZZER, 2200, 50);
 #endif
     delay(4000);
 

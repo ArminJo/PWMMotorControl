@@ -55,6 +55,7 @@ float sYZeroValueAdded; // The accumulator for the values of the first 8 calls.
 float sYZeroValue = 0;
 
 #if (VERSION_BLUE_DISPLAY_MAJOR <= 2) && (VERSION_BLUE_DISPLAY_MINOR <= 1)
+// positiveNegativeSlider is available since 2.2
 /*
  * To show a signed value on two sliders positioned back to back (one of it is inverse or has a negative length value)
  */
@@ -112,18 +113,11 @@ int setPositiveNegativeSliders(struct positiveNegativeSlider *aSliderStructPtr, 
 struct positiveNegativeSlider sAccelerationLeftRightSliders;
 struct positiveNegativeSlider sAccelerationForwardBackwardSliders;
 
-int speedOverflowAndDeadBandHandling(int aSpeed) {
-    if (aSpeed > 0) {
-        aSpeed += SPEED_DEAD_BAND;
-        // overflow handling since analogWrite only accepts byte values
-        if (aSpeed > MAX_SPEED) {
-            aSpeed = MAX_SPEED;
-        }
-    } else if (aSpeed < 0) {
-        aSpeed -= SPEED_DEAD_BAND;
-        if (aSpeed < -MAX_SPEED) {
-            aSpeed = -MAX_SPEED;
-        }
+uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeed) {
+    aSpeed += SPEED_DEAD_BAND;
+    // overflow handling since analogWrite only accepts byte values
+    if (aSpeed > MAX_SPEED) {
+        aSpeed = MAX_SPEED;
     }
     return aSpeed;
 }
@@ -138,7 +132,7 @@ int speedOverflowAndDeadBandHandling(int aSpeed) {
  * positive -> left down
  * negative -> right down
  */
-void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallbackInfo) {
+void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackInfo) {
     (void) aSensorType; // to avoid -Wunused-parameter
 
     if (sSensorChangeCallCountForZeroAdjustment < CALLS_FOR_ZERO_ADJUSTMENT) {
@@ -146,7 +140,7 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallback
             // init values
             sYZeroValueAdded = 0;
         }
-        // Add for zero adjustment
+        // Sum for zero adjustment
         sYZeroValueAdded += aSensorCallbackInfo->ValueY;
         sSensorChangeCallCountForZeroAdjustment++;
     } else if (sSensorChangeCallCountForZeroAdjustment == CALLS_FOR_ZERO_ADJUSTMENT) {
@@ -180,8 +174,19 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback * aSensorCallback
         sprintf(sStringBuffer, "%4d", tSpeedValue);
         SliderBackward.printValue(sStringBuffer);
 
-        RobotCarMotorControl.rightCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue + tLeftRightValue));
-        RobotCarMotorControl.leftCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue - tLeftRightValue));
+        /*
+         * Get direction
+         */
+        uint8_t tDirection = DIRECTION_FORWARD;
+        if (tSpeedValue < 0) {
+            tSpeedValue = -tSpeedValue;
+            tDirection = DIRECTION_BACKWARD;
+        }
+
+        RobotCarMotorControl.rightCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue + tLeftRightValue),
+                tDirection);
+        RobotCarMotorControl.leftCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue - tLeftRightValue),
+                tDirection);
     }
 }
 

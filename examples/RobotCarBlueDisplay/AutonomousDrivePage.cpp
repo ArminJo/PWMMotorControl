@@ -172,9 +172,10 @@ void initAutonomousDrivePage(void) {
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doStep);
 
     // use sDriveMode for reconnect during demo mode
-    TouchButtonFollower.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_RED, F("Follow"),
-    TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_FOLLOWER),
-            &doStartStopFollowerMode);
+    TouchButtonStartStopUserAutonomousDrive.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_RED, F("Start\nUser"),
+    TEXT_SIZE_14, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_AUTONOMOUS_DRIVE_USER),
+            &doStartStopTestUser);
+    TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop\nUser"));
 
     TouchButtonScanSpeed.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Scan slow"), TEXT_SIZE_16,
@@ -193,10 +194,10 @@ void initAutonomousDrivePage(void) {
             (sDriveMode == MODE_AUTONOMOUS_DRIVE_BUILTIN), &doStartStopAutomomousDrive);
     TouchButtonStartStopBuiltInAutonomousDrive.setCaptionForValueTrue(F("Stop"));
 
-    TouchButtonStartStopUserAutonomousDrive.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-    COLOR_RED, F("Start\nUser"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false,
-            &doStartStopTestUser);
-    TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop\nUser"));
+    TouchButtonFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+    COLOR_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_FOLLOWER),
+            &doStartStopFollowerMode);
+    TouchButtonFollower.setCaptionForValueTrue(F("Stop\nFollow"));
 
 #ifdef ENABLE_PATH_INFO_PAGE
     TouchButtonPathInfoPage.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR_RED, F("Show\nPath"), TEXT_SIZE_22,
