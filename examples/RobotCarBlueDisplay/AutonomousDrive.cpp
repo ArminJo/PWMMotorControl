@@ -163,7 +163,7 @@ void driveAutonomousOneStep() {
              * Continuous mode, start car or let it run
              */
             if (tCarIsStopped) {
-                RobotCarMotorControl.startRampUpAndWaitForDriveSpeed(DIRECTION_FORWARD, &loopGUI);
+                RobotCarMotorControl.startRampUpAndWaitForDriveSpeedPWM(DIRECTION_FORWARD, &loopGUI);
             }
         }
 
@@ -303,11 +303,11 @@ int doBuiltInCollisionDetection() {
  ***************************************************/
 
 void checkSpeedAndGo(unsigned int aSpeed, uint8_t aRequestedDirection) {
-    if (aSpeed > RobotCarMotorControl.rightCarMotor.DriveSpeed * 2) {
-        aSpeed = RobotCarMotorControl.rightCarMotor.DriveSpeed * 2;
+    if (aSpeed > RobotCarMotorControl.rightCarMotor.DriveSpeedPWM * 2) {
+        aSpeed = RobotCarMotorControl.rightCarMotor.DriveSpeedPWM * 2;
     }
-    if (aSpeed > MAX_SPEED) {
-        aSpeed = MAX_SPEED;
+    if (aSpeed > MAX_SPEED_PWM) {
+        aSpeed = MAX_SPEED_PWM;
     }
     RobotCarMotorControl.startRampUpAndWait(aSpeed, aRequestedDirection, &loopGUI);
 
@@ -375,14 +375,14 @@ void driveFollowerModeOneStep() {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
 //            Serial.println(F("Go forward"));
 //        }
-                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
+                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeedPWM + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
                 checkSpeedAndGo(tSpeed, DIRECTION_FORWARD);
 
             } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
 //            Serial.println(F("Go backward"));
 //        }
-                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeed + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeedPWM + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
                 checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
 
             } else {

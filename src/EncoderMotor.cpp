@@ -96,33 +96,34 @@ void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMP
 /*
  * If motor is already running, adjust TargetDistanceCount to go to aRequestedDistanceMillimeter
  */
-void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter,
+void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
     if (aRequestedDistanceMillimeter == 0) {
         stop(DefaultStopMode); // In case motor was running
         return;
     }
-    if (CurrentSpeed == 0) {
-        startRampUp(aRequestedSpeed, aRequestedDirection);
+    if (CurrentSpeedPWM == 0) {
+        startRampUp(aRequestedSpeedPWM, aRequestedDirection);
         TargetDistanceMillimeter = aRequestedDistanceMillimeter;
     } else {
         /*
          * Already moving
          */
+        MotorRampState = MOTOR_STATE_DRIVE; // must be set, since we may be moving until now without ramp control
         TargetDistanceMillimeter = getDistanceMillimeter() + aRequestedDistanceMillimeter;
-        PWMDcMotor::setSpeed(aRequestedSpeed, aRequestedDirection);
+        PWMDcMotor::setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
     }
     LastTargetDistanceMillimeter = TargetDistanceMillimeter;
     CheckDistanceInUpdateMotor = true;
 }
 
 void EncoderMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(DriveSpeed, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 /*
  * if aRequestedDistanceMillimeter < 0 then use DIRECTION_BACKWARD
- * initialize motorInfo fields DirectionForward, RequestedDriveSpeed, DistanceTickCounter and optional NextChangeMaxTargetCount.
+ * initialize motorInfo fields DirectionForward, RequestedDriveSpeedPWM, DistanceTickCounter and optional NextChangeMaxTargetCount.
  */
 void EncoderMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
@@ -138,23 +139,23 @@ void EncoderMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
  */
 bool EncoderMotor::updateMotor() {
     unsigned long tMillis = millis();
-    uint8_t tNewSpeed = CurrentSpeed;
+    uint8_t tNewSpeedPWM = CurrentSpeedPWM;
 
     if (MotorRampState == MOTOR_STATE_START) {
         NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
         /*
          * Start motor
          */
-        if (RequestedDriveSpeed > RAMP_VALUE_UP_OFFSET_SPEED) {
+        if (RequestedDriveSpeedPWM > RAMP_VALUE_UP_OFFSET_SPEED_PWM) {
             // start with ramp to avoid spinning wheels
-            tNewSpeed = RAMP_VALUE_UP_OFFSET_SPEED; // start immediately with speed offset (3 volt)
+            tNewSpeedPWM = RAMP_VALUE_UP_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
             // Motor ramp not required, go direct to drive speed.
-            tNewSpeed = RequestedDriveSpeed;
-            //  --> DRIVE_SPEED
-            MotorRampState = MOTOR_STATE_DRIVE_SPEED;
+            tNewSpeedPWM = RequestedDriveSpeedPWM;
+            //  --> DRIVE
+            MotorRampState = MOTOR_STATE_DRIVE;
         }
 
         /*
@@ -173,38 +174,39 @@ bool EncoderMotor::updateMotor() {
              * Transition criteria to next state is:
              * Drive speed reached or target distance - braking distance reached
              */
-            if (tNewSpeed == RequestedDriveSpeed
+            if (tNewSpeedPWM == RequestedDriveSpeedPWM
                     || (CheckDistanceInUpdateMotor
                             && getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter)) {
-                //  RequestedDriveSpeed reached switch to --> DRIVE_SPEED and check immediately for next transition to RAMP_DOWN
-                MotorRampState = MOTOR_STATE_DRIVE_SPEED;
+                //  RequestedDriveSpeedPWM reached switch to --> DRIVE_SPEED_PWM and check immediately for next transition to RAMP_DOWN
+                MotorRampState = MOTOR_STATE_DRIVE;
             } else {
-                tNewSpeed = tNewSpeed + RampSpeedDelta;
+                tNewSpeedPWM = tNewSpeedPWM + RampSpeedPWMDelta;
                 // Clip value and check for 8 bit overflow
-                if (tNewSpeed > RequestedDriveSpeed || tNewSpeed <= RampSpeedDelta) {
-                    // do not change state here to let motor run at RequestedDriveSpeed for one interval
-                    tNewSpeed = RequestedDriveSpeed;
+                if (tNewSpeedPWM > RequestedDriveSpeedPWM || tNewSpeedPWM <= RampSpeedPWMDelta) {
+                    // do not change state here to let motor run at RequestedDriveSpeedPWM for one interval
+                    tNewSpeedPWM = RequestedDriveSpeedPWM;
                 }
             }
 #ifdef DEBUG
+            Serial.print(PWMPin);
             Serial.print(F(" St="));
             Serial.print(MotorRampState);
             Serial.print(F(" Ns="));
-            Serial.println(tNewSpeed);
+            Serial.println(tNewSpeedPWM);
 #endif
         }
     }
 
     // do not use "else if" since we must immediately check for next transition to RAMP_DOWN
-    if (MotorRampState == MOTOR_STATE_DRIVE_SPEED) {
+    if (MotorRampState == MOTOR_STATE_DRIVE) {
         /*
          * Wait until target distance - braking distance reached
          */
         if (CheckDistanceInUpdateMotor && getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter) {
-            if (CurrentSpeed > (RAMP_VALUE_DOWN_OFFSET_SPEED - RAMP_DOWN_VALUE_DELTA)) {
-                tNewSpeed -= (RAMP_VALUE_DOWN_OFFSET_SPEED - RAMP_DOWN_VALUE_DELTA); // RAMP_DOWN_VALUE_DELTA is immediately subtracted below
+            if (CurrentSpeedPWM > (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA)) {
+                tNewSpeedPWM -= (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_DOWN_VALUE_DELTA is immediately subtracted below
             } else {
-                tNewSpeed = RAMP_VALUE_DOWN_MIN_SPEED;
+                tNewSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
             }
             //  --> RAMP_DOWN
             MotorRampState = MOTOR_STATE_RAMP_DOWN;
@@ -217,7 +219,7 @@ bool EncoderMotor::updateMotor() {
             Serial.print(F(" St="));
             Serial.print(MotorRampState);
             Serial.print(F(" Ns="));
-            Serial.println(tNewSpeed);
+            Serial.println(tNewSpeedPWM);
 #endif
         }
     }
@@ -229,17 +231,17 @@ bool EncoderMotor::updateMotor() {
             /*
              * Decrease motor speed RAMP_UP_UPDATE_INTERVAL_STEPS times every RAMP_UP_UPDATE_INTERVAL_MILLIS milliseconds
              */
-            if (tNewSpeed > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_DOWN_MIN_SPEED)) {
-                tNewSpeed -= RAMP_DOWN_VALUE_DELTA;
+            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_DOWN_MIN_SPEED_PWM)) {
+                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
             } else {
-                tNewSpeed = RAMP_VALUE_DOWN_MIN_SPEED;
+                tNewSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
             }
 #ifdef DEBUG
             Serial.print(PWMPin);
             Serial.print(F(" St="));
             Serial.print(MotorRampState);
             Serial.print(F(" Ns="));
-            Serial.println(tNewSpeed);
+            Serial.println(tNewSpeedPWM);
 #endif
         }
 
@@ -247,28 +249,33 @@ bool EncoderMotor::updateMotor() {
     // End of motor state machine
 
 #ifdef TRACE
-    Serial.print(F("St="));
+    Serial.print(PWMPin);
+    Serial.print(F(" St="));
     Serial.println(MotorRampState);
 #endif
-    if (tNewSpeed != CurrentSpeed) {
+    if (tNewSpeedPWM != CurrentSpeedPWM) {
 #ifdef TRACE
         Serial.print(F("Ns="));
-        Serial.println(tNewSpeed);
+        Serial.println(tNewSpeedPWM);
 #endif
-        PWMDcMotor::setSpeed(tNewSpeed, CurrentDirectionOrBrakeMode);
+        PWMDcMotor::setSpeedPWM(tNewSpeedPWM, CurrentDirectionOrBrakeMode);
     }
 
     /*
      * Check if target distance is reached or encoder tick timeout
      */
-    if (CurrentSpeed > 0) {
+    if (CurrentSpeedPWM > 0) {
         if (CheckDistanceInUpdateMotor
                 && (getDistanceMillimeter() >= TargetDistanceMillimeter
                         || tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS))) {
             stop(MOTOR_BRAKE); // this sets MOTOR_STATE_STOPPED;
 #ifdef DEBUG
             Serial.print(PWMPin);
-            Serial.print(F(" Reached dist="));
+            if(tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS)){
+                Serial.print(F(" Encoder timeout: dist="));
+            } else{
+                Serial.print(F(" Reached: dist="));
+            }
             Serial.print(getDistanceMillimeter());
             Serial.print(F(" Breakdist="));
             Serial.println(getBrakingDistanceMillimeter());
@@ -293,27 +300,27 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
     if (tMillis >= sNextMotorSyncMillis) {
         sNextMotorSyncMillis += aCheckInterval;
 // only synchronize if manually operated or at full speed
-        if ((MotorRampState == MOTOR_STATE_STOPPED && aOtherMotorControl->MotorRampState == MOTOR_STATE_STOPPED && CurrentSpeed > 0)
-                || (MotorRampState == MOTOR_STATE_DRIVE_SPEED && aOtherMotorControl->MotorRampState == MOTOR_STATE_DRIVE_SPEED)) {
+        if ((MotorRampState == MOTOR_STATE_STOPPED && aOtherMotorControl->MotorRampState == MOTOR_STATE_STOPPED && CurrentSpeedPWM > 0)
+                || (MotorRampState == MOTOR_STATE_DRIVE && aOtherMotorControl->MotorRampState == MOTOR_STATE_DRIVE)) {
             MotorControlValuesHaveChanged = false;
             if (EncoderCount >= (aOtherMotorControl->EncoderCount + 2)) {
                 EncoderCount = aOtherMotorControl->EncoderCount;
                 /*
                  * This motor is too fast, first try to reduce other motors compensation
                  */
-                if (aOtherMotorControl->SpeedCompensation >= 2) {
-                    aOtherMotorControl->SpeedCompensation -= 2;
-                    aOtherMotorControl->CurrentSpeed += 2;
-                    aOtherMotorControl->setSpeed(aOtherMotorControl->CurrentSpeed, DIRECTION_FORWARD);
+                if (aOtherMotorControl->SpeedPWMCompensation >= 2) {
+                    aOtherMotorControl->SpeedPWMCompensation -= 2;
+                    aOtherMotorControl->CurrentSpeedPWM += 2;
+                    aOtherMotorControl->setSpeedPWM(aOtherMotorControl->CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                     EncoderCount = aOtherMotorControl->EncoderCount;
-                } else if (CurrentSpeed > StartSpeed) {
+                } else if (CurrentSpeedPWM > StartSpeedPWM) {
                     /*
                      * else increase this motors compensation
                      */
-                    SpeedCompensation += 2;
-                    CurrentSpeed -= 2;
-                    PWMDcMotor::setSpeed(CurrentSpeed, DIRECTION_FORWARD);
+                    SpeedPWMCompensation += 2;
+                    CurrentSpeedPWM -= 2;
+                    PWMDcMotor::setSpeedPWM(CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                 }
 
@@ -322,18 +329,18 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
                 /*
                  * Other motor is too fast, first try to reduce this motors compensation
                  */
-                if (SpeedCompensation >= 2) {
-                    SpeedCompensation -= 2;
-                    CurrentSpeed += 2;
-                    PWMDcMotor::setSpeed(CurrentSpeed, DIRECTION_FORWARD);
+                if (SpeedPWMCompensation >= 2) {
+                    SpeedPWMCompensation -= 2;
+                    CurrentSpeedPWM += 2;
+                    PWMDcMotor::setSpeedPWM(CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
-                } else if (aOtherMotorControl->CurrentSpeed > aOtherMotorControl->StartSpeed) {
+                } else if (aOtherMotorControl->CurrentSpeedPWM > aOtherMotorControl->StartSpeedPWM) {
                     /*
                      * else increase other motors compensation
                      */
-                    aOtherMotorControl->SpeedCompensation += 2;
-                    aOtherMotorControl->CurrentSpeed -= 2;
-                    aOtherMotorControl->setSpeed(aOtherMotorControl->CurrentSpeed, DIRECTION_FORWARD);
+                    aOtherMotorControl->SpeedPWMCompensation += 2;
+                    aOtherMotorControl->CurrentSpeedPWM -= 2;
+                    aOtherMotorControl->setSpeedPWM(aOtherMotorControl->CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                 }
             }
@@ -510,7 +517,7 @@ bool EncoderMotor::printEncoderDataPeriodically(Print *aSerial, uint16_t aPeriod
 }
 
 void EncoderMotor::printEncoderData(Print *aSerial) {
-    aSerial->print(CurrentSpeed / 2); // = PWM, scale it for plotter
+    aSerial->print(CurrentSpeedPWM / 2); // = PWM, scale it for plotter
     aSerial->print(" ");
     aSerial->print(getSpeed());
     aSerial->print(" ");
@@ -609,7 +616,7 @@ bool EncoderMotor::updateAllMotors() {
 /*
  * Waits until distance is reached
  */
-void EncoderMotor::startRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
+void EncoderMotor::startRampUpAndWaitForDriveSpeedPWMForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
     EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart;
 // walk through list
     while (tEncoderMotorControlPointer != NULL) {
@@ -652,7 +659,7 @@ bool EncoderMotor::allMotorsStarted() {
     bool tAllAreStarted = true;
 // walk through list
     while (tEncoderMotorControlPointer != NULL) {
-        if (tEncoderMotorControlPointer->MotorRampState != MOTOR_STATE_DRIVE_SPEED) {
+        if (tEncoderMotorControlPointer->MotorRampState != MOTOR_STATE_DRIVE) {
             tAllAreStarted = false;
         }
         tEncoderMotorControlPointer = tEncoderMotorControlPointer->NextMotorControl;
@@ -674,9 +681,7 @@ bool EncoderMotor::allMotorsStopped() {
 }
 
 /*
- * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE_SPEED to MOTOR_STATE_RAMP_DOWN
- * Use DistanceCountAfterRampUp as ramp down count
- * Busy waits for stop
+ * Start ramp down and busy wait for stop
  */
 void EncoderMotor::stopAllMotorsAndWaitUntilStopped() {
     EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart;

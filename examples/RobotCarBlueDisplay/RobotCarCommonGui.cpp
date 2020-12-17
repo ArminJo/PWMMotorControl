@@ -164,12 +164,12 @@ void startStopRobotCar(bool aDoStart) {
             sSensorCallbacksEnabled = true;
         } else {
             if (sLastSpeedSliderValue == 0) {
-                sLastSpeedSliderValue = RobotCarMotorControl.rightCarMotor.StartSpeed;
+                sLastSpeedSliderValue = RobotCarMotorControl.rightCarMotor.StartSpeedPWM;
             }
             /*
              * Start car to last speed slider value
              */
-            RobotCarMotorControl.setSpeedCompensated(sLastSpeedSliderValue, sRobotCarDirection);
+            RobotCarMotorControl.setSpeedPWMCompensated(sLastSpeedSliderValue, sRobotCarDirection);
             tSpeedSliderValue = sLastSpeedSliderValue;
         }
     } else {
@@ -232,7 +232,7 @@ void doSpeedSlider(BDSlider *aTheTouchedSlider, uint16_t aValue) {
             // handle GUI
             startStopRobotCar(true);
         } else {
-            RobotCarMotorControl.setSpeedCompensated(aValue, sRobotCarDirection);
+            RobotCarMotorControl.setSpeedPWMCompensated(aValue, sRobotCarDirection);
         }
     }
 }
@@ -258,12 +258,12 @@ void doSetDirection(BDButton *aTheTouchedButton, int16_t aValue) {
 /*
  * changes speed compensation by +1 or -1
  */
-void doSetCompensation(BDButton *aTheTouchedButton, int16_t aRightMotorSpeedCompensation) {
-    RobotCarMotorControl.changeSpeedCompensation(aRightMotorSpeedCompensation);
+void doSetCompensation(BDButton *aTheTouchedButton, int16_t aRightMotorSpeedPWMCompensation) {
+    RobotCarMotorControl.changeSpeedPWMCompensation(aRightMotorSpeedPWMCompensation);
 }
 
 #ifdef SUPPORT_EEPROM_STORAGE
-void doStoreCompensation(BDButton * aTheTouchedButton, int16_t aRightMotorSpeedCompensation) {
+void doStoreCompensation(BDButton * aTheTouchedButton, int16_t aRightMotorSpeedPWMCompensation) {
     RobotCarMotorControl.writeMotorValuesToEeprom();
 }
 #endif
@@ -592,12 +592,12 @@ void printMotorValuesPeriodically() {
         /*
          * Print speed value
          */
-        if (PWMDcMotor::MotorSpeedHasChanged) {
-            PWMDcMotor::MotorSpeedHasChanged = false;
+        if (PWMDcMotor::MotorPWMHasChanged) {
+            PWMDcMotor::MotorPWMHasChanged = false;
             // position below caption of speed slider
             uint16_t tYPos = MOTOR_INFO_START_Y + TEXT_SIZE_11;
-            sprintf_P(sStringBuffer, PSTR("speed%3d %3d"), RobotCarMotorControl.leftCarMotor.CurrentSpeed,
-                    RobotCarMotorControl.rightCarMotor.CurrentSpeed);
+            sprintf_P(sStringBuffer, PSTR("PWM  %3d %3d"), RobotCarMotorControl.leftCarMotor.CurrentSpeedPWM,
+                    RobotCarMotorControl.rightCarMotor.CurrentSpeedPWM);
             BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_WHITE);
         }
         /*
@@ -608,32 +608,32 @@ void printMotorValuesPeriodically() {
             // position below speed values
             uint16_t tYPos = MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11);
             sprintf_P(sStringBuffer, PSTR("lcomp %2d"),
-                    RobotCarMotorControl.rightCarMotor.SpeedCompensation - RobotCarMotorControl.leftCarMotor.SpeedCompensation);
+                    RobotCarMotorControl.rightCarMotor.SpeedPWMCompensation - RobotCarMotorControl.leftCarMotor.SpeedPWMCompensation);
             BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_WHITE);
 
             tYPos += TEXT_SIZE_11;
             char tVCCString[5];
 #ifdef MONITOR_VIN_VOLTAGE
             dtostrf(
-                    ((RobotCarMotorControl.rightCarMotor.StartSpeed * sVINVoltage) - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0))
-                            / MAX_SPEED, 4, 2, tVCCString);
+                    ((RobotCarMotorControl.rightCarMotor.StartSpeedPWM * sVINVoltage) - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0))
+                            / MAX_SPEED_PWM, 4, 2, tVCCString);
 #else
             dtostrf(
-                    (RobotCarMotorControl.rightCarMotor.StartSpeed * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0)) / MAX_SPEED, 4, 2, tVCCString);
+                    (RobotCarMotorControl.rightCarMotor.StartSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0)) / MAX_SPEED_PWM, 4, 2, tVCCString);
 #endif
-            sprintf_P(sStringBuffer, PSTR("st.%3d %sV"), RobotCarMotorControl.rightCarMotor.StartSpeed, tVCCString);
+            sprintf_P(sStringBuffer, PSTR("st.%3d %sV"), RobotCarMotorControl.rightCarMotor.StartSpeedPWM, tVCCString);
             BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
 
             tYPos += TEXT_SIZE_11;
 #ifdef MONITOR_VIN_VOLTAGE
             dtostrf(
-                    ((RobotCarMotorControl.rightCarMotor.DriveSpeed * sVINVoltage) - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0))
-                            / MAX_SPEED, 4, 2, tVCCString);
+                    ((RobotCarMotorControl.rightCarMotor.DriveSpeedPWM * sVINVoltage) - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0))
+                            / MAX_SPEED_PWM, 4, 2, tVCCString);
 #else
             dtostrf(
-                    (RobotCarMotorControl.rightCarMotor.DriveSpeed * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0)) / MAX_SPEED, 4, 2, tVCCString);
+                    (RobotCarMotorControl.rightCarMotor.DriveSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0)) / MAX_SPEED_PWM, 4, 2, tVCCString);
 #endif
-            sprintf_P(sStringBuffer, PSTR("drv%3d %sV"), RobotCarMotorControl.rightCarMotor.DriveSpeed, tVCCString);
+            sprintf_P(sStringBuffer, PSTR("drv%3d %sV"), RobotCarMotorControl.rightCarMotor.DriveSpeedPWM, tVCCString);
             BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
 
         }

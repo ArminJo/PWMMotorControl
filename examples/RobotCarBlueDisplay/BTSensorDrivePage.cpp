@@ -35,9 +35,9 @@ BDSlider SliderLeft;        // X positive
 
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
-#define SLIDER_SPEED_THRESHOLD      DEFAULT_START_SPEED
+#define SLIDER_SPEED_THRESHOLD      DEFAULT_START_SPEED_PWM
 #define SPEED_SENSOR_DEAD_BAND      20
-#define SPEED_DEAD_BAND             (DEFAULT_START_SPEED / 2)
+#define SPEED_DEAD_BAND             (DEFAULT_START_SPEED_PWM / 2)
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
 #define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 4)
@@ -113,13 +113,13 @@ int setPositiveNegativeSliders(struct positiveNegativeSlider *aSliderStructPtr, 
 struct positiveNegativeSlider sAccelerationLeftRightSliders;
 struct positiveNegativeSlider sAccelerationForwardBackwardSliders;
 
-uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeed) {
-    aSpeed += SPEED_DEAD_BAND;
+uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeedPWM) {
+    aSpeedPWM += SPEED_DEAD_BAND;
     // overflow handling since analogWrite only accepts byte values
-    if (aSpeed > MAX_SPEED) {
-        aSpeed = MAX_SPEED;
+    if (aSpeedPWM > MAX_SPEED_PWM) {
+        aSpeedPWM = MAX_SPEED_PWM;
     }
-    return aSpeed;
+    return aSpeedPWM;
 }
 
 /*
@@ -165,27 +165,27 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         /*
          * forward backward handling
          */
-        int tSpeedValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED / 10)); // Scale value
-        tSpeedValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedValue, SPEED_SENSOR_DEAD_BAND);
+        int tSpeedPWMValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED_PWM / 10)); // Scale value
+        tSpeedPWMValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedPWMValue, SPEED_SENSOR_DEAD_BAND);
 
         /*
          * Print speed as value of bottom slider
          */
-        sprintf(sStringBuffer, "%4d", tSpeedValue);
+        sprintf(sStringBuffer, "%4d", tSpeedPWMValue);
         SliderBackward.printValue(sStringBuffer);
 
         /*
          * Get direction
          */
         uint8_t tDirection = DIRECTION_FORWARD;
-        if (tSpeedValue < 0) {
-            tSpeedValue = -tSpeedValue;
+        if (tSpeedPWMValue < 0) {
+            tSpeedPWMValue = -tSpeedPWMValue;
             tDirection = DIRECTION_BACKWARD;
         }
 
-        RobotCarMotorControl.rightCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue + tLeftRightValue),
+        RobotCarMotorControl.rightCarMotor.setSpeedPWMCompensated(speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue),
                 tDirection);
-        RobotCarMotorControl.leftCarMotor.setSpeedCompensated(speedOverflowAndDeadBandHandling(tSpeedValue - tLeftRightValue),
+        RobotCarMotorControl.leftCarMotor.setSpeedPWMCompensated(speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue),
                 tDirection);
     }
 }
@@ -205,8 +205,8 @@ void initBTSensorDrivePage(void) {
     SliderBackward.init(SENSOR_SLIDER_CENTER_X, SENSOR_SLIDER_CENTER_Y, SENSOR_SLIDER_WIDTH, -(VERTICAL_SLIDER_LENTGH),
     SLIDER_SPEED_THRESHOLD, 0, SLIDER_BACKGROUND_COLOR, SLIDER_BAR_COLOR, FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
 //    SliderBackward.setBarThresholdColor(SLIDER_THRESHOLD_COLOR);
-    SliderForward.setScaleFactor((float) MAX_SPEED / (float) VERTICAL_SLIDER_LENTGH);
-    SliderBackward.setScaleFactor((float) MAX_SPEED / (float) VERTICAL_SLIDER_LENTGH);
+    SliderForward.setScaleFactor((float) MAX_SPEED_PWM / (float) VERTICAL_SLIDER_LENTGH);
+    SliderBackward.setScaleFactor((float) MAX_SPEED_PWM / (float) VERTICAL_SLIDER_LENTGH);
     sAccelerationForwardBackwardSliders.positiveSliderPtr = &SliderForward;
     sAccelerationForwardBackwardSliders.negativeSliderPtr = &SliderBackward;
 

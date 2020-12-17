@@ -33,7 +33,7 @@
  * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
  * If negative, -value is subtracted from the left speed -> the car turns slightly left.
  */
-#define SPEED_COMPENSATION_RIGHT    0
+#define SPEED_PWM_COMPENSATION_RIGHT    0
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable it in PWMDCMotor.h
 /*
@@ -92,7 +92,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
     RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
@@ -153,7 +153,7 @@ void simpleObjectAvoidance() {
     if (tCentimeter < 20) {
         RobotCarMotorControl.stop();
         delay(1000);
-        RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_BACKWARD);
+        RobotCarMotorControl.setSpeedPWMCompensated(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
         delay(200);
         RobotCarMotorControl.stop();
         delay(1000);
@@ -164,7 +164,7 @@ void simpleObjectAvoidance() {
         Serial.println(" degree");
         RobotCarMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
-        RobotCarMotorControl.setSpeedCompensated(DEFAULT_DRIVE_SPEED, DIRECTION_FORWARD);
+        RobotCarMotorControl.setSpeedPWMCompensated(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 
     delay(50);

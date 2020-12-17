@@ -36,7 +36,7 @@
  * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
  * If negative, -value is subtracted from the left speed -> the car turns slightly left.
  */
-#define SPEED_COMPENSATION_RIGHT            0
+#define SPEED_PWM_COMPENSATION_RIGHT            0
 
 #define DISTANCE_MINIMUM_CENTIMETER         20 // If measured distance is less than this value, go backwards
 #define DISTANCE_MAXIMUM_CENTIMETER         30 // If measured distance is greater than this value, go forward
@@ -52,14 +52,14 @@
 
 #if defined(VIN_2_LIPO)
 // values for 2xLIPO / 7.4 volt
-#define START_SPEED                 55 // Speed PWM value at which car starts to move.
-#define DRIVE_SPEED                 90 // Speed PWM value used for going fixed distance.
-#define MAX_SPEED_FOLLOWER         135 // Max speed PWM value used for follower.
+#define START_SPEED_PWM                 55 // Speed PWM value at which car starts to move.
+#define DRIVE_SPEED_PWM                 90 // Speed PWM value used for going fixed distance.
+#define MAX_SPEED_PWM_FOLLOWER         135 // Max speed PWM value used for follower.
 #else
 // Values for 4xAA / 6.0 volt
-#define START_SPEED                140 // Speed PWM value at which car starts to move.
-#define DRIVE_SPEED                220 // Speed PWM value used for going fixed distance.
-#define MAX_SPEED_FOLLOWER         255 // Max speed PWM value used for follower.
+#define START_SPEED_PWM                140 // Speed PWM value at which car starts to move.
+#define DRIVE_SPEED_PWM                220 // Speed PWM value used for going fixed distance.
+#define MAX_SPEED_PWM_FOLLOWER         255 // Max speed PWM value used for follower.
 #endif
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable it in PWMDCMotor.h
@@ -124,7 +124,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
     RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
@@ -166,7 +166,7 @@ void setup() {
 void loop() {
 
     unsigned int tCentimeter = getDistanceAndPlayTone();
-    unsigned int tSpeed;
+    unsigned int tSpeedPWM;
 
     if (tCentimeter == 0 || tCentimeter > DISTANCE_TARGET_SCAN_CENTIMETER) {
         /*
@@ -206,48 +206,48 @@ void loop() {
         /*
          * Target too far -> drive forward with speed proportional to the gap
          */
-        tSpeed = START_SPEED + (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) * 2;
-        if (tSpeed > MAX_SPEED_FOLLOWER) {
-            tSpeed = MAX_SPEED_FOLLOWER;
+        tSpeedPWM = START_SPEED_PWM + (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) * 2;
+        if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
+            tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
 #ifdef PLOTTER_OUTPUT
-        Serial.print(tSpeed);
+        Serial.print(tSpeedPWM);
 #else
         if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
             Serial.println(F("Go forward"));
         }
-        Serial.print(F("Speed="));
-        Serial.print(tSpeed);
+        Serial.print(F("SpeedPWM="));
+        Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startGoDistanceCentimeter(tSpeed, (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarMotorControl.startGoDistanceCentimeter(tSpeedPWM, (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2,
                 DIRECTION_FORWARD);
 #else
-        RobotCarMotorControl.setSpeedCompensated(tSpeed, DIRECTION_FORWARD);
+        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
 #endif
 
     } else if (tCentimeter < DISTANCE_MINIMUM_CENTIMETER) {
         /*
          * Target too close -> drive backwards
          */
-        tSpeed = START_SPEED + (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
-        if (tSpeed > MAX_SPEED_FOLLOWER) {
-            tSpeed = MAX_SPEED_FOLLOWER;
+        tSpeedPWM = START_SPEED_PWM + (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+        if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
+            tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
 #ifdef PLOTTER_OUTPUT
-        Serial.print(tSpeed);
+        Serial.print(tSpeedPWM);
 #else
         if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
             Serial.println(F("Go backward"));
         }
-        Serial.print(F("Speed="));
-        Serial.print(tSpeed);
+        Serial.print(F("SpeedPWM="));
+        Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startGoDistanceCentimeter(tSpeed, (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarMotorControl.startGoDistanceCentimeter(tSpeedPWM, (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) + DISTANCE_DELTA_CENTIMETER / 2,
                 DIRECTION_BACKWARD);
 #else
-        RobotCarMotorControl.setSpeedCompensated(tSpeed, DIRECTION_BACKWARD);
+        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
 #endif
     } else {
         /*

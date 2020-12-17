@@ -111,7 +111,7 @@ void loop() {
     Serial.print(F("Set speed to DEFAULT_DRIVE_SPEED="));
     Serial.println(DEFAULT_DRIVE_SPEED);
 #endif
-    uint8_t sSpeed = DEFAULT_DRIVE_SPEED;
+    uint8_t sSpeedPWM = DEFAULT_DRIVE_SPEED_PWM;
 
     uint8_t tLoopIndex = 0;
 
@@ -129,19 +129,19 @@ void loop() {
                 Serial.print(F("Go distance[mm]="));
                 Serial.println((tLoopIndex + 1) * 200); // 200, 400, 600
 #endif
-                CarMotorControl.startGoDistanceMillimeter(sSpeed, (tLoopIndex + 1) * 200, sDirection);
+                CarMotorControl.startGoDistanceMillimeter(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
                 Serial.print(F("Go distance[mm]="));
                 Serial.println(CarMotorControl.CarRequestedDistanceMillimeter);
                 // print 20 data sets after stopping
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
             } else {
-                CarMotorControl.setSpeed(sSpeed, sDirection);
+                CarMotorControl.setSpeedPWM(sSpeedPWM, sDirection);
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
 #ifndef ONLY_ARDUINO_PLOTTER_OUTPUT
                 Serial.println(F("Stop motors"));
 #endif
                 CarMotorControl.setStopMode(MOTOR_BRAKE); // just to be sure
-                CarMotorControl.setSpeed(0);
+                CarMotorControl.setSpeedPWM(0);
                 printData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
             }
 
@@ -149,21 +149,21 @@ void loop() {
             CarMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
 
         }
-        if (sSpeed == MAX_SPEED) {
+        if (sSpeedPWM == MAX_SPEED_PWM) {
             break; // after last loop
         }
         // double speed for next turn
-        if (sSpeed <= MAX_SPEED / 2) {
-            sSpeed *= 2;
+        if (sSpeedPWM <= MAX_SPEED_PWM / 2) {
+            sSpeedPWM *= 2;
         } else {
             // last loop with MAX_SPEED
-            sSpeed = MAX_SPEED;
+            sSpeedPWM = MAX_SPEED_PWM;
         }
         tLoopIndex++;
 
 #ifndef ONLY_ARDUINO_PLOTTER_OUTPUT
         Serial.print(F("Set speed to:"));
-        Serial.println(sSpeed);
+        Serial.println(sSpeedPWM);
 #endif
         CarMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
 
@@ -203,7 +203,7 @@ void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) 
         }
 #else
         if (CarMotorControl.IMUData.printIMUCarDataDataPeriodically(&Serial, aPeriodMillis)) {
-            Serial.println(CarMotorControl.rightCarMotor.CurrentSpeed / 2); // = PWM, scale it for plotter
+            Serial.println(CarMotorControl.rightCarMotor.CurrentSpeedPWM / 2); // = PWM, scale it for plotter
             i++;
         }
 #endif

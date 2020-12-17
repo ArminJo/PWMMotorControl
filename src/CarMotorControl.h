@@ -74,10 +74,10 @@ public:
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
-    void setValuesForFixedDistanceDriving(uint8_t aStartSpeed, uint8_t aDriveSpeed, int8_t aSpeedCompensationRight);
-    void changeSpeedCompensation(int8_t aSpeedCompensationRight);
-    void setStartSpeed(uint8_t aStartSpeed);
-    void setDriveSpeed(uint8_t aDriveSpeed);
+    void setValuesForFixedDistanceDriving(uint8_t aStartSpeedPWM, uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight);
+    void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
+    void setStartSpeedPWM(uint8_t aStartSpeedPWM);
+    void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
@@ -103,11 +103,11 @@ public:
 
     // If ramp up is not supported, these functions just sets the speed and return immediately
     void startRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
-    void startRampUp(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
-    void waitForDriveSpeed(void (*aLoopCallback)(void) = NULL);
-    void startRampUpAndWait(uint8_t aRequestedSpeed, uint8_t aRequestedDirection = DIRECTION_FORWARD,
+    void startRampUp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void waitForDriveSpeedPWM(void (*aLoopCallback)(void) = NULL);
+    void startRampUpAndWait(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection = DIRECTION_FORWARD,
             void (*aLoopCallback)(void) = NULL);
-    void startRampUpAndWaitForDriveSpeed(uint8_t aRequestedDirection = DIRECTION_FORWARD, void (*aLoopCallback)(void) = NULL);
+    void startRampUpAndWaitForDriveSpeedPWM(uint8_t aRequestedDirection = DIRECTION_FORWARD, void (*aLoopCallback)(void) = NULL);
 
     /*
      * For car direction handling
@@ -119,7 +119,7 @@ public:
      * Functions for moving a fixed distance
      */
     // With signed distance
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // only setup values, no movement -> use updateMotors()
 
@@ -133,7 +133,7 @@ public:
      * Functions for rotation
      */
     void setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter);
-    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed);
+    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeedPWM);
     void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
             void (*aLoopCallback)(void) = NULL);
 
@@ -172,15 +172,15 @@ public:
     /*
      * Functions, which directly call motor functions for both motors
      */
-    void changeSpeedCompensated(uint8_t aRequestedSpeed); // Keeps direction
-    void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
-    void setSpeedCompensated(uint8_t aRequestedSpeed, uint8_t aRequestedDirection, int8_t aLeftRightSpeed);
+    void changeSpeedPWMCompensated(uint8_t aRequestedSpeedPWM); // Keeps direction
+    void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM);
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
 
-    void setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection);
+    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void setStopMode(uint8_t aStopMode);
-    void setSpeed(int aRequestedSpeed);
-    void setSpeedCompensated(int aRequestedSpeed);
+    void setSpeedPWM(int aRequestedSpeedPWM);
+    void setSpeedPWMCompensated(int aRequestedSpeedPWM);
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
     EncoderMotor rightCarMotor; // 40 bytes RAM

@@ -66,13 +66,13 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    leftMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0); // Set compensation to 0
-    rightMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, 0);
+    leftMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, 0); // Set compensation to 0
+    rightMotor.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, 0);
 
     Serial.print(F("Start speed="));
-    Serial.print(rightMotor.StartSpeed);
+    Serial.print(rightMotor.StartSpeedPWM);
     Serial.print(F(", drive speed="));
-    Serial.print(rightMotor.DriveSpeed);
+    Serial.print(rightMotor.DriveSpeedPWM);
     Serial.println();
 
     delay(2000);
@@ -84,12 +84,12 @@ void loop() {
     /*
      * Try the default start speed (from PWMDCMotor.h), at which the motor starts to move.
      */
-    rightMotor.setSpeed(DEFAULT_START_SPEED, sMotorDirection);
+    rightMotor.setSpeedPWM(DEFAULT_START_SPEED_PWM, sMotorDirection);
     delay(1000);               // wait for a second
     /*
      * Now set speed to the default drive speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
      */
-    rightMotor.setSpeed(DEFAULT_DRIVE_SPEED, sMotorDirection);
+    rightMotor.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
     delay(1000);               // wait for a second
     /*
      * Stop motor
@@ -105,9 +105,9 @@ void loop() {
     /*
      * Run left motor
      */
-    leftMotor.setSpeed(DEFAULT_START_SPEED, sMotorDirection);
+    leftMotor.setSpeedPWM(DEFAULT_START_SPEED_PWM, sMotorDirection);
     delay(1000);
-    leftMotor.setSpeed(DEFAULT_DRIVE_SPEED, sMotorDirection);
+    leftMotor.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
     delay(1000);
     leftMotor.stop();
     delay(1000);

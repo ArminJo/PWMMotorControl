@@ -45,7 +45,7 @@
  * Some factors depending on wheel diameter and encoder resolution
  */
 #if ! defined(FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT)
-// Exact value is 220 mm / 20
+// Exact value is 220 mm / 20 = 11
 #define FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT  ((DEFAULT_CIRCUMFERENCE_MILLIMETER + (ENCODER_COUNTS_PER_FULL_ROTATION / 2)) / ENCODER_COUNTS_PER_FULL_ROTATION) // = 11
 #endif
 
@@ -73,14 +73,14 @@ public:
      */
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance count
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeed, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     bool updateMotor();
 
     /*
      * Functions especially for encoder motors
      */
     void synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned int aCheckInterval); // Computes motor speed compensation value in order to go exactly straight ahead
-    static void calibrate(); // Generates a rising ramp and detects the first movement -> this sets StartSpeed / dead band
+    static void calibrate(); // Generates a rising ramp and detects the first movement -> this sets StartSpeedPWM / dead band
 
     /*
      * Encoder interrupt handling
@@ -115,7 +115,7 @@ public:
 
     static void startGoDistanceMillimeterForAll(int aRequestedDistanceMillimeter);
     static void goDistanceMillimeterForAll(int aRequestedDistanceMillimeter, void (*aLoopCallback)(void));
-    static void startRampUpAndWaitForDriveSpeedForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void));
+    static void startRampUpAndWaitForDriveSpeedPWMForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void));
 
     static void stopAllMotors(uint8_t aStopMode);
     static void waitUntilAllMotorsStopped(void (*aLoopCallback)(void));

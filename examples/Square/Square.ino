@@ -31,7 +31,7 @@
  * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
  * If negative, -value is subtracted from the left speed -> the car turns slightly left.
  */
-#define SPEED_COMPENSATION_RIGHT    0
+#define SPEED_PWM_COMPENSATION_RIGHT    0
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
 /*
@@ -73,7 +73,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED, DEFAULT_DRIVE_SPEED, SPEED_COMPENSATION_RIGHT); // Set compensation
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if defined(CAR_HAS_4_WHEELS)
     RobotCarMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT);
 #else

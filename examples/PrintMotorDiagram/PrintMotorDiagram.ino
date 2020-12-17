@@ -70,9 +70,10 @@ void setup() {
 #else
     MotorUnderTest.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT);
 #endif
-
+    delay(2000);
 }
 
+#define DELAY_MILLIS_BETWEEN_CHANGE 20
 void loop() {
 
     static uint8_t sMotorDirection = DIRECTION_FORWARD;
@@ -85,15 +86,15 @@ void loop() {
     uint8_t tStopPWM = 0;
     int tStopSpeed = 0;
     /*
-     * Print value after each encoder count change and increase PWM every 40 ms
+     * Print value after each encoder count change and increase PWM every DELAY_MILLIS_BETWEEN_CHANGE ms
      */
 //    for (uint8_t tSpeed = 0; tSpeed < 250; ++tSpeed) {
 //        MotorUnderTest.setSpeed(tSpeed, sMotorDirection);
 //        uint32_t tStartMillis = millis();
 //        do {
-//            if (MotorUnderTest.EncoderCountHasChanged) {
-//                MotorUnderTest.EncoderCountHasChanged = false;
-//                Serial.print(tSpeed * PWM_PRINT_FACTOR);
+//            if (MotorUnderTest.SensorValuesHaveChanged) {
+//                MotorUnderTest.SensorValuesHaveChanged = false;
+//                Serial.print(tSpeed);
 //                Serial.print(' ');
 //                Serial.print(MotorUnderTest.EncoderCount);
 //                Serial.print(' ');
@@ -101,14 +102,14 @@ void loop() {
 //                Serial.print(' ');
 //                Serial.println(MotorUnderTest.getAverageSpeed());
 //            }
-//        } while (millis() - tStartMillis < 50);
+//        } while (millis() - tStartMillis < DELAY_MILLIS_BETWEEN_CHANGE);
 //    }
     /*
-     * Increase PWM and print values every 40 ms
+     * Increase PWM and print values every DELAY_MILLIS_BETWEEN_CHANGE ms
      */
     for (uint8_t tPWM = 0; tPWM < 249; ++tPWM) {
-        MotorUnderTest.setSpeed(tPWM, sMotorDirection);
-        delay(50);
+        MotorUnderTest.setSpeedPWM(tPWM, sMotorDirection);
+        delay(DELAY_MILLIS_BETWEEN_CHANGE);
         Serial.print(tPWM);
 
         Serial.print(' ');
@@ -134,8 +135,8 @@ void loop() {
     MotorUnderTest.LastRideEncoderCount = 0;
     // and decrease
     for (int tPWM = 248; tPWM >= 0; tPWM--) {
-        MotorUnderTest.setSpeed(tPWM, sMotorDirection);
-        delay(50);
+        MotorUnderTest.setSpeedPWM(tPWM, sMotorDirection);
+        delay(DELAY_MILLIS_BETWEEN_CHANGE);
         Serial.print(tPWM);
 
         Serial.print(' ');
