@@ -1,6 +1,6 @@
 /*
  *  Square.cpp
- *  Example for driving a 50 cm square using CarMotorControl class
+ *  Example for driving a 50 cm square using CarPWMMotorControl class
  *
  *  Created on: 19.09.2020
  *  Copyright (C) 2020  Armin Joachimsmeyer
@@ -24,7 +24,7 @@
  */
 
 #include <Arduino.h>
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 
 /*
  * Speed compensation to enable driving straight ahead.
@@ -47,7 +47,7 @@
 #define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
 #endif
 
-CarMotorControl RobotCarMotorControl;
+CarPWMMotorControl RobotCarPWMMotorControl;
 #define SIZE_OF_SQUARE_MILLIMETER  400
 
 void setup() {
@@ -56,28 +56,29 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
-    delay(2000); // To be able to connect Serial monitor after reset and before first printout
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+    delay(4000); // To be able to connect Serial monitor after reset or power up and before first printout
 #endif
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     // For Adafruit Motor Shield v2
-    RobotCarMotorControl.init();
+    RobotCarPWMMotorControl.init();
 #else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
+    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
 #endif
 
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM,
+            SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if defined(CAR_HAS_4_WHEELS)
-    RobotCarMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT);
+    RobotCarPWMMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT);
 #else
-    RobotCarMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT);
+    RobotCarPWMMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT);
 #endif
     // Print info
     PWMDcMotor::printSettings(&Serial);
@@ -94,19 +95,19 @@ void loop() {
          * You can adjust the speed as well as the distance to time factor above, to get better results.
          * If you have have slot type photo interrupters assembled, you require no factor if defining USE_ENCODER_MOTOR_CONTROL in PWMDCMotor.h
          */
-        RobotCarMotorControl.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
+        RobotCarPWMMotorControl.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
         delay(400);
         /*
          * Try to turn by 90 degree.
          */
-        RobotCarMotorControl.rotate(90, sMotorDirection, true);
+        RobotCarPWMMotorControl.rotate(90, sMotorDirection, NULL, true);
         delay(400);
     }
 
     /*
      * Turn car around and switch direction
      */
-    RobotCarMotorControl.rotate(180, TURN_IN_PLACE, true);
+    RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE, NULL, true);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

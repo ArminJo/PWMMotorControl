@@ -161,46 +161,46 @@ void handleAutomomousDriveRadioButtons() {
 }
 
 void initAutonomousDrivePage(void) {
-    TouchButtonStepMode.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6 + 1, COLOR_BLUE,
+    TouchButtonStepMode.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6 + 1, COLOR16_BLUE,
             reinterpret_cast<const __FlashStringHelper *>(sStepModeButtonStringContinuousStepToTurn), TEXT_SIZE_9,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doNextStepMode);
 
-    TouchButtonSingleScan.init(0, BUTTON_HEIGHT_6_LINE_2, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_BLUE, F("Scan"),
+    TouchButtonSingleScan.init(0, BUTTON_HEIGHT_6_LINE_2, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Scan"),
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doSingleScan);
 
-    TouchButtonStep.init(0, BUTTON_HEIGHT_6_LINE_3, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_BLUE, F("Step"),
+    TouchButtonStep.init(0, BUTTON_HEIGHT_6_LINE_3, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Step"),
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doStep);
 
     // use sDriveMode for reconnect during demo mode
-    TouchButtonStartStopUserAutonomousDrive.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_RED, F("Start\nUser"),
-    TEXT_SIZE_14, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_AUTONOMOUS_DRIVE_USER),
+    TouchButtonStartStopUserAutonomousDrive.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_RED, F("Start\nUser"),
+    TEXT_SIZE_13, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_AUTONOMOUS_DRIVE_USER),
             &doStartStopTestUser);
     TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop\nUser"));
 
     TouchButtonScanSpeed.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
-    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_BLACK, F("Scan slow"), TEXT_SIZE_16,
+    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Scan slow"), TEXT_SIZE_16,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
     TouchButtonScanSpeed.setCaptionForValueTrue("Scan fast");
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
-    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR_RED, reinterpret_cast<const __FlashStringHelper *>(sScanModeButtonStringMinMax),
+    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, reinterpret_cast<const __FlashStringHelper *>(sScanModeButtonStringMinMax),
     TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, SCAN_MODE_MINIMUM, &doScanMode);
 #endif
 
     // use sDriveMode for reconnect during demo mode
-    TouchButtonStartStopBuiltInAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED,
+    TouchButtonStartStopBuiltInAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
             F("Start\nBuiltin"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             (sDriveMode == MODE_AUTONOMOUS_DRIVE_BUILTIN), &doStartStopAutomomousDrive);
     TouchButtonStartStopBuiltInAutonomousDrive.setCaptionForValueTrue(F("Stop"));
 
     TouchButtonFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-    COLOR_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_FOLLOWER),
+    COLOR16_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_FOLLOWER),
             &doStartStopFollowerMode);
     TouchButtonFollower.setCaptionForValueTrue(F("Stop\nFollow"));
 
 #ifdef ENABLE_PATH_INFO_PAGE
-    TouchButtonPathInfoPage.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR_RED, F("Show\nPath"), TEXT_SIZE_22,
+    TouchButtonPathInfoPage.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR16_RED, F("Show\nPath"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_SHOW_PATH, &GUISwitchPages);
 #endif
 }
@@ -255,7 +255,7 @@ void stopAutonomousDrivePage(void) {
  */
 void clearPrintedForwardDistancesInfos() {
     BlueDisplay1.fillRect(BUTTON_WIDTH_3_5 + 1, BUTTON_HEIGHT_4 + 1, LAYOUT_320_WIDTH,
-    BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR_WHITE);
+    BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR16_WHITE);
 }
 
 /*
@@ -274,15 +274,15 @@ void drawForwardDistancesInfos() {
          * Determine color
          */
         uint8_t tDistance = sForwardDistancesInfo.RawDistancesArray[i];
-        tColor = COLOR_ORANGE;
+        tColor = COLOR16_ORANGE;
         if (tDistance >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
             tDistance = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
-            tColor = COLOR_GREEN;
+            tColor = COLOR16_GREEN;
         }
         if (tDistance > sCentimeterPerScanTimesTwo) {
-            tColor = COLOR_GREEN;
+            tColor = COLOR16_GREEN;
         } else if (tDistance < sCentimeterPerScan) {
-            tColor = COLOR_RED;
+            tColor = COLOR16_RED;
         }
 
         /*
@@ -299,15 +299,15 @@ void drawForwardDistancesInfos() {
 void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoClearVector) {
 
     if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-        color16_t tColor = COLOR_BLUE;
+        color16_t tColor = COLOR16_BLUE;
         int tDegreeToDisplay = aDegreeToTurn;
 
         if (tDegreeToDisplay == 180) {
-            tColor = COLOR_RED;
+            tColor = COLOR16_RED;
             tDegreeToDisplay = 0;
         }
         if (aDoClearVector) {
-            tColor = COLOR_WHITE;
+            tColor = COLOR16_WHITE;
         }
 
         BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, aLengthOfVector, tDegreeToDisplay + 90,
@@ -316,7 +316,7 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
             sprintf_P(sStringBuffer, PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
                     aDegreeToTurn, sForwardDistancesInfo.WallRightAngleDegrees); // \xB0 is degree character
             BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
-            COLOR_BLACK, COLOR_WHITE);
+            COLOR16_BLACK, COLOR16_WHITE);
         }
     }
 }

@@ -1,6 +1,6 @@
 /*
  *  Start.cpp
- *  Example for controlling 2 motors without using CarMotorControl class
+ *  Example for controlling 2 motors without using CarPWMMotorControl class
  *
  *  Copyright (C) 2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -23,7 +23,7 @@
  */
 
 #include <Arduino.h>
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
 /*
@@ -48,8 +48,8 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
-    delay(2000); // To be able to connect Serial monitor after reset and before first printout
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+    delay(4000); // To be able to connect Serial monitor after reset or power up and before first printout
 #endif
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));

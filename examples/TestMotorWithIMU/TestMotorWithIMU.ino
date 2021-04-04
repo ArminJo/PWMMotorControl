@@ -24,14 +24,14 @@
  */
 
 #include <Arduino.h>
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 #include "IMUCarData.h"
 
 #define ONLY_ARDUINO_PLOTTER_OUTPUT
 #define PRINTS_PER_SECOND 50
 
 #if !defined(USE_MPU6050_IMU)
-#error For this example to run, USE_MPU6050_IMU must be commented out / defined in CarMotorControl.h line 36
+#error For this example to run, USE_MPU6050_IMU must be commented out / defined in CarPWMMotorControl.h line 36
 #endif
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
@@ -50,7 +50,7 @@
 
 #define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
 
-CarMotorControl CarMotorControl;
+CarPWMMotorControl CarPWMMotorControl;
 
 unsigned long LastPrintMillis;
 
@@ -62,8 +62,8 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
-    delay(2000); // To be able to connect Serial monitor after reset and before first printout
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+    delay(4000); // To be able to connect Serial monitor after reset or power up and before first printout
 #endif
     // Just to know which program is running on my Arduino
 #ifndef ONLY_ARDUINO_PLOTTER_OUTPUT
@@ -75,22 +75,22 @@ void setup() {
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     // For Adafruit Motor Shield v2
-    CarMotorControl.init();
+    CarPWMMotorControl.init();
 #else
-    CarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
+    CarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
 #endif
 
-    CarMotorControl.IMUData.delayAndReadIMUCarDataData(3000);
+    CarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(3000);
 }
 
 void loop() {
     static uint8_t sDirection = DIRECTION_FORWARD;
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-    CarMotorControl.rightCarMotor.printEncoderDataCaption(&Serial);
+    CarPWMMotorControl.rightCarMotor.printEncoderDataCaption(&Serial);
 #endif
-    CarMotorControl.IMUData.printIMUCarDataCaption(&Serial);
+    CarPWMMotorControl.IMUData.printIMUCarDataCaption(&Serial);
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     Serial.print(F("PWM[2] "));
 #endif
@@ -119,9 +119,9 @@ void loop() {
         bool tUseRamp = true;
         for (uint8_t i = 0; i < 2; ++i) {
 
-            CarMotorControl.IMUData.resetOffsetDataAndWait();
+            CarPWMMotorControl.IMUData.resetOffsetDataAndWait();
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            CarMotorControl.rightCarMotor.resetEncoderControlValues();
+            CarPWMMotorControl.rightCarMotor.resetEncoderControlValues();
 #endif
 
             if (tUseRamp) {
@@ -129,24 +129,24 @@ void loop() {
                 Serial.print(F("Go distance[mm]="));
                 Serial.println((tLoopIndex + 1) * 200); // 200, 400, 600
 #endif
-                CarMotorControl.startGoDistanceMillimeter(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
+                CarPWMMotorControl.startGoDistanceMillimeter(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
                 Serial.print(F("Go distance[mm]="));
-                Serial.println(CarMotorControl.CarRequestedDistanceMillimeter);
+                Serial.println(CarPWMMotorControl.CarRequestedDistanceMillimeter);
                 // print 20 data sets after stopping
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
             } else {
-                CarMotorControl.setSpeedPWM(sSpeedPWM, sDirection);
+                CarPWMMotorControl.setSpeedPWM(sSpeedPWM, sDirection);
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
 #ifndef ONLY_ARDUINO_PLOTTER_OUTPUT
                 Serial.println(F("Stop motors"));
 #endif
-                CarMotorControl.setStopMode(MOTOR_BRAKE); // just to be sure
-                CarMotorControl.setSpeedPWM(0);
+                CarPWMMotorControl.setStopMode(MOTOR_BRAKE); // just to be sure
+                CarPWMMotorControl.setSpeedPWM(0);
                 printData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
             }
 
             tUseRamp = false;
-            CarMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
+            CarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
 
         }
         if (sSpeedPWM == MAX_SPEED_PWM) {
@@ -165,10 +165,10 @@ void loop() {
         Serial.print(F("Set speed to:"));
         Serial.println(sSpeedPWM);
 #endif
-        CarMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
+        CarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
 
     }
-    CarMotorControl.IMUData.delayAndReadIMUCarDataData(5000);
+    CarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(5000);
     /*
      * switch direction
      */
@@ -188,22 +188,22 @@ void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) 
 
     for (uint8_t i = 0; i < aDataSetsToPrint;) {
         if (aUseRamp) {
-            if (CarMotorControl.updateMotors()) {
+            if (CarPWMMotorControl.updateMotors()) {
                 // do not count as long as car is driving
                 i = 0;
             }
         }
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 
-        if (CarMotorControl.rightCarMotor.printEncoderDataPeriodically(&Serial, aPeriodMillis)) {
-            CarMotorControl.IMUData.readCarDataFromMPU6050Fifo();
-            CarMotorControl.IMUData.printIMUCarData(&Serial);
+        if (CarPWMMotorControl.rightCarMotor.printEncoderDataPeriodically(&Serial, aPeriodMillis)) {
+            CarPWMMotorControl.IMUData.readCarDataFromMPU6050Fifo();
+            CarPWMMotorControl.IMUData.printIMUCarData(&Serial);
             Serial.println();
             i++;
         }
 #else
-        if (CarMotorControl.IMUData.printIMUCarDataDataPeriodically(&Serial, aPeriodMillis)) {
-            Serial.println(CarMotorControl.rightCarMotor.CurrentSpeedPWM / 2); // = PWM, scale it for plotter
+        if (CarPWMMotorControl.IMUData.printIMUCarDataDataPeriodically(&Serial, aPeriodMillis)) {
+            Serial.println(CarPWMMotorControl.rightCarMotor.CurrentSpeedPWM / 2); // = PWM, scale it for plotter
             i++;
         }
 #endif

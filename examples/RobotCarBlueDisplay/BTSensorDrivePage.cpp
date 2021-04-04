@@ -29,9 +29,9 @@ BDSlider SliderBackward;    // Y positive
 BDSlider SliderRight;       // X negative
 BDSlider SliderLeft;        // X positive
 
-#define SLIDER_BACKGROUND_COLOR     COLOR_YELLOW
-#define SLIDER_BAR_COLOR            COLOR_GREEN
-#define SLIDER_THRESHOLD_COLOR      COLOR_BLUE
+#define SLIDER_BACKGROUND_COLOR     COLOR16_YELLOW
+#define SLIDER_BAR_COLOR            COLOR16_GREEN
+#define SLIDER_THRESHOLD_COLOR      COLOR16_BLUE
 
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))

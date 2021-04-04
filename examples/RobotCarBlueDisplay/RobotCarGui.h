@@ -52,7 +52,7 @@ extern char sStringBuffer[128];
 #define US_DISTANCE_MAP_ORIGIN_Y 150
 
 #define MOTOR_INFO_START_X (BUTTON_WIDTH_6 + 4)
-#define MOTOR_INFO_START_Y (SPEED_SLIDER_SIZE / 2 + 25)
+#define MOTOR_INFO_START_Y (SPEED_SLIDER_SIZE / 2 + 26)
 
 #define PAGE_HOME               0 // Manual control page
 #define PAGE_AUTOMATIC_CONTROL  1

@@ -45,10 +45,10 @@
 // The change log is at the bottom of the file
 
 /*
- * Comment this out, if you have encoder interrupts attached at pin 2 and 3
+ * Activate this, if you have encoder interrupts attached at pin 2 and 3
  * and want to use the methods of the EncoderMotor class for fixed distance / closed loop driving.
  * Enabling it will disable no longer required PWMDCMotor class variables and functions
- * and force the usage of the EncoderMotor class in CarMotorControl.
+ * and force the usage of the EncoderMotor class in CarPWMMotorControl.
  */
 //#define USE_ENCODER_MOTOR_CONTROL
 //
@@ -75,7 +75,7 @@
 #endif
 
 /*
- * Comment this out, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
+ * Activate this, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
  */
 //#define VIN_2_LIPO
 /*

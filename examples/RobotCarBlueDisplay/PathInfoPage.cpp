@@ -37,10 +37,10 @@ void doResetPath(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 
 void initPathInfoPage(void) {
-    TouchButtonResetPath.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR_RED, F("Clear"), TEXT_SIZE_22,
+    TouchButtonResetPath.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_RED, F("Clear"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doResetPath);
 
-    TouchButtonBackSmall.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR_RED, F("Back"), TEXT_SIZE_22,
+    TouchButtonBackSmall.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR16_RED, F("Back"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &GUISwitchPages);
 }
 
@@ -203,7 +203,7 @@ void DrawPath() {
     while (tXDeltaPtr <= sXPathDeltaPtr) {
         int tYDisplayDelta = (-(*tXDeltaPtr++)) >> tScaleShift;
         int tXDisplayDelta = (-(*tYDeltaPtr++)) >> tScaleShift;
-        BlueDisplay1.drawLineRel(tXDisplayPos, tYDisplayPos, tXDisplayDelta, tYDisplayDelta, COLOR_RED);
+        BlueDisplay1.drawLineRel(tXDisplayPos, tYDisplayPos, tXDisplayDelta, tYDisplayDelta, COLOR16_RED);
         tXDisplayPos += tXDisplayDelta;
         tYDisplayPos += tYDisplayDelta;
     }

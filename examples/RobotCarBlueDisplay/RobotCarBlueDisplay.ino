@@ -55,7 +55,7 @@
 /*
  * Car Control
  */
-CarMotorControl RobotCarMotorControl;
+CarPWMMotorControl RobotCarMotorControl;
 float sVINVoltage;
 
 #ifdef ENABLE_RTTTL
@@ -188,8 +188,8 @@ void setup() {
 //        BlueDisplay1.debug("sMCUSR=", sMCUSR);
     } else {
 #if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)
-    delay(2000); // To be able to connect Serial monitor after reset and before first printout
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+    delay(4000); // To be able to connect Serial monitor after reset or power up and before first printout
 #endif
         // Just to know which program is running on my Arduino
         Serial.println(F("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__));

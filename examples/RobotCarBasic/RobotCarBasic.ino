@@ -22,7 +22,7 @@
 
 #include <Arduino.h>
 
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 #include "Servo.h"
 #include "HCSR04.h"
 
@@ -62,7 +62,7 @@
 #define PIN_ECHO_IN                A1
 
 //Car Control
-CarMotorControl RobotCarMotorControl;
+CarPWMMotorControl RobotCarMotorControl;
 
 Servo DistanceServo;
 

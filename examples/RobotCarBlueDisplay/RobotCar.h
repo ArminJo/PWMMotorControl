@@ -26,7 +26,7 @@
 //#define USE_LAYOUT_FOR_NANO
 
 // Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger.
-//#define USE_US_SENSOR_1_PIN_MODE // Comment it out, if you use modified HC-SR04 modules or HY-SRF05 ones.
+//#define USE_US_SENSOR_1_PIN_MODE // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones.
 
 //#define CAR_HAS_IR_DISTANCE_SENSOR
 
@@ -65,8 +65,8 @@
 #include <Servo.h>
 #endif
 
-#include "CarMotorControl.h"
-extern CarMotorControl RobotCarMotorControl;
+#include "CarPWMMotorControl.h"
+extern CarPWMMotorControl RobotCarMotorControl;
 
 /*
  * Pin usage

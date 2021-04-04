@@ -200,17 +200,17 @@ int scanForTarget() {
              * Determine color and draw distance line
              */
             color16_t tColor;
-            tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
+            tColor = COLOR16_RED; // tCentimeter <= sCentimeterPerScan
             if (tCentimeter <= FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
-                tColor = COLOR_GREEN;
+                tColor = COLOR16_GREEN;
             } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
-                tColor = COLOR_YELLOW;
+                tColor = COLOR16_YELLOW;
             }
 
             // Clear old line
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
                     sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tScanDegree,
-                    COLOR_WHITE, 3);
+                    COLOR16_WHITE, 3);
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tScanDegree, tColor, 3);
         }
         sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
@@ -229,7 +229,7 @@ int scanForTarget() {
          */
         sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tScanDegree - 90, tCentimeter); // \xB0 is degree character
         BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
-        COLOR_BLACK, COLOR_WHITE);
+        COLOR16_BLACK, COLOR16_WHITE);
 
         // reset distance servo direction
         DistanceServoWriteAndDelay(90, false);
@@ -300,20 +300,20 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             /*
              * Determine color
              */
-            tColor = COLOR_RED; // tCentimeter <= sCentimeterPerScan
+            tColor = COLOR16_RED; // tCentimeter <= sCentimeterPerScan
             if (tCentimeter >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
                 tColor = DISTANCE_TIMEOUT_COLOR;
             } else if (tCentimeter > sCentimeterPerScanTimesTwo) {
-                tColor = COLOR_GREEN;
+                tColor = COLOR16_GREEN;
             } else if (tCentimeter > sCentimeterPerScan) {
-                tColor = COLOR_YELLOW;
+                tColor = COLOR16_YELLOW;
             }
 
             /*
              * Clear old and draw new distance line
              */
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
-                    sForwardDistancesInfo.RawDistancesArray[tIndex], tCurrentDegrees, COLOR_WHITE, 3);
+                    sForwardDistancesInfo.RawDistancesArray[tIndex], tCurrentDegrees, COLOR16_WHITE, 3);
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tCurrentDegrees, tColor,
                     3);
         }
@@ -487,7 +487,7 @@ void doWallDetection() {
                 tNextDistanceOriginal = tNextDistanceComputed;
                 if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                     BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextDistanceComputed,
-                            tCurrentAngleToCheck, COLOR_WHITE, 1);
+                            tCurrentAngleToCheck, COLOR16_WHITE, 1);
                 }
             }
         }
@@ -561,7 +561,7 @@ void doWallDetection() {
                     tNextValue = tNextValueComputed;
                     if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                         BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextValueComputed,
-                                tCurrentAngleToCheck, COLOR_WHITE, 1);
+                                tCurrentAngleToCheck, COLOR16_WHITE, 1);
                     }
                 }
             }

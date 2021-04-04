@@ -26,7 +26,7 @@
 
 #include <Arduino.h>
 
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 #include "Servo.h"
 #include "HCSR04.h"
 #include "pitches.h"
@@ -47,7 +47,7 @@
 // Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
 #define VIN_2_LIPO
 #else
-//#define VIN_2_LIPO // comment it out to use speed values for 7.4 Volt
+//#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
 #endif
 
 #if defined(VIN_2_LIPO)
@@ -88,10 +88,10 @@
 #define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
 #define PIN_ECHO_IN                A1
 
-//#define PLOTTER_OUTPUT // Comment this out, if you want to see the result of the US distance sensor and resulting speed in Arduino plotter
+//#define PLOTTER_OUTPUT // Activate this, if you want to see the result of the US distance sensor and resulting speed in Arduino plotter
 
 //Car Control
-CarMotorControl RobotCarMotorControl;
+CarPWMMotorControl RobotCarPWMMotorControl;
 Servo DistanceServo;
 
 unsigned int getDistanceAndPlayTone();
@@ -110,13 +110,13 @@ void setup() {
 #endif
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarMotorControl.init();
+    RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
+    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
+    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
 #  endif
 #endif
@@ -124,10 +124,10 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
+    RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
 #endif
 
     DistanceServo.attach(PIN_DISTANCE_SERVO);
@@ -149,8 +149,8 @@ void setup() {
     delay(1000);
     tone(PIN_BUZZER, 2200, 50);
     delay(100);
-    RobotCarMotorControl.initIMU();
-    RobotCarMotorControl.printIMUOffsets(&Serial);
+    RobotCarPWMMotorControl.initIMU();
+    RobotCarPWMMotorControl.printIMUOffsets(&Serial);
     tone(PIN_BUZZER, 2200, 50);
 #endif
     delay(4000);
@@ -173,11 +173,11 @@ void loop() {
          * Distance too high or timeout / target not found -> search for target at different directions and turn if found
          */
         noTone(PIN_BUZZER);
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
 #ifndef PLOTTER_OUTPUT
             Serial.print(F("Stop and search"));
 #endif
-            RobotCarMotorControl.stop(MOTOR_RELEASE);
+            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
         }
 
         // check additionally at 70 and 110 degree for vanished target
@@ -190,9 +190,9 @@ void loop() {
                  * Target found -> turn and proceed
                  */
 #ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-                RobotCarMotorControl.rotate(90 - i);
+                RobotCarPWMMotorControl.rotate(90 - i);
 #else
-                RobotCarMotorControl.rotate(i - 90);
+                RobotCarPWMMotorControl.rotate(i - 90);
 #endif
                 DistanceServo.write(90);
                 break;
@@ -213,17 +213,17 @@ void loop() {
 #ifdef PLOTTER_OUTPUT
         Serial.print(tSpeedPWM);
 #else
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
             Serial.println(F("Go forward"));
         }
         Serial.print(F("SpeedPWM="));
         Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startGoDistanceCentimeter(tSpeedPWM, (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarPWMMotorControl.startGoDistanceCentimeter(tSpeedPWM, (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2,
                 DIRECTION_FORWARD);
 #else
-        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
+        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
 #endif
 
     } else if (tCentimeter < DISTANCE_MINIMUM_CENTIMETER) {
@@ -237,33 +237,33 @@ void loop() {
 #ifdef PLOTTER_OUTPUT
         Serial.print(tSpeedPWM);
 #else
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
             Serial.println(F("Go backward"));
         }
         Serial.print(F("SpeedPWM="));
         Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarMotorControl.startGoDistanceCentimeter(tSpeedPWM, (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarPWMMotorControl.startGoDistanceCentimeter(tSpeedPWM, (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) + DISTANCE_DELTA_CENTIMETER / 2,
                 DIRECTION_BACKWARD);
 #else
-        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
+        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
 #endif
     } else {
         /*
          * Target is in the right distance -> stop once
          */
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
 #ifndef PLOTTER_OUTPUT
             Serial.print(F("Stop"));
 #endif
-            RobotCarMotorControl.stop(MOTOR_RELEASE);
+            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
         }
     }
 
     Serial.println();
 #ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.delayAndUpdateMotors(1000);
+    RobotCarPWMMotorControl.delayAndUpdateMotors(1000);
 #else
     delay(100);
 #endif

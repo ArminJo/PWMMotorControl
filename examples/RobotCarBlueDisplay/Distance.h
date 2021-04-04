@@ -28,7 +28,7 @@
 #endif
 
 /*
- * Comment this out / enable this if the distance servo is mounted head down to detect small obstacles.
+ * Activate this, if the distance servo is mounted head down to detect small obstacles.
  */
 //#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
 #if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
@@ -47,7 +47,7 @@ extern Servo DistanceServo;
 #define DISTANCE_TIMEOUT_CM_FOLLOWER            130 // do not measure and process distances greater than 130 cm
 #define DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE    100 // do not measure and process distances greater than 100 cm
 
-#define DISTANCE_TIMEOUT_COLOR COLOR_CYAN
+#define DISTANCE_TIMEOUT_COLOR COLOR16_CYAN
 #define DISTANCE_DISPLAY_PERIOD_MILLIS 500
 
 // for future use maybe

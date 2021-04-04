@@ -1,5 +1,5 @@
 /*
- * CarMotorControl.h
+ * CarPWMMotorControl.h
  *
  *  Motor control for a car with 2 encoder motors
  *
@@ -23,8 +23,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef CARMOTORCONTROL_H_
-#define CARMOTORCONTROL_H_
+#ifndef CarPWMMotorControl_H_
+#define CarPWMMotorControl_H_
 
 #include "EncoderMotor.h"
 
@@ -58,11 +58,11 @@
 #define TURN_BACKWARD   DIRECTION_BACKWARD // 1
 #define TURN_IN_PLACE   2
 
-class CarMotorControl {
+class CarPWMMotorControl {
 public:
 
-    CarMotorControl();
-//    virtual ~CarMotorControl();
+    CarPWMMotorControl();
+//    virtual ~CarPWMMotorControl();
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
     void init();
@@ -85,6 +85,7 @@ public:
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     void calibrate(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
     unsigned int getBrakingDistanceMillimeter();
+    uint8_t getTurnDistanceHalfDegree();
 #endif
 
 #ifdef USE_MPU6050_IMU
@@ -133,14 +134,22 @@ public:
      * Functions for rotation
      */
     void setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter);
-    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeedPWM);
-    void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
-            void (*aLoopCallback)(void) = NULL);
+#if defined(CAR_HAS_4_WHEELS)
+    // slow speed does not really work for 4 WD cars
+    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = false);
+    void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE,
+            void (*aLoopCallback)(void) = NULL, bool aUseSlowSpeed = false);
+#else
+    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = true);
+    void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE,
+            void (*aLoopCallback)(void) = NULL, bool aUseSlowSpeed = true);
+#endif
 
 #ifdef USE_MPU6050_IMU
     IMUCarData IMUData;
     int CarRequestedRotationDegrees; // 0 -> car is moving forward / backward
     int CarTurnAngleHalfDegreesFromIMU; // Read from Gyroscope
+    int8_t CarTurn2DegreesPerSecondFromIMU; // Read from Gyroscope
     // Read from Accelerator
     unsigned int CarSpeedCmPerSecondFromIMU;
     unsigned int CarRequestedDistanceMillimeter;
@@ -191,7 +200,7 @@ public:
 #endif
 };
 
-#endif /* CARMOTORCONTROL_H_ */
+#endif /* CarPWMMotorControl_H_ */
 
 #pragma once
 

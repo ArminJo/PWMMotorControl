@@ -1,7 +1,7 @@
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Available as Arduino library "PWMMotorControl"
 
-### [Version 2.0.0](https://github.com/ArminJo/PWMMotorControl/releases) - work in progress
+### [Version 2.0.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
@@ -11,26 +11,26 @@ Available as Arduino library "PWMMotorControl"
 
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
-- The CarMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
-- To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed if you use the `setSpeedCompensation()` functions. For car control, only compensation of one motor is required.
+- The CarPWMMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
+- To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed PWM if you use the `setSpeedPWMCompensation()` functions. For car control, only compensation of one motor is required.
 
 #### The motor is mainly controlled by 2 dimensions:
 1. **Direction** / motor driver control. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
-2. **Speed** / PWM which is ignored for BRAKE or RELEASE. Some functions allow a signed speed parameter, which incudes the direction as sign (positive -> FORWARD).
+2. **SpeedPWM** which is ignored for BRAKE or RELEASE. Some functions allow a signed speedPWM parameter, which incudes the direction as sign (positive -> FORWARD).
 
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
-- `setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection)` or `setSpeed(int Signed_RequestedSpeed)`.
-- `setSpeedCompensated(uint8_t Unsigned_RequestedSpeed, uint8_t aRequestedDirection)` or `setSpeedCompensated(int Signed_RequestedSpeed)` and `setSpeedCompensation(uint8_t aSpeedCompensation)`.
-- `stop()` or `setSpeed(0)`.
+- `setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWM(int Signed_RequestedSpeedPWM)`.
+- `setSpeedPWMCompensated(uint8_t Unsigned_RequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWMCompensated(int Signed_RequestedSpeedPWM)` and `setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation)`.
+- `stop()` or `setSpeedPWM(0)`.
 - `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for encoder motors.
 
 #### To go a specified distance use:
-- `setDefaultsForFixedDistanceDriving()` to set start speed and driving speed. Minimal speed is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
-Drving speed is the PWM value to use for driving a fixed distance. The software generates a ramp up from start to driving speed at the start of the movement and a ramp down to stop.
+- `setDefaultsForFixedDistanceDriving()` to set start speed PWM and driving speed PWM. Start speed PWM is the PWM value where the motors start to move. It depends of the motor supply voltage.<br/>
+Drving speed PWM is the PWM value to use for driving a fixed distance. The software generates a ramp up from start PWM to driving speed PWM at the start of the movement and a ramp down to stop.
 - `calibrate()` to automatically set start speed for encoder or IMU supported cars.
-- `startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)` or `setSpeed(uint8_t aRequestedSpeed, uint8_t aRequestedDirection)` - for non encoder motors a formula, using distance and the difference between minimal speed and maximal speed, is used to convert counts into motor driving time.
-- `updateMotor()` - call this in your loop if you use the start* functions.
+- `startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)` or `setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` - for non encoder motors a formula, using distance and the drive speed PWM, is used to convert counts into motor driving time.
+- `updateMotor()` or `updateMotors()` - call this in your loop if you use the start* functions.
 
 2 wheel car from LAVFIN with 2 LiPo batteries case, and IR receiver, wires not shortened.
 ![2 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Car_TopView_small.jpg)
@@ -59,7 +59,7 @@ These values are for a standard 2 WD car as can be seen on the pictures below.
 |-|-|-|-|
 | `DEFAULT_CIRCUMFERENCE_MILLIMETER` | 220 | PWMDCMotor.h | At a circumference of around 220 mm this gives 11 mm per count. |
 | `ENCODER_COUNTS_PER_FULL_ROTATION` | 20 | EncoderMotor.h | This value is for 20 slot encoder discs, giving 20 on and 20 off counts per full rotation. |
-| `FACTOR_DEGREE_TO_MILLIMETER_DEFAULT` | 2.2777 for 2 wheel drive cars, 5.0 for 4 WD cars | CarMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
+| `FACTOR_DEGREE_TO_MILLIMETER_DEFAULT` | 2.2777 for 2 wheel drive cars, 5.0 for 4 WD cars | CarPWMMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
 
 # Other default values for this library
 These values are used by functions and some can be overwritten by set* functions.
@@ -71,11 +71,11 @@ These values are used by functions and some can be overwritten by set* functions
 | `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | PWMDCMotor.h | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
 | `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | PWMDCMotor.h | The effective voltage available for the motor. |
 | `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | PWMDCMotor.h | The DC Voltage at which the motor start to move / dead band voltage. |
-| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | The derived `DEFAULT_DRIVE_SPEED` is the speed PWM value used for fixed distance driving. |
-| `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | PWMDCMotor.h | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeed))` |
+| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | The derived `DEFAULT_DRIVE_SPEED_PWM` is the speed PWM value used for fixed distance driving. |
+| `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | PWMDCMotor.h | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeedPWM))` |
 
 ### Modifying compile options with Arduino IDE
-First use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>
+First, use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>
 If you did not yet stored the example as your own sketch, then you are instantly in the right library folder.<br/>
 Otherwise you have to navigate to the parallel `libraries` folder and select the library you want to access.<br/>
 In both cases the library files itself are located in the `src` directory.<br/>
@@ -98,7 +98,7 @@ The L298 has a loss of around 2 volt, which the reason for the attached heat sin
 # [Examples](tree/master/examples)
 
 ## Start
-**To check the default values of StartSpeed and DriveSpeed**. One motor starts with StartSpeed for one second, then runs 1 second with DriveSpeed.
+**To check the default values of StartSpeedPWM and DriveSpeedPWM**. One motor starts with StartSpeedPWM for one second, then runs 1 second with DriveSpeedPWM.
 After stopping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
 For the next loop, the direction is switched to backwards.
 

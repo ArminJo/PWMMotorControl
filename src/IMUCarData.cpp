@@ -50,11 +50,11 @@ int8_t IMUCarData::getAcceleratorForward4MilliG() {
 
 int8_t IMUCarData::getAcceleratorForwardLowPass8() {
 //    return AcceleratorForwardLowPass8.Byte.HighByte;
-    return AcceleratorForwardLowPass8.Word.HighWord.Word >> 6; // 256 per g
+    return AcceleratorForwardLowPass8.Word.HighWord >> 6; // 256 per g
 }
 
 int8_t IMUCarData::getAcceleratorForwardLowPass4() {
-    return AcceleratorForwardLowPass4.Word.HighWord.Word >> 6; // 256 per g
+    return AcceleratorForwardLowPass4.Word.HighWord >> 6; // 256 per g
 }
 
 // shift 14 -> 1 (0.981) cm/s , 12 -> 2.5 mm/s, 8 -> 0.15328 mm/s
@@ -74,7 +74,7 @@ int IMUCarData::getSpeedFastWithHigherResolution() {
  */
 int IMUCarData::getDistanceCm() {
 #if SAMPLE_RATE == 1000
-    return Distance.Word.HighWord.Word; // 0.958 cm since we shift by 10 and do not divide by 1000
+    return Distance.Word.HighWord; // 0.958 cm since we shift by 10 and do not divide by 1000
 #else
     return Distance.Long >> (16 - (2 * RATE_SHIFT)); // 0.958 cm since we shift by additional 10 and do not divide by 1000
 #endif
@@ -84,7 +84,7 @@ int IMUCarData::getDistanceMillimeter() {
 #if SAMPLE_RATE == 1000
     LongUnion tDistance;
     tDistance.Long = Distance.Long * 10; // use full resolution for * 10
-    return tDistance.Word.HighWord.Word; // saves 10 bytes
+    return tDistance.Word.HighWord; // saves 10 bytes
 //    return ((Distance.Long * 10 ) >> 16) ; // 0.958 mm
 #else
     return (Distance.Long * 10) >> (16 - (2 * RATE_SHIFT)); // 0.958 cm since we shift by additional 10 and do not divide by 1000
@@ -100,7 +100,7 @@ int IMUCarData::getGyroscopePan2DegreePerSecond() {
 
 int IMUCarData::getTurnAngleHalfDegree() {
 #if SAMPLE_RATE == 1000
-    return TurnAngle.Word.HighWord.Word;
+    return TurnAngle.Word.HighWord;
 #else
     return TurnAngle.Long >> (16 - RATE_SHIFT);
 #endif
@@ -108,9 +108,9 @@ int IMUCarData::getTurnAngleHalfDegree() {
 
 int IMUCarData::getTurnAngleDegree() {
 #if SAMPLE_RATE == 1000
-    return TurnAngle.Word.HighWord.Word >> 1;
+    return TurnAngle.Word.HighWord >> 1;
 #elif SAMPLE_RATE == 500
-    return TurnAngle.Word.HighWord.Word;
+    return TurnAngle.Word.HighWord;
 #else
     return TurnAngle.Long >> (16 - (RATE_SHIFT - 1));
 #endif
@@ -250,6 +250,7 @@ bool IMUCarData::readCarDataFromMPU6050Fifo() {
     Serial.print("|");
 #endif
     int32_t tAcceleratorForward = 0;
+    int32_t tGyroscopePan = 0;
     int8_t tReadChunckCount = 0;
     while (tFifoCount >= FIFO_CHUNK_SIZE) {
         /*
@@ -304,15 +305,18 @@ bool IMUCarData::readCarDataFromMPU6050Fifo() {
             WordUnion tValue;
             tValue.Byte.HighByte = Wire.read();
             tValue.Byte.LowByte = Wire.read();
-            GyroscopePan.Word = tValue.Word - GyroscopePanOffset;
+            tValue.Word = tValue.Word - GyroscopePanOffset;
+            tGyroscopePan += tValue.Word;
             // Compute turn angle
-            TurnAngle.Long += GyroscopePan.Word;
+            TurnAngle.Long += tValue.Word;
         }
         tFifoCount -= tReceivedCount;
 
     } // while tFifoCount >= FIFO_CHUNK_SIZE
     sCountOfUndisturbedFifoChunks += tReadChunckCount;
+    // compute average of read values
     AcceleratorForward.Word = tAcceleratorForward / (int32_t) tReadChunckCount;
+    GyroscopePan.Word = tGyroscopePan / (int32_t) tReadChunckCount;
 
     /*
      * Get initial offset values
@@ -347,7 +351,7 @@ void IMUCarData::doAutoOffset() {
          * Adjust Offsets, if sensor has not moved after NUMBER_OF_OFFSET_CALIBRATION_SAMPLES
          * Requires 420 bytes FLASH
          */
-        int16_t tAccelDifference = abs(AcceleratorForwardLowPass8.Word.HighWord.Word - AcceleratorForward.Word);
+        int16_t tAccelDifference = abs(AcceleratorForwardLowPass8.Word.HighWord - AcceleratorForward.Word);
         if (tAccelDifference > ACCEL_MOVE_THRESHOLD || GyroscopePan.Word < -(GYRO_MOVE_THRESHOLD)
                 || GYRO_MOVE_THRESHOLD < GyroscopePan.Word) { // using abs() costs 6 byte FLASH
 #ifdef AUTO_OFFSET_DEBUG

@@ -25,7 +25,7 @@
 
 #include <Arduino.h>
 
-#include "CarMotorControl.h"
+#include "CarPWMMotorControl.h"
 #include "Servo.h"
 #include "HCSR04.h"
 
@@ -79,7 +79,7 @@
 #define PIN_ECHO_IN                A1
 
 //Car Control
-CarMotorControl RobotCarMotorControl;
+CarPWMMotorControl RobotCarPWMMotorControl;
 
 Servo DistanceServo;
 
@@ -95,13 +95,13 @@ void setup() {
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarMotorControl.init();
+    RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
+    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
+    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
     PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
 #  endif
 #endif
@@ -109,10 +109,10 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
+    RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
 #endif
     /*
      * Set US servo to forward position
@@ -148,13 +148,13 @@ void loop() {
         if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
             tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
             Serial.println(F("Go forward"));
         }
         Serial.print(F("SpeedPWM="));
         Serial.println(tSpeedPWM);
 
-        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
+        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
 
     } else if (tCentimeter < DISTANCE_MINIMUM_CENTIMETER) {
         /*
@@ -164,21 +164,21 @@ void loop() {
         if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
             tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
             Serial.println(F("Go backward"));
         }
         Serial.print(F("SpeedPWM="));
         Serial.println(tSpeedPWM);
 
-        RobotCarMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
+        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
 
     } else {
         /*
          * Target is in the right distance -> stop once
          */
-        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
             Serial.println(F("Stop"));
-            RobotCarMotorControl.stop(MOTOR_RELEASE);
+            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
         }
     }
 

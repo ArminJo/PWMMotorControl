@@ -145,7 +145,7 @@ void driveAutonomousOneStep() {
                 RobotCarMotorControl.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
             } else {
                 // rotate and go
-                RobotCarMotorControl.rotate(sNextDegreesToTurn, sTurnMode, true, &loopGUI);
+                RobotCarMotorControl.rotate(sNextDegreesToTurn, sTurnMode, &loopGUI);
                 // wait to really stop after turning
                 delay(100);
                 sLastDegreesTurned = sNextDegreesToTurn;
@@ -204,7 +204,7 @@ void driveAutonomousOneStep() {
                 char tStringBuffer[6];
                 sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimeterPerScan, "cm");
                 BlueDisplay1.drawText(0, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11,
-                COLOR_BLACK, COLOR_WHITE);
+                COLOR16_BLACK, COLOR16_WHITE);
             }
         }
 
@@ -343,7 +343,7 @@ void driveFollowerModeOneStep() {
             /*
              * we had a pending turn
              */
-            RobotCarMotorControl.rotate(sNextDegreesToTurn, TURN_FORWARD, true);
+            RobotCarMotorControl.rotate(sNextDegreesToTurn, TURN_FORWARD);
             sNextDegreesToTurn = 0;
 
         } else {

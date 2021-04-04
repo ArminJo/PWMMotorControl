@@ -31,11 +31,11 @@
 #include "LongUnion.h"
 
 /*
- * Comment this out if the y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the right.
+ * Activate this if the y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the right.
  */
 // #define USE_ACCELERATOR_Y_FOR_SPEED
 /*
- * Comment this out if the axis of the GY-521 MPU6050 breakout board points backwards.
+ * Activate this if the axis of the GY-521 MPU6050 breakout board points backwards.
  */
 // #define USE_NEGATIVE_ACCELERATION_FOR_SPEED
 // #define DISABLE_AUTO_OFFSET // default is enabled
