@@ -26,7 +26,7 @@
 
 #include <Arduino.h>
 
-#include "CarPWMMotorControl.h"
+#include "CarPWMMotorControl.hpp"
 #include "Servo.h"
 #include "HCSR04.h"
 #include "pitches.h"
@@ -220,7 +220,7 @@ void loop() {
         Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarPWMMotorControl.startGoDistanceCentimeter(tSpeedPWM, (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2) * 10,
                 DIRECTION_FORWARD);
 #else
         RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
@@ -244,7 +244,7 @@ void loop() {
         Serial.print(tSpeedPWM);
 #endif
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarPWMMotorControl.startGoDistanceCentimeter(tSpeedPWM, (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) + DISTANCE_DELTA_CENTIMETER / 2,
+        RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2) * 10,
                 DIRECTION_BACKWARD);
 #else
         RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);

@@ -63,6 +63,8 @@ public:
     void init(uint8_t aMotorNumber);
     void init(uint8_t aMotorNumber, uint8_t aInterruptNumber);
 #else
+    EncoderMotor(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
+
     void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
     void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin, uint8_t aInterruptNumber);
 #endif
@@ -108,6 +110,7 @@ public:
     void resetSpeedValues();
 
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS
+    void  AddToMotorList();
     /*
      * Static convenience functions affecting all motors. If you have 2 motors, better use CarControl
      */

@@ -30,6 +30,11 @@
 #include <Arduino.h>
 
 #include "RobotCar.h"
+#include "CarPWMMotorControl.hpp" // include source of library
+#if defined(USE_MPU6050_IMU)
+#include "IMUCarData.hpp" // include source of library
+#endif
+
 #include "RobotCarGui.h"
 #include "Distance.h"
 
@@ -40,7 +45,7 @@
 #endif
 
 //#define DEBUG_TRACE_INIT
-//#include "AvrTracing.cpp.h"
+//#include "AvrTracing.hpp"
 
 /****************************************************************************
  * Change this if you have reprogrammed the hc05 module for other baud rate
@@ -189,7 +194,7 @@ void setup() {
     } else {
 #if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
 #if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
-    delay(4000); // To be able to connect Serial monitor after reset or power up and before first printout
+    delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
         // Just to know which program is running on my Arduino
         Serial.println(F("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__));

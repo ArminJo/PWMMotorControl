@@ -1,7 +1,7 @@
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Available as Arduino library "PWMMotorControl"
 
-### [Version 2.0.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
+### [Version 2.1.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
@@ -42,7 +42,7 @@ Diagram of PWM, speed[rpm] and encoder count for 2 LiPo (7.5 volt) supply and a 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
 Modify it by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for global compile (the latter is not possible with the Arduino IDE, so consider using [Sloeber](https://eclipse.baeyens.it).<br/>
-Some options which are enabed by default can be disabled by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
+Some options which are enabled by default can be disabled by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
 
 | Macro | Default | File | Description |
 |-|-|-|-|
@@ -184,7 +184,11 @@ Automatic control page with detected wall at right
 - The tiny black bar is the rotation chosen by doCollisionDetection() function.
 
 # Revision History
-### Version 2.0.0 - work in progress
+### Version 2.1.0 - work in progress
+- Renamed *.cpp to *.hpp.
+- Added and renamed functions.
+
+### Version 2.0.0
 - Support of off the shelf smart cars.
 - Added and renamed functions.
 - Converted to voltage based formulas.

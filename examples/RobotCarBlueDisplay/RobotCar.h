@@ -1,8 +1,8 @@
 /*
- * RobotCarMotorControl.h
+ * RobotCar.h
  *
  *  Created on: 29.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.

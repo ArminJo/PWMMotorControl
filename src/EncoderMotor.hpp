@@ -1,5 +1,5 @@
 /*
- * EncoderMotor.cpp
+ * EncoderMotor.hpp
  *
  *  Functions for controlling a DC-motor which rotary encoder implemented by slot-type photo interrupter and an attached encoder disc (with 20 slots).
  *  Works with positive (unsigned) speed and direction or signed speed.
@@ -12,7 +12,7 @@
  *  Tested for Adafruit Motor Shield and plain TB6612 breakout board.
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -30,10 +30,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
+#ifndef ENCODER_MOTOR_CONTROL_HPP
+#define ENCODER_MOTOR_CONTROL_HPP
 
 #include <Arduino.h>
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 #include "EncoderMotor.h"
+#include "PWMDcMotor.hpp"
 
 //#define TRACE
 //#define DEBUG
@@ -44,24 +47,7 @@ EncoderMotor *sPointerForInt1ISR;
 EncoderMotor::EncoderMotor() : // @suppress("Class members should be properly initialized")
         PWMDcMotor() {
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS
-    /*
-     * The list version saves 100 bytes and is more flexible, compared with the array version
-     */
-    EncoderMotor::sNumberOfMotorControls++;
-    NextMotorControl = NULL;
-    if (sMotorControlListStart == NULL) {
-        // first constructor
-        sMotorControlListStart = this;
-    } else {
-        // put object in control list
-        EncoderMotor *tObjectPointer = sMotorControlListStart;
-        // search last list element
-        while (tObjectPointer->NextMotorControl != NULL) {
-            tObjectPointer = tObjectPointer->NextMotorControl;
-        }
-        //insert current control in last element
-        tObjectPointer->NextMotorControl = this;
-    }
+    AddToMotorList();
 #endif
 }
 
@@ -81,6 +67,14 @@ void EncoderMotor::init(uint8_t aMotorNumber, uint8_t aInterruptNumber) {
     attachInterrupt(aInterruptNumber);
 }
 #else
+EncoderMotor::EncoderMotor(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin) : // @suppress("Class members should be properly initialized")
+        PWMDcMotor(aForwardPin, aBackwardPin, aPWMPin) {
+    resetEncoderControlValues();
+#ifdef ENABLE_MOTOR_LIST_FUNCTIONS
+    AddToMotorList();
+#endif
+}
+
 void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin) {
     PWMDcMotor::init(aForwardPin, aBackwardPin, aPWMPin);
     resetEncoderControlValues();
@@ -103,7 +97,7 @@ void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigne
         return;
     }
     if (CurrentSpeedPWM == 0) {
-        startRampUp(aRequestedSpeedPWM, aRequestedDirection);
+        setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
         TargetDistanceMillimeter = aRequestedDistanceMillimeter;
     } else {
         /*
@@ -300,7 +294,8 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
     if (tMillis >= sNextMotorSyncMillis) {
         sNextMotorSyncMillis += aCheckInterval;
 // only synchronize if manually operated or at full speed
-        if ((MotorRampState == MOTOR_STATE_STOPPED && aOtherMotorControl->MotorRampState == MOTOR_STATE_STOPPED && CurrentSpeedPWM > 0)
+        if ((MotorRampState == MOTOR_STATE_STOPPED && aOtherMotorControl->MotorRampState == MOTOR_STATE_STOPPED
+                && CurrentSpeedPWM > 0)
                 || (MotorRampState == MOTOR_STATE_DRIVE && aOtherMotorControl->MotorRampState == MOTOR_STATE_DRIVE)) {
             MotorControlValuesHaveChanged = false;
             if (EncoderCount >= (aOtherMotorControl->EncoderCount + 2)) {
@@ -595,8 +590,25 @@ void EncoderMotor::enableINT0AndINT1InterruptsOnRisingEdge() {
  * The list version saves 100 bytes and is more flexible, compared with the array version
  */
 uint8_t EncoderMotor::sNumberOfMotorControls = 0;
-EncoderMotor * EncoderMotor::sMotorControlListStart = NULL;
+EncoderMotor *EncoderMotor::sMotorControlListStart = NULL;
 
+void EncoderMotor::AddToMotorList() {
+    EncoderMotor::sNumberOfMotorControls++;
+    NextMotorControl = NULL;
+    if (sMotorControlListStart == NULL) {
+        // first constructor
+        sMotorControlListStart = this;
+    } else {
+        // put object in control list
+        EncoderMotor *tObjectPointer = sMotorControlListStart;
+        // search last list element
+        while (tObjectPointer->NextMotorControl != NULL) {
+            tObjectPointer = tObjectPointer->NextMotorControl;
+        }
+        //insert current control in last element
+        tObjectPointer->NextMotorControl = this;
+    }
+}
 /*****************************************************
  * Static convenience functions affecting all motors.
  * If you have 2 motors, better use CarControl
@@ -716,5 +728,7 @@ void EncoderMotor::stopAllMotors(uint8_t aStopMode) {
         tEncoderMotorControlPointer = tEncoderMotorControlPointer->NextMotorControl;
     }
 }
-#endif
-#endif
+#endif // #ifdef ENABLE_MOTOR_LIST_FUNCTIONS
+#endif // #if defined(USE_ENCODER_MOTOR_CONTROL)
+#endif // #ifndef ENCODER_MOTOR_CONTROL_HPP
+#pragma once

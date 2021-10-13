@@ -34,18 +34,34 @@ jobs:
         # Examples: arduino:avr:uno, arduino:avr:leonardo, arduino:avr:nano, arduino:avr:mega
         # arduino:sam:arduino_due_x, arduino:samd:arduino_zero_native"
         # ATTinyCore:avr:attinyx5:chip=85,clock=1internal, digistump:avr:digispark-tiny, digistump:avr:digispark-pro
-        # STM32:stm32:GenF1:pnum=BLUEPILL_F103C8
+        # STMicroelectronics:stm32:GenF1:pnum=BLUEPILL_F103C8
         # esp8266:esp8266:huzzah:eesz=4M3M,xtal=80, esp32:esp32:featheresp32:FlashFreq=80
         # You may add a suffix behind the fqbn with "|" to specify one board for e.g. different compile options like arduino:avr:uno|trace
         #############################################################################################################
         arduino-boards-fqbn:
           - arduino:avr:uno
+          - esp32:esp32:featheresp32:FlashFreq=80
 
         # Specify parameters for each board.
         # With sketches-exclude you may exclude specific examples for a board. Use a comma separated list.
         #############################################################################################################
         include:
           - arduino-boards-fqbn: arduino:avr:uno
+            build-properties: # the flags were put in compiler.cpp.extra_flags
+              RobotCarBlueDisplay:
+                -DBLUETOOTH_BAUD_RATE=BAUD_115200
+                -DUSE_ENCODER_MOTOR_CONTROL
+                -DUSE_US_SENSOR_1_PIN_MODE
+                -DDISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+                -DENABLE_MOTOR_LIST_FUNCTIONS
+              PrintMotorDiagram:
+                -DUSE_ENCODER_MOTOR_CONTROL
+              TestMotorWithIMU:
+                -DUSE_MPU6050_IMU
+
+          - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
+            platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+            required-libraries: ESP32 ESP32S2 AnalogWrite
             build-properties: # the flags were put in compiler.cpp.extra_flags
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
@@ -81,6 +97,6 @@ jobs:
           arduino-board-fqbn: ${{ matrix.arduino-boards-fqbn }}
           arduino-platform: ${{ matrix.arduino-platform }}
           platform-url: ${{ matrix.platform-url }}
-          required-libraries: ${{ env.REQUIRED_LIBRARIES }}
+          required-libraries: ${{ env.REQUIRED_LIBRARIES }},${{ matrix.required-libraries }}
           sketches-exclude: ${{ matrix.sketches-exclude }}
           build-properties: ${{ toJson(matrix.build-properties) }}

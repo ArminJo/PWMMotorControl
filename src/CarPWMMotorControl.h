@@ -104,7 +104,7 @@ public:
 
     // If ramp up is not supported, these functions just sets the speed and return immediately
     void startRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
-    void startRampUp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void waitForDriveSpeedPWM(void (*aLoopCallback)(void) = NULL);
     void startRampUpAndWait(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection = DIRECTION_FORWARD,
             void (*aLoopCallback)(void) = NULL);

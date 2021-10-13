@@ -1,13 +1,13 @@
 /*
- * CarPWMMotorControl.cpp
+ * CarPWMMotorControl.hpp
  *
  *  Contains functions for control of the 2 motors of a car like setDirection, goDistanceMillimeter() and rotate().
  *  Checks input of PIN aPinFor2WDDetection since we need different factors for rotating a 4 wheel and a 2 wheel car.
  *
- *  Requires EncoderMotor.cpp
+ *  Requires EncoderMotor.hpp
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -26,7 +26,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
+#ifndef CAR_PWM_MOTOR_CONTROL_HPP
+#define CAR_PWM_MOTOR_CONTROL_HPP
+
 #include <Arduino.h>
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+#include "EncoderMotor.hpp"
+#endif
+#include "PWMDcMotor.hpp"
+
 #include "CarPWMMotorControl.h"
 
 #define DEBUG // Only for development
@@ -230,7 +238,8 @@ void CarPWMMotorControl::setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint
  * @param aLeftRightSpeedPWM if positive, this value is subtracted from the left motor value, if negative subtracted from the right motor value
  *
  */
-void CarPWMMotorControl::setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM) {
+void CarPWMMotorControl::setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
+        int8_t aLeftRightSpeedPWM) {
     checkAndHandleDirectionChange(aRequestedDirection);
 #ifdef USE_ENCODER_MOTOR_CONTROL
     EncoderMotor *tMotorWithModifiedSpeedPWM;
@@ -418,8 +427,8 @@ bool CarPWMMotorControl::updateMotors() {
     }
 
 #else // USE_MPU6050_IMU
-bool tReturnValue = rightCarMotor.updateMotor();
-tReturnValue |= leftCarMotor.updateMotor();
+    bool tReturnValue = rightCarMotor.updateMotor();
+    tReturnValue |= leftCarMotor.updateMotor();
 #endif // USE_MPU6050_IMU
 
     return tReturnValue;;
@@ -448,14 +457,15 @@ void CarPWMMotorControl::startRampUp(uint8_t aRequestedDirection) {
     leftCarMotor.startRampUp(aRequestedDirection);
 }
 
-void CarPWMMotorControl::startRampUp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+void CarPWMMotorControl::setSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
-    rightCarMotor.startRampUp(aRequestedSpeedPWM, aRequestedDirection);
-    leftCarMotor.startRampUp(aRequestedSpeedPWM, aRequestedDirection);
+    rightCarMotor.setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+    leftCarMotor.setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 }
 
 /*
  * Blocking wait until both motors are at drive SpeedPWM. 256 milliseconds for ramp up.
+ * @param aLoopCallback The callback called while waiting for motor to reach MOTOR_STATE_DRIVE.
  */
 void CarPWMMotorControl::waitForDriveSpeedPWM(void (*aLoopCallback)(void)) {
     while (updateMotors(aLoopCallback)
@@ -467,9 +477,10 @@ void CarPWMMotorControl::waitForDriveSpeedPWM(void (*aLoopCallback)(void)) {
 /*
  * If ramp up is not supported, this functions just sets the SpeedPWM and returns immediately.
  * 256 milliseconds for ramp up.
+ * @param aLoopCallback The callback called while waiting for motor to reach MOTOR_STATE_DRIVE.
  */
 void CarPWMMotorControl::startRampUpAndWait(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
-    startRampUp(aRequestedSpeedPWM, aRequestedDirection);
+    setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
     waitForDriveSpeedPWM(aLoopCallback);
 }
 
@@ -497,7 +508,7 @@ void CarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, u
 
 #if defined(USE_MPU6050_IMU) && !defined(USE_ENCODER_MOTOR_CONTROL)
     // for non encoder motor we use the IMU distance, and require only the ramp up
-    startRampUp(aRequestedSpeedPWM, aRequestedDirection);
+    setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 #else
     rightCarMotor.startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
     leftCarMotor.startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
@@ -826,3 +837,6 @@ void CarPWMMotorControl::calibrate(void (*aLoopCallback)(void)) {
     stop();
 }
 #endif // defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+
+#endif // #ifndef CAR_PWM_MOTOR_CONTROL_HPP
+#pragma once

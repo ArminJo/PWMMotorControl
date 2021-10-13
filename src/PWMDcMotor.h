@@ -15,7 +15,7 @@
  *
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -228,6 +228,7 @@ public:
     Adafruit_DCMotor *Adafruit_MotorShield_DcMotor;
 #  endif
 #else
+    PWMDcMotor(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
     void init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin);
 #endif
 
@@ -241,9 +242,10 @@ public:
     void changeSpeedPWMCompensated(uint8_t aRequestedSpeedPWM); // Keeps direction
     void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
 
+    void start(uint8_t aRequestedDirection);
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
     void setStopMode(uint8_t aStopMode); // mode for SpeedPWM==0 or STOP_MODE_KEEP: MOTOR_BRAKE or MOTOR_RELEASE
-
+    bool isStopped(); // checks for SpeedPWM==0
     /*
      * Fixed distance driving
      */
@@ -252,9 +254,11 @@ public:
     void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
     void setStartSpeedPWM(uint8_t aStartSpeedPWM);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
+    void updateDriveSpeedPWM(uint8_t aDriveSpeedPWM); // if running update also current speed
 
+    void setSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void changeSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM);
     void startRampUp(uint8_t aRequestedDirection);
-    void startRampUp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void startRampDown();
 
 #ifndef USE_ENCODER_MOTOR_CONTROL // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerMillimeter for the functions below
@@ -319,8 +323,8 @@ public:
     volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
 #endif
 
-    uint8_t CurrentSpeedPWM;
-    uint8_t CurrentDirectionOrBrakeMode; // (of CurrentSpeedPWM etc.) DIRECTION_FORWARD, DIRECTION_BACKWARD, MOTOR_BRAKE, MOTOR_RELEASE
+    uint8_t CurrentSpeedPWM; // stopped if CurrentSpeedPWM == 0
+    uint8_t CurrentDirectionOrBrakeMode; // (of CurrentSpeedPWM etc.) DIRECTION_FORWARD, DIRECTION_BACKWARD, if motor stopped, then: MOTOR_BRAKE, MOTOR_RELEASE
     uint8_t LastDirection; // Used for speed and distance. Contains  DIRECTION_FORWARD, DIRECTION_BACKWARD but not MOTOR_BRAKE, MOTOR_RELEASE.
     static bool MotorPWMHasChanged;
 
@@ -343,6 +347,10 @@ public:
 };
 
 /*
+ * Version 2.1.0 - 10/2021
+ * - Renamed *.cpp to *.hpp.
+ * - Added and renamed functions.
+ *
  * Version 2.0.0 - 11/2020
  * - IMU / MPU6050 support.
  * - Support of off the shelf smart cars.

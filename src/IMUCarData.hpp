@@ -1,10 +1,10 @@
 /*
- * CarIMUData.cpp
+ * IMUCarData.hpp
  *
  *  Functions for getting IMU data from MPU6050 for car control.
  *
  *  Created on: 19.11.2020
- *  Copyright (C) 2020  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -22,6 +22,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
+#ifndef IMU_CAR_DATA_HPP
+#define IMU_CAR_DATA_HPP
 
 #include <Arduino.h>
 #include "Wire.h"
@@ -537,3 +539,5 @@ uint16_t IMUCarData::MPU6050ReadWordSwapped(uint8_t aRegisterNumber) {
     tWord.UByte.LowByte = Wire.read();
     return tWord.UWord;
 }
+#endif // #ifndef IMU_CAR_DATA_HPP
+

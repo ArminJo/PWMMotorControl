@@ -27,6 +27,8 @@ ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 #if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 Servo DistanceServo;
+#else
+#include "LightweightServo.hpp"
 #endif
 uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
