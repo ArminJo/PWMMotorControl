@@ -37,7 +37,7 @@
 #include "PWMDcMotor.h"
 
 #if defined(ESP32)
-extern void analogWrite(int8_t pin, int aSpeed);
+#include "analogWrite.h" // from e.g. ESP32Servo library
 #endif
 
 //#define TRACE

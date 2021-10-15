@@ -23,9 +23,11 @@
  */
 
 #include <Arduino.h>
+
+//#define USE_ADAFRUIT_MOTOR_SHIELD
 #include "CarPWMMotorControl.hpp"
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
+#if !defined(USE_ADAFRUIT_MOTOR_SHIELD)
 /*
  * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
  * 2 + 3 are reserved for encoder input
@@ -44,7 +46,7 @@ PWMDcMotor leftMotor;
 
 void setup() {
 // initialize the digital pin as an output.
-    pinMode(LED_BUILTIN, OUTPUT);
+//    pinMode(LED_BUILTIN, OUTPUT);
 
     Serial.begin(115200);
 

@@ -26,8 +26,21 @@
 
 #include <Arduino.h>
 
+//#define USE_ENCODER_MOTOR_CONTROL
+//#define USE_ADAFRUIT_MOTOR_SHIELD
+//#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+// Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
+#define VIN_2_LIPO
+#else
+//#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
+#endif
 #include "CarPWMMotorControl.hpp"
-#include "Servo.h"
+#if defined(ESP32)
+#include <ESP32Servo.h>
+#else
+#include <Servo.h>
+#endif
 #include "HCSR04.h"
 #include "pitches.h"
 
@@ -42,13 +55,6 @@
 #define DISTANCE_MAXIMUM_CENTIMETER         30 // If measured distance is greater than this value, go forward
 #define DISTANCE_DELTA_CENTIMETER           (DISTANCE_MAXIMUM_CENTIMETER - DISTANCE_MINIMUM_CENTIMETER)
 #define DISTANCE_TARGET_SCAN_CENTIMETER     70 // search if target moved to side
-
-#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-// Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
-#define VIN_2_LIPO
-#else
-//#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
-#endif
 
 #if defined(VIN_2_LIPO)
 // values for 2xLIPO / 7.4 volt
@@ -77,16 +83,26 @@
 #endif
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(ESP32)
+#define RIGHT_MOTOR_INTERRUPT    2 // Pin 2
+#define LEFT_MOTOR_INTERRUPT     3 // Pin 3
+#else
 #define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
 #define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
+#endif
 #endif
 
 #define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield
 
 #define PIN_BUZZER                 12
 
+#if defined(ESP32)
+#define PIN_TRIGGER_OUT            14
+#define PIN_ECHO_IN                15
+#else
 #define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
 #define PIN_ECHO_IN                A1
+#endif
 
 //#define PLOTTER_OUTPUT // Activate this, if you want to see the result of the US distance sensor and resulting speed in Arduino plotter
 

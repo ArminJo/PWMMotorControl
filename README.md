@@ -66,6 +66,7 @@ These values are used by functions and some can be overwritten by set* functions
 | Macro | Default | File | Description |
 |-|-|-|-|
 | `VIN_2_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
+| `VIN_1_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 3700. |
 | `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | PWMDCMotor.h | The supply voltage used for the full bridge. |
 | `MOSFET_BRIDGE_USED` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 0. |
 | `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | PWMDCMotor.h | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |

@@ -22,8 +22,14 @@
 
 #include <Arduino.h>
 
+//#define USE_ADAFRUIT_MOTOR_SHIELD
 #include "CarPWMMotorControl.hpp"
+
+#if defined(ESP32)
+#include "ESP32Servo.h"
+#else
 #include "Servo.h"
+#endif
 #include "HCSR04.h"
 
 #define VERSION_EXAMPLE "1.0"
@@ -35,7 +41,7 @@
  */
 #define SPEED_PWM_COMPENSATION_RIGHT    0
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable it in PWMDCMotor.h
+#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
 /*
  * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
  * 2 + 3 are reserved for encoder input
@@ -92,7 +98,8 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM,
+            SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
     RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);

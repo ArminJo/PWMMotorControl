@@ -87,7 +87,11 @@ public:
     /*
      * Encoder interrupt handling
      */
+#if defined ESP32
+    void IRAM_ATTR handleEncoderInterrupt();
+#else
     void handleEncoderInterrupt();
+#endif
     void attachInterrupt(uint8_t aInterruptPinNumber);
     static void enableINT0AndINT1InterruptsOnRisingEdge();
 

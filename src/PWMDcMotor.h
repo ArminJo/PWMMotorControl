@@ -78,6 +78,8 @@
  * Activate this, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
  */
 //#define VIN_2_LIPO
+// Or if you use a Mosfet bridge 1 LIPO may be sufficient
+//#define VIN_1_LIPO
 /*
  * Helper macro for getting a macro definition as string
  */
@@ -111,6 +113,8 @@
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LIPO)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         7400 // for 2 x LIPO batteries (7.4 volt).
+#  elif defined(VIN_1_LIPO)
+#define FULL_BRIDGE_INPUT_MILLIVOLT         3700 // for 1 x LIPO battery (3.7 volt).
 #  else
 #define FULL_BRIDGE_INPUT_MILLIVOLT         6000 // for 4 x AA batteries (6 volt).
 #  endif

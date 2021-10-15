@@ -25,8 +25,21 @@
 
 #include <Arduino.h>
 
+//#define USE_ENCODER_MOTOR_CONTROL
+//#define USE_ADAFRUIT_MOTOR_SHIELD
+//#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+// Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
+#define VIN_2_LIPO
+#else
+//#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
+#endif
 #include "CarPWMMotorControl.hpp"
-#include "Servo.h"
+#if defined(ESP32)
+#include <ESP32Servo.h>
+#else
+#include <Servo.h>
+#endif
 #include "HCSR04.h"
 
 /*
@@ -75,8 +88,13 @@
 
 #define PIN_BUZZER                 12
 
+#if defined(ESP32)
+#define PIN_TRIGGER_OUT            14
+#define PIN_ECHO_IN                15
+#else
 #define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
 #define PIN_ECHO_IN                A1
+#endif
 
 //Car Control
 CarPWMMotorControl RobotCarPWMMotorControl;

@@ -95,8 +95,13 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
     /*
      * For slot type optocoupler interrupts on pin PD2 + PD3
      */
+#    if defined (INT0)
     rightCarMotor.attachInterrupt(INT0);
     leftCarMotor.attachInterrupt(INT1);
+#    else
+    rightCarMotor.attachInterrupt(2);
+    rightCarMotor.attachInterrupt(3);
+#    endif
 #  endif
 }
 

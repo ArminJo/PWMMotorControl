@@ -24,6 +24,8 @@
  */
 
 #include <Arduino.h>
+
+//#define USE_ADAFRUIT_MOTOR_SHIELD
 #include "CarPWMMotorControl.hpp"
 
 /*
@@ -33,7 +35,7 @@
  */
 #define SPEED_PWM_COMPENSATION_RIGHT    0
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
+#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
 /*
  * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
  * 2 + 3 are reserved for encoder input
@@ -74,7 +76,7 @@ void setup() {
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCarPWMMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM,
-            SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if defined(CAR_HAS_4_WHEELS)
     RobotCarPWMMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT);
 #else

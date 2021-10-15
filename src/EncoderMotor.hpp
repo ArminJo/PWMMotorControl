@@ -366,6 +366,7 @@ void EncoderMotor::resetEncoderControlValues() {
  * aInterruptNumber can be one of INT0 (at pin D2) or INT1 (at pin D3) for Atmega328
  */
 void EncoderMotor::attachInterrupt(uint8_t aInterruptNumber) {
+#ifdef EICRA
     if (aInterruptNumber > 1) {
         return;
     }
@@ -384,6 +385,10 @@ void EncoderMotor::attachInterrupt(uint8_t aInterruptNumber) {
         EIFR |= _BV(INTF1);
         EIMSK |= _BV(INT1);
     }
+#else
+#error Encoder interrupts for ESP32 not yet supported
+    attachInterrupt(aInterruptNumber, handleEncoderInterrupt, RISING);
+#endif
 }
 
 /*
@@ -524,7 +529,11 @@ void EncoderMotor::printEncoderData(Print *aSerial) {
     aSerial->print(" ");
 }
 
+#if defined ESP32
+void IRAM_ATTR EncoderMotor::handleEncoderInterrupt() {
+#else
 void EncoderMotor::handleEncoderInterrupt() {
+#endif
     long tMillis = millis();
     unsigned long tDeltaMillis = tMillis - LastEncoderInterruptMillis;
     if (tDeltaMillis <= ENCODER_SENSOR_RING_MILLIS) {
@@ -559,6 +568,7 @@ void EncoderMotor::handleEncoderInterrupt() {
     }
 }
 
+#if defined(INT0_vect)
 // ISR for PIN PD2 / RIGHT
 ISR(INT0_vect) {
     sPointerForInt0ISR->handleEncoderInterrupt();
@@ -568,6 +578,7 @@ ISR(INT0_vect) {
 ISR(INT1_vect) {
     sPointerForInt1ISR->handleEncoderInterrupt();
 }
+#endif
 
 /******************************************************************************************
  * Static methods
@@ -576,13 +587,14 @@ ISR(INT1_vect) {
  * Enable both interrupts INT0/D2 or INT1/D3
  */
 void EncoderMotor::enableINT0AndINT1InterruptsOnRisingEdge() {
-
+#ifdef EICRA
 // interrupt on any logical change
     EICRA |= (_BV(ISC00) | _BV(ISC01) | _BV(ISC10) | _BV(ISC11));
 // clear interrupt bit
     EIFR |= (_BV(INTF0) | _BV(INTF1));
 // enable interrupt on next change
     EIMSK |= (_BV(INT0) | _BV(INT1));
+#endif
 }
 
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS
