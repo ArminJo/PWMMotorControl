@@ -98,8 +98,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM,
-            SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
     RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
@@ -160,7 +159,7 @@ void simpleObjectAvoidance() {
     if (tCentimeter < 20) {
         RobotCarMotorControl.stop();
         delay(1000);
-        RobotCarMotorControl.setSpeedPWMCompensated(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+        RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
         delay(200);
         RobotCarMotorControl.stop();
         delay(1000);
@@ -171,7 +170,7 @@ void simpleObjectAvoidance() {
         Serial.println(" degree");
         RobotCarMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
-        RobotCarMotorControl.setSpeedPWMCompensated(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+        RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 
     delay(50);

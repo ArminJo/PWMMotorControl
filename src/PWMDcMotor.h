@@ -44,6 +44,8 @@
 #define VERSION_PWMMOTORCONTROL_MINOR 0
 // The change log is at the bottom of the file
 
+#define MILLIS_IN_ONE_SECOND 1000L
+
 /*
  * Activate this, if you have encoder interrupts attached at pin 2 and 3
  * and want to use the methods of the EncoderMotor class for fixed distance / closed loop driving.
@@ -93,23 +95,6 @@
  */
 #define DEFAULT_CIRCUMFERENCE_MILLIMETER   220
 
-/*
- * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
- * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
- * This corresponds to 5 cm/s every 20 ms
- */
-#define RAMP_INTERVAL_MILLIS               20 // The smaller the value the steeper the ramp
-#define RAMP_VALUE_UP_OFFSET_MILLIVOLT   2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
-#define RAMP_VALUE_DOWN_OFFSET_MILLIVOLT 2500 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
-#define RAMP_VALUE_UP_OFFSET_SPEED_PWM   ((RAMP_VALUE_UP_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_DOWN_OFFSET_SPEED_PWM ((RAMP_VALUE_DOWN_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_DOWN_MIN_SPEED_PWM    (((DEFAULT_DRIVE_MILLIVOLT / 2) * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_UP_VALUE_DELTA              (SPEED_FOR_8_VOLT / (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 10V/s = 1.0 volt per 100 ms
-#define RAMP_DOWN_VALUE_DELTA            ((SPEED_FOR_8_VOLT * 2)/ (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 1.0 volt per 100 ms
-#define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
-
-#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
-
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LIPO)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         7400 // for 2 x LIPO batteries (7.4 volt).
@@ -136,30 +121,43 @@
 #endif
 
 #define DEFAULT_START_MILLIVOLT             1100 // Start voltage -motors start to turn- is 1.1 volt
-#define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage is 2.0 volt
-#define SPEED_FOR_1_VOLT                    ((1000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
+#define SPEED_PWM_FOR_1_VOLT                ((1000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define SPEED_FOR_8_VOLT                    ((8000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define SPEED_FOR_10_VOLT                   ((10000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 
 // Default values - used if EEPROM values are invalid or nor available
-#if !defined(DEFAULT_START_SPEED_PWM)
-// DEFAULT_START_SPEED_PWM is the speed PWM value at which motor starts to move. 70|127 for 4 volt 37|68 for 7.4 volt
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#endif
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
-// At 2 volt I measured around 32 cm/s. 68 for 7.4 volt
+// At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt, 68 for 7.4 volt
 #define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
-// At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.25 rotation per second -> 25 distance/encoder counts per second -> 27 cm / second
-#define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT motor supply
-#define DEFAULT_MILLIS_PER_MILLIMETER       (1000 / DEFAULT_MILLIMETER_PER_SECOND)
+// At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.5 rotation per second, 29 distance/encoder counts per second -> 32 cm / second
+#define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_MILLIS_PER_MILLIMETER       (MILLIS_IN_ONE_SECOND / DEFAULT_MILLIMETER_PER_SECOND)
 #endif
 /*
- *  Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
+ * Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
  * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerMillimeter) / DriveSpeedPWM));
  */
+
+/*
+ * RAMP values
+ * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
+ * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
+ * This corresponds to 5 cm/s every 20 ms
+ */
+#define RAMP_INTERVAL_MILLIS               20 // The smaller the value the steeper the ramp
+#define RAMP_VALUE_UP_OFFSET_MILLIVOLT   2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+#define RAMP_VALUE_DOWN_OFFSET_MILLIVOLT 2500 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+#define RAMP_VALUE_UP_OFFSET_SPEED_PWM   ((RAMP_VALUE_UP_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_DOWN_OFFSET_SPEED_PWM ((RAMP_VALUE_DOWN_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_DOWN_MIN_SPEED_PWM    (((DEFAULT_DRIVE_MILLIVOLT / 2) * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_UP_VALUE_DELTA              (SPEED_FOR_8_VOLT / (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 10V/s = 1.0 volt per 100 ms
+#define RAMP_DOWN_VALUE_DELTA            ((SPEED_FOR_8_VOLT * 2)/ (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 1.0 volt per 100 ms
+#define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
+
+#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_FORWARD   0
@@ -199,15 +197,12 @@
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
 struct EepromMotorInfoStruct {
-    uint8_t StartSpeedPWM;
-    uint8_t StopSpeedPWM;
     uint8_t DriveSpeedPWM;
     uint8_t SpeedPWMCompensation;
 };
 
 /*
  * Ramp control
- * Ramp up speed in 16 steps every 16 millis from from StartSpeedPWM to RequestedDriveSpeedPWM.
  */
 #define MOTOR_STATE_STOPPED     0
 #define MOTOR_STATE_START       1
@@ -242,26 +237,22 @@ public:
     void setSpeedPWM(int aRequestedSpeedPWM);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
     void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWMCompensated(int aRequestedSpeedPWM);
-    void changeSpeedPWMCompensated(uint8_t aRequestedSpeedPWM); // Keeps direction
-    void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+
+    void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
 
     void start(uint8_t aRequestedDirection);
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
     void setStopMode(uint8_t aStopMode); // mode for SpeedPWM==0 or STOP_MODE_KEEP: MOTOR_BRAKE or MOTOR_RELEASE
     bool isStopped(); // checks for SpeedPWM==0
     /*
-     * Fixed distance driving
+     * Fixed distance driving functions
      */
-    void setValuesForFixedDistanceDriving(uint8_t aStartSpeedPWM, uint8_t aDriveSpeedPWM, uint8_t aSpeedPWMCompensation = 0);
+    void setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, uint8_t aSpeedPWMCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
-    void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
-    void setStartSpeedPWM(uint8_t aStartSpeedPWM);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
     void updateDriveSpeedPWM(uint8_t aDriveSpeedPWM); // if running update also current speed
 
-    void setSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void changeSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM);
     void startRampUp(uint8_t aRequestedDirection);
     void startRampDown();
 
@@ -272,7 +263,8 @@ public:
     // These functions are implemented by encoder motor too
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+            uint8_t aRequestedDirection);
     bool updateMotor();
 
     /*
@@ -305,24 +297,19 @@ public:
     /**********************************
      * Start of values for EEPROM
      *********************************/
-    /*
-     * Minimum SpeedPWM setting at which motor starts moving. Depend on current voltage, load and surface.
-     * Is set by calibrate() and then stored (with the other values) in eeprom.
-     */
-    uint8_t StartSpeedPWM; // SpeedPWM value at which car starts to move. For 8 volt is appr. 35 to 40, for 4.3 volt (USB supply) is appr. 90 to 100
     uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance.
 
     /*
      * Positive value to be subtracted from TargetPWM to get CurrentSpeedPWM to compensate for different left and right motors
      * Currently SpeedPWMCompensation is in steps of 2 and only one motor can have a positive value, the other is set to zero.
-     * Value is computed in synchronizeMotor()
+     * Value is computed in EncoderMotor::synchronizeMotor()
      */
     uint8_t SpeedPWMCompensation;
     /**********************************
      * End of EEPROM values
      *********************************/
     uint8_t DefaultStopMode; // used for PWM == 0 and STOP_MODE_KEEP
-    static bool MotorControlValuesHaveChanged; // true if DefaultStopMode, StartSpeedPWM, DriveSpeedPWM or SpeedPWMCompensation have changed - for printing
+    static bool MotorControlValuesHaveChanged; // true if DefaultStopMode, DriveSpeedPWM or SpeedPWMCompensation have changed - for printing
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
     volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
 #endif
@@ -343,7 +330,7 @@ public:
     uint8_t RampSpeedPWMDelta; // TODO is still constant, so remove?
     unsigned long NextRampChangeMillis;
 
-#ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the PWMDcMotor distance functions
+#ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
     uint8_t MillisPerMillimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED_PWM. Required for non encoder motors to estimate duration for a fixed distance
 #endif
@@ -351,6 +338,11 @@ public:
 };
 
 /*
+ * Version 2.2.0 - 10/2021
+ * - Removed all *Compensated functions, compensation now is always active.
+ * - Removed StopSpeed from EepromMotorinfoStruct.
+ * - Removed StartSpeed.
+ *
  * Version 2.1.0 - 10/2021
  * - Renamed *.cpp to *.hpp.
  * - Added and renamed functions.

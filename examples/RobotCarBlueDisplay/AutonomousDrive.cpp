@@ -157,7 +157,7 @@ void driveAutonomousOneStep() {
              */
             if (sStepMode == MODE_SINGLE_STEP) {
                 // Go fixed distance
-                RobotCarMotorControl.goDistanceMillimeter(sCentimeterPerScan*10, DIRECTION_FORWARD, &loopGUI);
+                RobotCarMotorControl.goDistanceMillimeter(sCentimeterPerScan * 10, DIRECTION_FORWARD, &loopGUI);
             } else
             /*
              * Continuous mode, start car or let it run
@@ -375,14 +375,16 @@ void driveFollowerModeOneStep() {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
 //            Serial.println(F("Go forward"));
 //        }
-                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeedPWM + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
+                tSpeed = RobotCarMotorControl.rightCarMotor.DriveSpeedPWM / 2
+                        + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
                 checkSpeedAndGo(tSpeed, DIRECTION_FORWARD);
 
             } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
 //        if (RobotCarMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
 //            Serial.println(F("Go backward"));
 //        }
-                tSpeed = RobotCarMotorControl.rightCarMotor.StartSpeedPWM + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+                tSpeed = RobotCarMotorControl.rightCarMotor.DriveSpeedPWM / 2
+                        + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
                 checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
 
             } else {

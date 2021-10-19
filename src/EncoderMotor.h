@@ -82,7 +82,7 @@ public:
      * Functions especially for encoder motors
      */
     void synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned int aCheckInterval); // Computes motor speed compensation value in order to go exactly straight ahead
-    static void calibrate(); // Generates a rising ramp and detects the first movement -> this sets StartSpeedPWM / dead band
+//    static void calibrate();
 
     /*
      * Encoder interrupt handling

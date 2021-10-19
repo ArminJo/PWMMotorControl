@@ -21,7 +21,6 @@ Available as Arduino library "PWMMotorControl"
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
 - `setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWM(int Signed_RequestedSpeedPWM)`.
-- `setSpeedPWMCompensated(uint8_t Unsigned_RequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWMCompensated(int Signed_RequestedSpeedPWM)` and `setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation)`.
 - `stop()` or `setSpeedPWM(0)`.
 - `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for encoder motors.
 
@@ -99,7 +98,7 @@ The L298 has a loss of around 2 volt, which the reason for the attached heat sin
 # [Examples](tree/master/examples)
 
 ## Start
-**To check the default values of StartSpeedPWM and DriveSpeedPWM**. One motor starts with StartSpeedPWM for one second, then runs 1 second with DriveSpeedPWM.
+One motor starts with DriveSpeedPWM / 2 for one second, then runs 1 second with DriveSpeedPWM.
 After stopping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
 For the next loop, the direction is switched to backwards.
 
@@ -107,10 +106,15 @@ For the next loop, the direction is switched to backwards.
 4 times drive 40 cm, then 90 degree left turn. After the square, the car is turned by 180 degree and the direction is switched to backwards. Then the square starts again.
 
 ## PrintMotorDiagram
-Prints PWM, distance and speed diagram of an encoder motor.
+Prints PWM, distance and speed diagram of an encoder motor. The encoder is inverted at falling PWM slope to show the quadratic kind of encoder graph.
 | Diagram for free running motor controlled by an MosFet bridge supplied by 7.0 volt | Diagram for free running motor controlled by an L298 bridge supplied by 7.6 volt |
 | :-: | :-: |
 | ![7.0V MosFet free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.0V_MosFet_FreeRun.png) | ![7.6V L298 free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_L298_FreeRun.png) |
+| Here you see that the speed is proportional to the PWM, but the minimal power to start the motor is 33/255 = 13% PWM or 0.9 volt. | Due to losses and other effects in the L298 the start voltage is much higher. |
+| | |
+| **MosFet bridge supplied by 3.5 volt** | **Start diagram for L298 with 6.2 volt** |
+| ![3.5V MosFet free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/3.5V_MosFet_FreeRun.png) | ![7.6V L298 free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/6.2V_L298_FreeRun.png) |
+
 
 ## TestMotorWithIMU
 | Diagram for car controlled by an MosFet bridge | Diagram for car controlled by an L298 bridge |

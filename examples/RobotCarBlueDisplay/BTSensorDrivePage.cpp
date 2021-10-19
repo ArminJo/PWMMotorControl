@@ -35,9 +35,9 @@ BDSlider SliderLeft;        // X positive
 
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
-#define SLIDER_SPEED_THRESHOLD      DEFAULT_START_SPEED_PWM
+#define SLIDER_SPEED_THRESHOLD      (DEFAULT_DRIVE_SPEED_PWM / 2)
 #define SPEED_SENSOR_DEAD_BAND      20
-#define SPEED_DEAD_BAND             (DEFAULT_START_SPEED_PWM / 2)
+#define SPEED_DEAD_BAND             (DEFAULT_DRIVE_SPEED_PWM / 4)
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
 #define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 4)
@@ -183,9 +183,9 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
             tDirection = DIRECTION_BACKWARD;
         }
 
-        RobotCarMotorControl.rightCarMotor.setSpeedPWMCompensated(speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue),
+        RobotCarMotorControl.rightCarMotor.setSpeedPWM(speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue),
                 tDirection);
-        RobotCarMotorControl.leftCarMotor.setSpeedPWMCompensated(speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue),
+        RobotCarMotorControl.leftCarMotor.setSpeedPWM(speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue),
                 tDirection);
     }
 }

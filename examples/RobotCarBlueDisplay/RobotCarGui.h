@@ -156,7 +156,7 @@ extern BDButton TouchButtonDirection;
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
-void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
+//void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
 #endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;

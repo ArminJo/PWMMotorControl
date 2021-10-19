@@ -127,7 +127,7 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarPWMMotorControl.setValuesForFixedDistanceDriving(DEFAULT_START_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
     RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
@@ -172,7 +172,7 @@ void loop() {
         Serial.print(F("SpeedPWM="));
         Serial.println(tSpeedPWM);
 
-        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_FORWARD);
+        RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
 
     } else if (tCentimeter < DISTANCE_MINIMUM_CENTIMETER) {
         /*
@@ -188,7 +188,7 @@ void loop() {
         Serial.print(F("SpeedPWM="));
         Serial.println(tSpeedPWM);
 
-        RobotCarPWMMotorControl.setSpeedPWMCompensated(tSpeedPWM, DIRECTION_BACKWARD);
+        RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_BACKWARD);
 
     } else {
         /*

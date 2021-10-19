@@ -97,7 +97,7 @@ void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigne
         return;
     }
     if (CurrentSpeedPWM == 0) {
-        setSpeedPWMCompensatedWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+        setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
         TargetDistanceMillimeter = aRequestedDistanceMillimeter;
     } else {
         /*
@@ -142,7 +142,7 @@ bool EncoderMotor::updateMotor() {
          */
         if (RequestedDriveSpeedPWM > RAMP_VALUE_UP_OFFSET_SPEED_PWM) {
             // start with ramp to avoid spinning wheels
-            tNewSpeedPWM = RAMP_VALUE_UP_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
+            tNewSpeedPWM = RAMP_VALUE_UP_OFFSET_SPEED_PWM; // start immediately with speed offset (2.3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
@@ -309,7 +309,7 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
                     aOtherMotorControl->setSpeedPWM(aOtherMotorControl->CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                     EncoderCount = aOtherMotorControl->EncoderCount;
-                } else if (CurrentSpeedPWM > StartSpeedPWM) {
+                } else if (CurrentSpeedPWM > DriveSpeedPWM / 2) {
                     /*
                      * else increase this motors compensation
                      */
@@ -329,7 +329,7 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
                     CurrentSpeedPWM += 2;
                     PWMDcMotor::setSpeedPWM(CurrentSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
-                } else if (aOtherMotorControl->CurrentSpeedPWM > aOtherMotorControl->StartSpeedPWM) {
+                } else if (aOtherMotorControl->CurrentSpeedPWM > aOtherMotorControl->DriveSpeedPWM / 2) {
                     /*
                      * else increase other motors compensation
                      */

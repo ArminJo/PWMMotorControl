@@ -74,16 +74,15 @@ public:
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
-    void setValuesForFixedDistanceDriving(uint8_t aStartSpeedPWM, uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight);
+    void setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight);
     void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
-    void setStartSpeedPWM(uint8_t aStartSpeedPWM);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-    void calibrate(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
+//    void calibrate(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
     unsigned int getBrakingDistanceMillimeter();
     uint8_t getTurnDistanceHalfDegree();
 #endif
@@ -104,7 +103,7 @@ public:
 
     // If ramp up is not supported, these functions just sets the speed and return immediately
     void startRampUp(uint8_t aRequestedDirection = DIRECTION_FORWARD);
-    void setSpeedPWMCompensatedWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void waitForDriveSpeedPWM(void (*aLoopCallback)(void) = NULL);
     void startRampUpAndWait(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection = DIRECTION_FORWARD,
             void (*aLoopCallback)(void) = NULL);
@@ -181,15 +180,13 @@ public:
     /*
      * Functions, which directly call motor functions for both motors
      */
-    void changeSpeedPWMCompensated(uint8_t aRequestedSpeedPWM); // Keeps direction
-    void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWMCompensated(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM);
-    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
-
-    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setStopMode(uint8_t aStopMode);
     void setSpeedPWM(int aRequestedSpeedPWM);
-    void setSpeedPWMCompensated(int aRequestedSpeedPWM);
+    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM);
+    void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
+
+    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
+    void setStopMode(uint8_t aStopMode);
 
 #ifdef USE_ENCODER_MOTOR_CONTROL
     EncoderMotor rightCarMotor; // 40 bytes RAM
