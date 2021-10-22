@@ -139,8 +139,7 @@ void CarPWMMotorControl::setDefaultsForFixedDistanceDriving() {
  * @param aSpeedPWMCompensationRight if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
  *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
-void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM,
-        int8_t aSpeedPWMCompensationRight) {
+void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight) {
     if (aSpeedPWMCompensationRight >= 0) {
         rightCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, aSpeedPWMCompensationRight);
         leftCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, 0);
@@ -154,19 +153,34 @@ void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpee
  * @param aSpeedPWMCompensationRight if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
  *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
-void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight) {
-    if (aSpeedPWMCompensationRight > 0) {
-        if (leftCarMotor.SpeedPWMCompensation >= aSpeedPWMCompensationRight) {
-            leftCarMotor.SpeedPWMCompensation -= aSpeedPWMCompensationRight;
+void CarPWMMotorControl::setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight) {
+
+    if (aSpeedPWMCompensationRight >= 0) {
+        rightCarMotor.setSpeedPWMCompensation(aSpeedPWMCompensationRight);
+        leftCarMotor.setSpeedPWMCompensation(0);
+    } else {
+        rightCarMotor.setSpeedPWMCompensation(0);
+        leftCarMotor.setSpeedPWMCompensation(-aSpeedPWMCompensationRight);
+    }
+}
+
+/**
+ * @param aSpeedPWMCompensationRightDelta if positive, this value is added to the compensation value of the right motor, or subtracted from the left motor value.
+ *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
+ */
+void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta) {
+    if (aSpeedPWMCompensationRightDelta > 0) {
+        if (leftCarMotor.SpeedPWMCompensation >= aSpeedPWMCompensationRightDelta) {
+            leftCarMotor.SpeedPWMCompensation -= aSpeedPWMCompensationRightDelta;
         } else {
-            rightCarMotor.SpeedPWMCompensation += aSpeedPWMCompensationRight;
+            rightCarMotor.SpeedPWMCompensation += aSpeedPWMCompensationRightDelta;
         }
     } else {
-        aSpeedPWMCompensationRight = -aSpeedPWMCompensationRight;
-        if (rightCarMotor.SpeedPWMCompensation >= aSpeedPWMCompensationRight) {
-            rightCarMotor.SpeedPWMCompensation -= aSpeedPWMCompensationRight;
+        aSpeedPWMCompensationRightDelta = -aSpeedPWMCompensationRightDelta;
+        if (rightCarMotor.SpeedPWMCompensation >= aSpeedPWMCompensationRightDelta) {
+            rightCarMotor.SpeedPWMCompensation -= aSpeedPWMCompensationRightDelta;
         } else {
-            leftCarMotor.SpeedPWMCompensation += aSpeedPWMCompensationRight;
+            leftCarMotor.SpeedPWMCompensation += aSpeedPWMCompensationRightDelta;
         }
     }
     PWMDcMotor::MotorControlValuesHaveChanged = true;

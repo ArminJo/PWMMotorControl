@@ -263,7 +263,7 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
  */
 void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     if (aRequestedSpeedPWM == 0) {
-        stop(DefaultStopMode);
+        stop(STOP_MODE_KEEP);
     } else {
         checkAndHandleDirectionChange(aRequestedDirection);
         if (CurrentSpeedPWM != aRequestedSpeedPWM) {
@@ -299,49 +299,6 @@ void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
     if (!isStopped()) {
         setSpeedPWM(aRequestedSpeedPWM, CurrentDirectionOrBrakeMode); // output PWM value to motor
     }
-}
-
-/*
- * Changes RequestedDriveSpeedPWM and uses ramp for transitions if it makes sense
- */
-void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
-#ifdef DEBUG
-    Serial.print(PWMPin);
-    Serial.print(F(" Set PWM to "));
-    Serial.print(aRequestedSpeedPWM);
-    Serial.print(F(" Dir="));
-    Serial.print(aRequestedDirection);
-    Serial.print(F(" CurrentSpeedPWM="));
-    Serial.print(CurrentSpeedPWM);
-    Serial.print(F(" MotorMode="));
-    Serial.print(CurrentDirectionOrBrakeMode);
-    Serial.println();
-#endif
-
-    if (isStopped()) {
-        checkAndHandleDirectionChange(aRequestedDirection);
-        MotorRampState = MOTOR_STATE_START;
-        /*
-         * Set target speed for ramp up
-         */
-        uint8_t tRequestedDriveSpeedPWM;
-        if (aRequestedSpeedPWM > SpeedPWMCompensation) {
-            tRequestedDriveSpeedPWM = aRequestedSpeedPWM - SpeedPWMCompensation;
-        } else {
-            tRequestedDriveSpeedPWM = 0;
-        }
-        RequestedDriveSpeedPWM = tRequestedDriveSpeedPWM;
-        RampSpeedPWMDelta = RAMP_UP_VALUE_DELTA; // 20V / s
-    } else if (MotorRampState == MOTOR_STATE_DRIVE) {
-        // motor is running, -> just change speed
-        setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
-    }
-    // else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
-#  ifdef DEBUG
-    Serial.print(F("MotorRampState="));
-    Serial.print(MotorRampState);
-    Serial.println();
-#  endif
 }
 
 /*
@@ -455,6 +412,47 @@ void PWMDcMotor::updateDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
 }
 
 /*
+ * Changes RequestedDriveSpeedPWM and uses ramp for transitions if it makes sense
+ */
+void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+#ifdef DEBUG
+    Serial.print(PWMPin);
+    Serial.print(F(" Set PWM to "));
+    Serial.print(aRequestedSpeedPWM);
+    Serial.print(F(" Dir="));
+    Serial.print(aRequestedDirection);
+    Serial.print(F(" CurrentSpeedPWM="));
+    Serial.print(CurrentSpeedPWM);
+    Serial.print(F(" MotorMode="));
+    Serial.print(CurrentDirectionOrBrakeMode);
+    Serial.println();
+#endif
+#if defined(DO_NOT_SUPPORT_RAMP)
+    setSpeedPWM(aRequestedSpeedPWM,aRequestedDirection);
+#else
+    if (isStopped()) {
+        checkAndHandleDirectionChange(aRequestedDirection);
+        MotorRampState = MOTOR_STATE_START;
+        /*
+         * Set target speed for ramp up
+         */
+        RequestedDriveSpeedPWM = aRequestedSpeedPWM;
+    } else if (MotorRampState == MOTOR_STATE_DRIVE) {
+        /*
+         * motor is running, -> just change speed
+         */
+        setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
+    }
+    // else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
+#  ifdef DEBUG
+    Serial.print(F("MotorRampState="));
+    Serial.print(MotorRampState);
+    Serial.println();
+#  endif
+#endif // defined(DO_NOT_SUPPORT_RAMP)
+}
+
+/*
  * Takes the current DriveSpeedPWM for ramp up
  */
 void PWMDcMotor::startRampUp(uint8_t aRequestedDirection) {
@@ -462,13 +460,17 @@ void PWMDcMotor::startRampUp(uint8_t aRequestedDirection) {
 }
 
 void PWMDcMotor::startRampDown() {
+#if defined(DO_NOT_SUPPORT_RAMP)
+    stop(STOP_MODE_KEEP);
+#else
     MotorRampState = MOTOR_STATE_RAMP_DOWN;
 // set only the variables for later evaluation in updateMotor() below
-    if (CurrentSpeedPWM > (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA)) {
-        CurrentSpeedPWM -= (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_DOWN_VALUE_DELTA is immediately subtracted below
+    if (CurrentSpeedPWM > (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA)) {
+        CurrentSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
     } else {
-        CurrentSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
+        CurrentSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
     }
+#endif
 }
 
 #if !defined(USE_ENCODER_MOTOR_CONTROL)
@@ -476,17 +478,28 @@ void PWMDcMotor::startRampDown() {
  * @return true if not stopped (motor expects another update)
  */
 bool PWMDcMotor::updateMotor() {
-    unsigned long tMillis = millis();
     uint8_t tNewSpeedPWM = CurrentSpeedPWM;
+
+    /*
+     * Check if target milliseconds are reached
+     */
+    if (tNewSpeedPWM > 0) {
+        if (CheckDistanceInUpdateMotor && millis() > computedMillisOfMotorStopForDistance) {
+            stop(STOP_MODE_KEEP); // resets CheckDistanceInUpdateMotor and sets MOTOR_STATE_STOPPED;
+        }
+    }
+
+#if !defined(DO_NOT_SUPPORT_RAMP)
+    unsigned long tMillis = millis();
 
     if (MotorRampState == MOTOR_STATE_START) {
         NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
         /*
          * Start motor
          */
-        if (RequestedDriveSpeedPWM > RAMP_VALUE_UP_OFFSET_SPEED_PWM) {
-            // start with ramp to avoid spinning wheels
-            tNewSpeedPWM = RAMP_VALUE_UP_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
+        if (RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+            // Start with ramp to avoid spinning wheels
+            tNewSpeedPWM = RAMP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
@@ -497,37 +510,40 @@ bool PWMDcMotor::updateMotor() {
         }
     } else if (MotorRampState == MOTOR_STATE_RAMP_UP) {
         /*
-         * Increase motor speed by RAMP_UP_VALUE_DELTA every RAMP_UP_UPDATE_INTERVAL_MILLIS milliseconds
+         * Increase motor speed by RAMP_VALUE_DELTA every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
+         * Only used if RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid spinning wheels
          */
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis += RAMP_INTERVAL_MILLIS;
-            tNewSpeedPWM = tNewSpeedPWM + RampSpeedPWMDelta;
+            tNewSpeedPWM = tNewSpeedPWM + RAMP_VALUE_DELTA;
             /*
              * Transition criteria is: RequestedDriveSpeedPWM reached.
              * Then check immediately for timeout
              */
             // Clip value and check for 8 bit overflow
-            if (tNewSpeedPWM >= RequestedDriveSpeedPWM || tNewSpeedPWM <= RampSpeedPWMDelta) {
+            if (tNewSpeedPWM >= RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_VALUE_DELTA) {
                 tNewSpeedPWM = RequestedDriveSpeedPWM;
                 //  --> DRIVE
                 MotorRampState = MOTOR_STATE_DRIVE;
             }
         }
     }
-
     if (MotorRampState == MOTOR_STATE_DRIVE) {
         /*
          * Time based distance. Ramp down is included in time formula.
          */
         if (CheckDistanceInUpdateMotor && millis() >= computedMillisOfMotorStopForDistance) {
+            /*
+             * "Distance" reached -> stop now
+             */
 
-            if (tNewSpeedPWM > (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA)) {
-                tNewSpeedPWM -= (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_DOWN_VALUE_DELTA is immediately subtracted below
+            if (tNewSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+                // Stop with ramp to avoid blocking wheels
+                tNewSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
                 //  --> RAMP_DOWN
                 MotorRampState = MOTOR_STATE_RAMP_DOWN;
             } else {
-                //  --> STOPPED
-                tNewSpeedPWM = 0;
+                tNewSpeedPWM = 0; // This in turn changes state to MOTOR_STATE_STOPPED
             }
         }
     }
@@ -536,12 +552,13 @@ bool PWMDcMotor::updateMotor() {
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
             /*
-             * Decrease motor speed RAMP_UP_UPDATE_INTERVAL_STEPS times every RAMP_UP_UPDATE_INTERVAL_MILLIS milliseconds
+             * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
+             * Only used if CurrentSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid blocking wheels
              */
-            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_DOWN_MIN_SPEED_PWM)) {
-                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
+            if (tNewSpeedPWM > (RAMP_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
+                tNewSpeedPWM -= RAMP_VALUE_DELTA;
             } else {
-                tNewSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
+                tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }
         }
     }
@@ -558,18 +575,8 @@ bool PWMDcMotor::updateMotor() {
 #endif
         PWMDcMotor::setSpeedPWM(tNewSpeedPWM, CurrentDirectionOrBrakeMode); // sets MOTOR_STATE_STOPPED if speed is 0
     }
-
-    /*
-     * Check if target milliseconds are reached
-     */
-    if (CurrentSpeedPWM > 0) {
-        if (CheckDistanceInUpdateMotor && millis() > computedMillisOfMotorStopForDistance) {
-            stop(DefaultStopMode); // resets CheckDistanceInUpdateMotor and sets MOTOR_STATE_STOPPED;
-            return false; // need no more calls to update()
-        }
-        return true; // still running
-    }
-    return false; // current speed == 0
+#endif // #if defined(DO_NOT_SUPPORT_RAMP)
+    return (CurrentSpeedPWM > 0); // current speed == 0
 }
 
 /********************************************************************************************
@@ -582,42 +589,21 @@ void PWMDcMotor::setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillime
     MillisPerMillimeter = MILLIS_IN_ONE_SECOND / aMillimeterPerSecond;
 }
 
-/*
- * If motor is already running just update speed and new time
- */
-void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+void PWMDcMotor::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
+    goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+}
+
+void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
-    if (aRequestedDistanceMillimeter == 0) {
-        stop(DefaultStopMode); // In case motor was running
-        return;
+    startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+#if defined(DO_NOT_SUPPORT_RAMP)
+    delay(computedMillisOfMotorStopForDistance - millis());
+#else
+    while (millis() <= computedMillisOfMotorStopForDistance) {
+        updateMotor();
     }
-
-    if (isStopped()) {
-        setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
-
-        /*
-         * Estimate duration for given distance
-         * MillisPerMillimeter is defined for DEFAULT_DRIVE_SPEED_PWM is
-         */
-        if (aRequestedSpeedPWM == DEFAULT_DRIVE_SPEED_PWM) {
-            computedMillisOfMotorStopForDistance = millis() + DEFAULT_MOTOR_START_UP_TIME_MILLIS
-                    + (((uint16_t) aRequestedDistanceMillimeter * MillisPerMillimeter));
-        } else {
-            computedMillisOfMotorStopForDistance = millis() + DEFAULT_MOTOR_START_UP_TIME_MILLIS
-                    + (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
-        }
-
-    } else {
-        MotorRampState = MOTOR_STATE_DRIVE;
-        setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
-        /*
-         * Estimate duration for given distance
-         * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
-         */
-        computedMillisOfMotorStopForDistance = millis()
-                + (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
-    }
-    CheckDistanceInUpdateMotor = true;
+#endif
+    stop(STOP_MODE_KEEP);
 }
 
 void PWMDcMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
@@ -637,19 +623,29 @@ void PWMDcMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
 }
 
 /*
- * Not used by CarControl
+ * If motor is already running just update speed and new time
  */
-void PWMDcMotor::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
-}
-
-void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
-    while (millis() <= computedMillisOfMotorStopForDistance) {
-        updateMotor();
+    if (aRequestedDistanceMillimeter == 0) {
+        stop(MOTOR_BRAKE); // In case motor was running
+        return;
     }
-    stop(DefaultStopMode);
+
+    setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+    /*
+     * Estimate duration for given distance
+     * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
+     */
+    uint32_t tComputedMillisOfMotorStopForDistance = millis()
+            + (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
+
+    if (isStopped()) {
+        tComputedMillisOfMotorStopForDistance += DEFAULT_MOTOR_START_TIME_MILLIS;
+    }
+    computedMillisOfMotorStopForDistance = tComputedMillisOfMotorStopForDistance;
+
+    CheckDistanceInUpdateMotor = true;
 }
 
 #endif // !defined(USE_ENCODER_MOTOR_CONTROL)
@@ -713,9 +709,6 @@ void PWMDcMotor::printSettings(Print *aSerial) {
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 #endif
 
-    aSerial->print(F("DEFAULT_MOTOR_START_UP_TIME_MILLIS="));
-    aSerial->println(DEFAULT_MOTOR_START_UP_TIME_MILLIS);
-
     aSerial->print(F("FULL_BRIDGE_OUTPUT_MILLIVOLT="));
     aSerial->print(FULL_BRIDGE_OUTPUT_MILLIVOLT);
     aSerial->print(F("mV (= FULL_BRIDGE_INPUT_MILLIVOLT|"));
@@ -724,8 +717,13 @@ void PWMDcMotor::printSettings(Print *aSerial) {
     aSerial->print(FULL_BRIDGE_LOSS_MILLIVOLT);
     aSerial->println(F("mV)"));
 
+    aSerial->print(F("DEFAULT_START_SPEED_PWM="));
+    aSerial->print(DEFAULT_START_SPEED_PWM);
     aSerial->print(F(", DEFAULT_DRIVE_SPEED_PWM="));
     aSerial->println(DEFAULT_DRIVE_SPEED_PWM);
+
+    aSerial->print(F("DEFAULT_MOTOR_START_TIME_MILLIS="));
+    aSerial->println(DEFAULT_MOTOR_START_TIME_MILLIS);
 
     aSerial->print(F("DEFAULT_MILLIS_PER_MILLIMETER="));
     aSerial->println(DEFAULT_MILLIS_PER_MILLIMETER);

@@ -75,7 +75,8 @@ public:
 
     void setDefaultsForFixedDistanceDriving();
     void setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight);
-    void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
+    void setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
+    void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
 
     void writeMotorValuesToEeprom();

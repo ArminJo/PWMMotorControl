@@ -111,6 +111,7 @@ public:
     void printEncoderData(Print *aSerial);
 
     void resetEncoderControlValues();
+    void initEncoderControlValues();
     void resetSpeedValues();
 
 #ifdef ENABLE_MOTOR_LIST_FUNCTIONS

@@ -99,7 +99,7 @@ public:
     int8_t getAcceleratorForwardLowPass8();
     int8_t getAcceleratorForwardLowPass4();
     int getSpeedCmPerSecond();
-    int getSpeedFastWithHigherResolution(); // faster and shorter call
+    int getSpeedFastWithHigherResolution();
     int getDistanceCm();
     int getDistanceMillimeter();
 

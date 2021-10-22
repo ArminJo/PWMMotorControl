@@ -25,8 +25,19 @@
 
 #include <Arduino.h>
 
-//#define USE_ENCODER_MOTOR_CONTROL
-//#define USE_ADAFRUIT_MOTOR_SHIELD
+/*
+ * You will need to change these values according to your motor, H-bridge and motor supply voltage.
+ * You must specify this before the include of "CarPWMMotorControl.hpp"
+ */
+//#define USE_ENCODER_MOTOR_CONTROL  // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+//#define USE_ADAFRUIT_MOTOR_SHIELD  // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD  // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
+#define VIN_2_LIPO                 // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+//#define VIN_1_LIPO                 // Or if you use a Mosfet bridge, 1 LIPO (around 3.7 volt) may be sufficient.
+//#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
+//#define MOSFET_BRIDGE_USED  // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
+//#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
+//#define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
 //#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
 #ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
 // Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
@@ -35,6 +46,9 @@
 //#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
 #endif
 #include "CarPWMMotorControl.hpp"
+
+#include "PinDefinitionsAndMore.h"
+
 #if defined(ESP32)
 #include <ESP32Servo.h>
 #else
@@ -52,51 +66,8 @@
 #define DISTANCE_MINIMUM_CENTIMETER 20 // If measured distance is less than this value, go backwards
 #define DISTANCE_MAXIMUM_CENTIMETER 30 // If measured distance is greater than this value, go forward
 
-//#define VIN_2_LIPO
-#if defined(VIN_2_LIPO)
-// values for 2xLIPO / 7.4 volt
-#define START_SPEED_PWM                 55 // Speed PWM value at which car starts to move.
-#define DRIVE_SPEED_PWM                 90 // Speed PWM value used for going fixed distance.
-#define MAX_SPEED_PWM_FOLLOWER         135 // Max speed PWM value used for follower.
-#else
-// Values for 4xAA / 6.0 volt
-#define START_SPEED_PWM                140 // Speed PWM value at which car starts to move.
-#define DRIVE_SPEED_PWM                220 // Speed PWM value used for going fixed distance.
-#define MAX_SPEED_PWM_FOLLOWER         255 // Max speed PWM value used for follower.
-#endif
+#define MAX_SPEED_PWM_FOLLOWER              (DEFAULT_DRIVE_SPEED_PWM * 2) // Max speed PWM value used for follower.
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable it in PWMDCMotor.h
-/*
- * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
- * 2 + 3 are reserved for encoder input
- */
-#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
-#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
-#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
-
-#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
-#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
-#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
-#endif
-
-#ifdef USE_ENCODER_MOTOR_CONTROL
-#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
-#define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
-#endif
-
-#define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield
-
-#define PIN_BUZZER                 12
-
-#if defined(ESP32)
-#define PIN_TRIGGER_OUT            14
-#define PIN_ECHO_IN                15
-#else
-#define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
-#define PIN_ECHO_IN                A1
-#endif
-
-//Car Control
 CarPWMMotorControl RobotCarPWMMotorControl;
 
 Servo DistanceServo;
@@ -116,22 +87,16 @@ void setup() {
     RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarPWMMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #endif
 
-    /*
-     * You will need to change these values according to your motor, wheels and motor supply voltage.
-     */
-    RobotCarPWMMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
-#if ! defined(USE_ENCODER_MOTOR_CONTROL)
-    // set factor for converting distance to drive time
-    RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
-#endif
+    RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+
     /*
      * Set US servo to forward position
      */
@@ -162,7 +127,7 @@ void loop() {
         /*
          * Target too far -> drive forward with speed proportional to the gap
          */
-        tSpeedPWM = START_SPEED_PWM + (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) * 2;
+        tSpeedPWM = DEFAULT_START_SPEED_PWM + (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) * 2;
         if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
             tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
@@ -178,7 +143,7 @@ void loop() {
         /*
          * Target too close -> drive backwards
          */
-        tSpeedPWM = START_SPEED_PWM + (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+        tSpeedPWM = DEFAULT_START_SPEED_PWM + (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
         if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
             tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }

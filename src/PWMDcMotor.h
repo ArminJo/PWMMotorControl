@@ -6,7 +6,7 @@
  * 2. Direction / MotorDriverMode. Can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
  *
  * PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
- * PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
+ * PWM period is 1030 us for using full bridge PWM generation by analogWrite() with millis() timer0 on pin 5 & 6.
  *
  * Distance is computed in 3 different ways.
  * Without IMU or Encoder: - distance is converted to a time for riding.
@@ -39,9 +39,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "2.0.0"
+#define VERSION_PWMMOTORCONTROL "2.1.0"
 #define VERSION_PWMMOTORCONTROL_MAJOR 2
-#define VERSION_PWMMOTORCONTROL_MINOR 0
+#define VERSION_PWMMOTORCONTROL_MINOR 1
 // The change log is at the bottom of the file
 
 #define MILLIS_IN_ONE_SECOND 1000L
@@ -49,18 +49,13 @@
 /*
  * Activate this, if you have encoder interrupts attached at pin 2 and 3
  * and want to use the methods of the EncoderMotor class for fixed distance / closed loop driving.
- * Enabling it will disable no longer required PWMDCMotor class variables and functions
- * and force the usage of the EncoderMotor class in CarPWMMotorControl.
+ * Enabling it will overload some PWMDCMotor class functions and force the usage of the EncoderMotor class in CarPWMMotorControl.
  */
 //#define USE_ENCODER_MOTOR_CONTROL
-//
-/*
- * Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
- * This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
- * For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6.
- */
-//#define USE_ADAFRUIT_MOTOR_SHIELD
+
+//#define USE_ADAFRUIT_MOTOR_SHIELD // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+//This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
 #  if !defined(MOSFET_BRIDGE_USED)
 #define MOSFET_BRIDGE_USED
 #  endif
@@ -68,20 +63,14 @@
 #define FULL_BRIDGE_LOSS_MILLIVOLT             0
 #  endif
 #endif
-//
-/*
- * Own library saves me 694 bytes program memory
- */
-#if ! defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD) // if defined (externally), forces using Adafruit library
+
+//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
+#if ! defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 #define USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 #endif
 
-/*
- * Activate this, if you use default settings and 2 LiPo Cells (around 7.4 volt) as Motor supply.
- */
-//#define VIN_2_LIPO
-// Or if you use a Mosfet bridge 1 LIPO may be sufficient
-//#define VIN_1_LIPO
+//#define VIN_2_LIPO // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+//#define VIN_1_LIPO // Or if you use a Mosfet bridge, 1 LIPO may be sufficient.
 /*
  * Helper macro for getting a macro definition as string
  */
@@ -101,7 +90,7 @@
 #  elif defined(VIN_1_LIPO)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         3700 // for 1 x LIPO battery (3.7 volt).
 #  else
-#define FULL_BRIDGE_INPUT_MILLIVOLT         6000 // for 4 x AA batteries (6 volt).
+#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).
 #  endif
 #endif
 
@@ -120,7 +109,8 @@
 #define FULL_BRIDGE_OUTPUT_MILLIVOLT        (FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)
 #endif
 
-#define DEFAULT_START_MILLIVOLT             1100 // Start voltage -motors start to turn- is 1.1 volt
+#define DEFAULT_START_MILLIVOLT_MOSFET      1000 // Voltage where motors start to turn
+#define DEFAULT_START_MILLIVOLT_L298        1500 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
 #define SPEED_PWM_FOR_1_VOLT                ((1000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define SPEED_FOR_8_VOLT                    ((8000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
@@ -131,6 +121,14 @@
 #define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 
+#if !defined(DEFAULT_START_SPEED_PWM)
+#  if defined(MOSFET_BRIDGE_USED)
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#  else
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#  endif
+#endif
+
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
 // At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.5 rotation per second, 29 distance/encoder counts per second -> 32 cm / second
 #define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
@@ -138,7 +136,7 @@
 #endif
 /*
  * Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
- * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_UP_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerMillimeter) / DriveSpeedPWM));
+ * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerMillimeter) / DriveSpeedPWM));
  */
 
 /*
@@ -148,16 +146,13 @@
  * This corresponds to 5 cm/s every 20 ms
  */
 #define RAMP_INTERVAL_MILLIS               20 // The smaller the value the steeper the ramp
-#define RAMP_VALUE_UP_OFFSET_MILLIVOLT   2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
-#define RAMP_VALUE_DOWN_OFFSET_MILLIVOLT 2500 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
-#define RAMP_VALUE_UP_OFFSET_SPEED_PWM   ((RAMP_VALUE_UP_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_DOWN_OFFSET_SPEED_PWM ((RAMP_VALUE_DOWN_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_DOWN_MIN_SPEED_PWM    (((DEFAULT_DRIVE_MILLIVOLT / 2) * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_UP_VALUE_DELTA              (SPEED_FOR_8_VOLT / (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 10V/s = 1.0 volt per 100 ms
-#define RAMP_DOWN_VALUE_DELTA            ((SPEED_FOR_8_VOLT * 2)/ (1000 / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 20V/s = 1.0 volt per 100 ms
+#define RAMP_VALUE_OFFSET_MILLIVOLT      2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+#define RAMP_VALUE_OFFSET_SPEED_PWM      ((RAMP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_MIN_SPEED_PWM         (DEFAULT_DRIVE_SPEED_PWM / 2) // Minimal speed, if motor is still turning
+#define RAMP_VALUE_DELTA                 (SPEED_FOR_8_VOLT / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 8V/s = 0.8 volt per 100 ms
 #define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
 
-#define DEFAULT_MOTOR_START_UP_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
+#define DEFAULT_MOTOR_START_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_FORWARD   0
@@ -327,7 +322,6 @@ public:
     uint8_t MotorRampState; // MOTOR_STATE_STOPPED, MOTOR_STATE_START, MOTOR_STATE_RAMP_UP, MOTOR_STATE_DRIVE, MOTOR_STATE_RAMP_DOWN
     uint8_t RequestedDriveSpeedPWM; // DriveSpeedPWM - SpeedPWMCompensation; The DriveSpeedPWM used for current movement. Can be set for eg. turning which better performs with reduced DriveSpeedPWM
 
-    uint8_t RampSpeedPWMDelta; // TODO is still constant, so remove?
     unsigned long NextRampChangeMillis;
 
 #ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
@@ -338,12 +332,10 @@ public:
 };
 
 /*
- * Version 2.2.0 - 10/2021
+ * Version 2.1.0 - 10/2021
  * - Removed all *Compensated functions, compensation now is always active.
  * - Removed StopSpeed from EepromMotorinfoStruct.
  * - Removed StartSpeed.
- *
- * Version 2.1.0 - 10/2021
  * - Renamed *.cpp to *.hpp.
  * - Added and renamed functions.
  *

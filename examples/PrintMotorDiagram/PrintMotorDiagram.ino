@@ -3,7 +3,7 @@
  *  Prints PWM, distance and speed diagram of an encoder motor.
  *
  *
- *  Copyright (C) 2020  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
@@ -24,28 +24,22 @@
  */
 
 #include <Arduino.h>
-#include "CarPWMMotorControl.hpp"
-
-#if !defined(USE_ENCODER_MOTOR_CONTROL)
-#error For this example to run, USE_ENCODER_MOTOR_CONTROL must be commented out / defined in PWMDCMotor.h line 42
-#endif
-
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) // enable / disable it in PWMDCMotor.h
 /*
- * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
- * 2 + 3 are reserved for encoder input
+ * You will need to change these values according to your motor, H-bridge and motor supply voltage.
+ * You must specify this before the include of "CarPWMMotorControl.hpp"
  */
-#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
-#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
-#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
+#define USE_ENCODER_MOTOR_CONTROL  // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+//#define USE_ADAFRUIT_MOTOR_SHIELD  // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD  // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
+#define VIN_2_LIPO                 // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+//#define VIN_1_LIPO                 // Or if you use a Mosfet bridge, 1 LIPO (around 3.7 volt) may be sufficient.
+//#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
+//#define MOSFET_BRIDGE_USED  // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
+//#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
+//#define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+#include "EncoderMotor.hpp"
 
-#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
-#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
-#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
-#endif
-
-#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
-#define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
+#include "PinDefinitionsAndMore.h"
 
 EncoderMotor MotorUnderTest;
 
@@ -68,7 +62,7 @@ void setup() {
     // For Adafruit Motor Shield v2
     MotorUnderTest.init(2, RIGHT_MOTOR_INTERRUPT);
 #else
-    MotorUnderTest.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT);
+    MotorUnderTest.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT);
 #endif
     delay(2000);
 }

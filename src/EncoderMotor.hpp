@@ -135,14 +135,39 @@ bool EncoderMotor::updateMotor() {
     unsigned long tMillis = millis();
     uint8_t tNewSpeedPWM = CurrentSpeedPWM;
 
+    /*
+     * Check if target distance is reached or encoder tick has timeout
+     */
+    if (tNewSpeedPWM > 0) {
+        if (CheckDistanceInUpdateMotor
+                && (getDistanceMillimeter() >= TargetDistanceMillimeter
+                        || tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS))) {
+            stop(MOTOR_BRAKE); // this sets MOTOR_STATE_STOPPED;
+#ifdef DEBUG
+            Serial.print(PWMPin);
+            if(tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS)){
+                Serial.print(F(" Encoder timeout: dist="));
+            } else{
+                Serial.print(F(" Reached: dist="));
+            }
+            Serial.print(getDistanceMillimeter());
+            Serial.print(F(" Breakdist="));
+            Serial.println(getBrakingDistanceMillimeter());
+#endif
+            return false; // need no more calls to update()
+        }
+    }
+
     if (MotorRampState == MOTOR_STATE_START) {
+        initEncoderControlValues();
+
         NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
         /*
          * Start motor
          */
-        if (RequestedDriveSpeedPWM > RAMP_VALUE_UP_OFFSET_SPEED_PWM) {
+        if (RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
             // start with ramp to avoid spinning wheels
-            tNewSpeedPWM = RAMP_VALUE_UP_OFFSET_SPEED_PWM; // start immediately with speed offset (2.3 volt)
+            tNewSpeedPWM = RAMP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (2.3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
@@ -152,19 +177,12 @@ bool EncoderMotor::updateMotor() {
             MotorRampState = MOTOR_STATE_DRIVE;
         }
 
-        /*
-         * Init Encoder values
-         */
-        LastRideEncoderCount = 0;
-        EncoderCount = 0;
-        // initialize for timeout detection
-        LastEncoderInterruptMillis = tMillis - ENCODER_SENSOR_RING_MILLIS - 1;
 
     } else if (MotorRampState == MOTOR_STATE_RAMP_UP) {
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis += RAMP_INTERVAL_MILLIS;
             /*
-             * Increase motor speed by RAMP_UP_VALUE_DELTA every RAMP_UP_UPDATE_INTERVAL_MILLIS milliseconds
+             * Increase motor speed by RAMP_VALUE_DELTA every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
              * Transition criteria to next state is:
              * Drive speed reached or target distance - braking distance reached
              */
@@ -174,9 +192,9 @@ bool EncoderMotor::updateMotor() {
                 //  RequestedDriveSpeedPWM reached switch to --> DRIVE_SPEED_PWM and check immediately for next transition to RAMP_DOWN
                 MotorRampState = MOTOR_STATE_DRIVE;
             } else {
-                tNewSpeedPWM = tNewSpeedPWM + RampSpeedPWMDelta;
+                tNewSpeedPWM = tNewSpeedPWM + RAMP_VALUE_DELTA;
                 // Clip value and check for 8 bit overflow
-                if (tNewSpeedPWM > RequestedDriveSpeedPWM || tNewSpeedPWM <= RampSpeedPWMDelta) {
+                if (tNewSpeedPWM > RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_VALUE_DELTA) {
                     // do not change state here to let motor run at RequestedDriveSpeedPWM for one interval
                     tNewSpeedPWM = RequestedDriveSpeedPWM;
                 }
@@ -197,10 +215,10 @@ bool EncoderMotor::updateMotor() {
          * Wait until target distance - braking distance reached
          */
         if (CheckDistanceInUpdateMotor && getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter) {
-            if (CurrentSpeedPWM > (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA)) {
-                tNewSpeedPWM -= (RAMP_VALUE_DOWN_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_DOWN_VALUE_DELTA is immediately subtracted below
+            if (CurrentSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+                tNewSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
             } else {
-                tNewSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
+                tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }
             //  --> RAMP_DOWN
             MotorRampState = MOTOR_STATE_RAMP_DOWN;
@@ -223,12 +241,12 @@ bool EncoderMotor::updateMotor() {
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
             /*
-             * Decrease motor speed RAMP_UP_UPDATE_INTERVAL_STEPS times every RAMP_UP_UPDATE_INTERVAL_MILLIS milliseconds
+             * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
              */
-            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_DOWN_MIN_SPEED_PWM)) {
-                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
+            if (tNewSpeedPWM > (RAMP_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
+                tNewSpeedPWM -= RAMP_VALUE_DELTA;
             } else {
-                tNewSpeedPWM = RAMP_VALUE_DOWN_MIN_SPEED_PWM;
+                tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }
 #ifdef DEBUG
             Serial.print(PWMPin);
@@ -254,31 +272,7 @@ bool EncoderMotor::updateMotor() {
 #endif
         PWMDcMotor::setSpeedPWM(tNewSpeedPWM, CurrentDirectionOrBrakeMode);
     }
-
-    /*
-     * Check if target distance is reached or encoder tick timeout
-     */
-    if (CurrentSpeedPWM > 0) {
-        if (CheckDistanceInUpdateMotor
-                && (getDistanceMillimeter() >= TargetDistanceMillimeter
-                        || tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS))) {
-            stop(MOTOR_BRAKE); // this sets MOTOR_STATE_STOPPED;
-#ifdef DEBUG
-            Serial.print(PWMPin);
-            if(tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS)){
-                Serial.print(F(" Encoder timeout: dist="));
-            } else{
-                Serial.print(F(" Reached: dist="));
-            }
-            Serial.print(getDistanceMillimeter());
-            Serial.print(F(" Breakdist="));
-            Serial.println(getBrakingDistanceMillimeter());
-#endif
-            return false; // need no more calls to update()
-        }
-        return true; // still running
-    }
-    return false; // current speed == 0
+    return (CurrentSpeedPWM > 0); // current speed == 0
 }
 
 /*
@@ -354,6 +348,13 @@ void EncoderMotor::resetEncoderControlValues() {
             (((uint8_t*) &Debug) + sizeof(Debug)) - reinterpret_cast<uint8_t*>(&TargetDistanceMillimeter));
 // to force display of initial values
     SensorValuesHaveChanged = true;
+}
+
+void EncoderMotor::initEncoderControlValues() {
+    LastRideEncoderCount = 0;
+    EncoderCount = 0;
+// initialize for timeout detection
+    LastEncoderInterruptMillis = millis() - ENCODER_SENSOR_RING_MILLIS - 1;
 }
 
 /***************************************************
