@@ -1,8 +1,7 @@
 /*
  * AutonomousDrive.h
  *
- *  Created on: 08.11.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -45,20 +44,6 @@ extern bool sDoStep;
 #define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER  70 // search if target moved to side
 
 /*
- * Different result types acquired at one scan
- */
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-#define SCAN_MODE_MINIMUM   0
-#define SCAN_MODE_MAXIMUM   1
-#define SCAN_MODE_US        2
-#define SCAN_MODE_IR        3
-extern uint8_t sScanMode;
-#endif
-
-#define GO_BACK_AND_SCAN_AGAIN 360 // possible result of doBuiltInCollisionDetection()
-#define SCAN_AGAIN 360 // possible result of scanForTarget(), scan at next step.
-
-/*
  * Used for adaptive collision detection
  */
 extern uint8_t sCentimeterPerScanTimesTwo; // Statistics
@@ -66,12 +51,9 @@ extern uint8_t sCentimeterPerScan; // = sCentimeterPerScanTimesTwo / 2
 
 int postProcessAndCollisionDetection();
 
-unsigned int getDistanceAndPlayTone();
-
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
 void driveAutonomousOneStep();
 void driveFollowerModeOneStep();
 
 #endif /* SRC_AUTONOMOUSDRIVE_H_ */
-
 #pragma once

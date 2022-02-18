@@ -2,6 +2,7 @@
  * MPU6050Defines.h
  * Contains only the defines for MPU6050.
  * Copied from https://github.com/jrowberg/i2cdevlib/tree/master/Arduino/MPU6050
+ * All typedefs are from Adafruit_MPU6050.h https://github.com/adafruit/Adafruit_MPU6050
  */
 
 /* ============================================
@@ -28,8 +29,8 @@ THE SOFTWARE.
 ===============================================
 */
 
-#ifndef _MPU6050_H_
-#define _MPU6050_H_
+#ifndef MPU6050_DEFINES_H
+#define MPU6050_DEFINES_H
 
 //#define MPU6050_INCLUDE_DMP_MOTIONAPPS41
 
@@ -207,6 +208,25 @@ THE SOFTWARE.
 #define MPU6050_EXT_SYNC_ACCEL_XOUT_L   0x5
 #define MPU6050_EXT_SYNC_ACCEL_YOUT_L   0x6
 #define MPU6050_EXT_SYNC_ACCEL_ZOUT_L   0x7
+/*
+ * This and all the next enums are copied from Adafruit_MPU6050.cpp
+ * https://github.com/adafruit/Adafruit_MPU6050
+ */
+/**
+ * @brief FSYNC output values
+ *
+ * Allowed values for `setFsyncSampleOutput`.
+ */
+typedef enum fsync_out {
+  MPU6050_FSYNC_OUT_DISABLED,
+  MPU6050_FSYNC_OUT_TEMP,
+  MPU6050_FSYNC_OUT_GYROX,
+  MPU6050_FSYNC_OUT_GYROY,
+  MPU6050_FSYNC_OUT_GYROZ,
+  MPU6050_FSYNC_OUT_ACCELX,
+  MPU6050_FSYNC_OUT_ACCELY,
+  MPU6050_FSYNC_OUT_ACCEL_Z,
+} mpu6050_fsync_out_t;
 
 #define MPU6050_DLPF_BW_256         0x00
 #define MPU6050_DLPF_BW_188         0x01
@@ -215,6 +235,20 @@ THE SOFTWARE.
 #define MPU6050_DLPF_BW_20          0x04
 #define MPU6050_DLPF_BW_10          0x05
 #define MPU6050_DLPF_BW_5           0x06
+/**
+ * @brief Digital low pass filter bandthwidth options
+ *
+ * Allowed values for `setFilterBandwidth`.
+ */
+typedef enum {
+  MPU6050_BAND_260_HZ, ///< Docs imply this disables the filter
+  MPU6050_BAND_184_HZ, ///< 184 Hz
+  MPU6050_BAND_94_HZ,  ///< 94 Hz
+  MPU6050_BAND_44_HZ,  ///< 44 Hz
+  MPU6050_BAND_21_HZ,  ///< 21 Hz
+  MPU6050_BAND_10_HZ,  ///< 10 Hz
+  MPU6050_BAND_5_HZ,   ///< 5 Hz
+} mpu6050_bandwidth_t;
 
 #define MPU6050_GCONFIG_FS_SEL_BIT      4
 #define MPU6050_GCONFIG_FS_SEL_LENGTH   2
@@ -223,6 +257,17 @@ THE SOFTWARE.
 #define MPU6050_GYRO_FS_500         0x01
 #define MPU6050_GYRO_FS_1000        0x02
 #define MPU6050_GYRO_FS_2000        0x03
+/**
+ * @brief Gyroscope range options
+ *
+ * Allowed values for `setGyroRange`.
+ */
+typedef enum {
+  MPU6050_RANGE_250_DEG,  ///< +/- 250 deg/s (default value)
+  MPU6050_RANGE_500_DEG,  ///< +/- 500 deg/s
+  MPU6050_RANGE_1000_DEG, ///< +/- 1000 deg/s
+  MPU6050_RANGE_2000_DEG, ///< +/- 2000 deg/s
+} mpu6050_gyro_range_t;
 
 #define MPU6050_ACONFIG_XA_ST_BIT           7
 #define MPU6050_ACONFIG_YA_ST_BIT           6
@@ -236,6 +281,17 @@ THE SOFTWARE.
 #define MPU6050_ACCEL_FS_4          0x01
 #define MPU6050_ACCEL_FS_8          0x02
 #define MPU6050_ACCEL_FS_16         0x03
+/**
+ * @brief Accelerometer range options
+ *
+ * Allowed values for `setAccelerometerRange`.
+ */
+typedef enum {
+  MPU6050_RANGE_2_G = 0b00,  ///< +/- 2g (default value)
+  MPU6050_RANGE_4_G = 0b01,  ///< +/- 4g
+  MPU6050_RANGE_8_G = 0b10,  ///< +/- 8g
+  MPU6050_RANGE_16_G = 0b11, ///< +/- 16g
+} mpu6050_accel_range_t;
 
 #define MPU6050_DHPF_RESET          0x00
 #define MPU6050_DHPF_5              0x01
@@ -398,6 +454,20 @@ THE SOFTWARE.
 #define MPU6050_CLOCK_PLL_EXT32K        0x04
 #define MPU6050_CLOCK_PLL_EXT19M        0x05
 #define MPU6050_CLOCK_KEEP_RESET        0x07
+/**
+ * @brief Clock source options
+ *
+ * Allowed values for `setClock`.
+ */
+typedef enum clock_select {
+  MPU6050_INTR_8MHz,
+  MPU6050_PLL_GYROX,
+  MPU6050_PLL_GYROY,
+  MPU6050_PLL_GYROZ,
+  MPU6050_PLL_EXT_32K,
+  MPU6050_PLL_EXT_19MHz,
+  MPU6050_STOP = 7,
+} mpu6050_clock_select_t;
 
 #define MPU6050_PWR2_LP_WAKE_CTRL_BIT       7
 #define MPU6050_PWR2_LP_WAKE_CTRL_LENGTH    2
@@ -412,6 +482,17 @@ THE SOFTWARE.
 #define MPU6050_WAKE_FREQ_2P5       0x1
 #define MPU6050_WAKE_FREQ_5         0x2
 #define MPU6050_WAKE_FREQ_10        0x3
+/**
+ * @brief Periodic measurement options
+ *
+ * Allowed values for `setCycleRate`.
+ */
+typedef enum {
+  MPU6050_CYCLE_1_25_HZ, ///< 1.25 Hz
+  MPU6050_CYCLE_5_HZ,    ///< 5 Hz
+  MPU6050_CYCLE_20_HZ,   ///< 20 Hz
+  MPU6050_CYCLE_40_HZ,   ///< 40 Hz
+} mpu6050_cycle_rate_t;
 
 #define MPU6050_BANKSEL_PRFTCH_EN_BIT       6
 #define MPU6050_BANKSEL_CFG_USER_BANK_BIT   5
@@ -425,4 +506,5 @@ THE SOFTWARE.
 #define MPU6050_DMP_MEMORY_BANK_SIZE    256
 #define MPU6050_DMP_MEMORY_CHUNK_SIZE   16
 
-#endif /* _MPU6050_H_ */
+#endif // MPU6050_DEFINES_H
+#pragma once

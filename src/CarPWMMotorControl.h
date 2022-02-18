@@ -32,7 +32,6 @@
  * Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration.
  * Connectors point to the rear.
  */
-//#define USE_MPU6050_IMU
 #ifdef USE_MPU6050_IMU
 #include "IMUCarData.h"
 #endif
@@ -54,9 +53,12 @@
 #endif
 
 // turn directions
-#define TURN_FORWARD    DIRECTION_FORWARD  // 0
-#define TURN_BACKWARD   DIRECTION_BACKWARD // 1
-#define TURN_IN_PLACE   2
+typedef enum turn_direction {
+    TURN_FORWARD, TURN_BACKWARD, TURN_IN_PLACE
+} turn_direction_t;
+//#define TURN_FORWARD    DIRECTION_FORWARD  // 0
+//#define TURN_BACKWARD   DIRECTION_BACKWARD // 1
+//#define TURN_IN_PLACE   2
 
 class CarPWMMotorControl {
 public:
@@ -83,7 +85,7 @@ public:
     void readMotorValuesFromEeprom();
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-//    void calibrate(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
+    void getStartSpeedPWM(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
     unsigned int getBrakingDistanceMillimeter();
     uint8_t getTurnDistanceHalfDegree();
 #endif
@@ -120,7 +122,8 @@ public:
      * Functions for moving a fixed distance
      */
     // With signed distance
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+            uint8_t aRequestedDirection); // only setup values
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // only setup values, no movement -> use updateMotors()
 
@@ -136,13 +139,13 @@ public:
     void setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter);
 #if defined(CAR_HAS_4_WHEELS)
     // slow speed does not really work for 4 WD cars
-    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = false);
-    void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE,
-            void (*aLoopCallback)(void) = NULL, bool aUseSlowSpeed = false);
+    void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = false);
+    void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
+            void (*aLoopCallback)(void) = NULL);
 #else
-    void startRotate(int aRotationDegrees, uint8_t aTurnDirection, bool aUseSlowSpeed = true);
-    void rotate(int aRotationDegrees, uint8_t aTurnDirection = TURN_IN_PLACE,
-            void (*aLoopCallback)(void) = NULL, bool aUseSlowSpeed = true);
+    void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = true);
+    void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
+            void (*aLoopCallback)(void) = NULL);
 #endif
 
 #ifdef USE_MPU6050_IMU
@@ -176,7 +179,7 @@ public:
     bool isState(uint8_t aState);
     bool isStateRamp(); // MOTOR_STATE_RAMP_UP OR MOTOR_STATE_RAMP_DOWN
 
-    void resetControlValues();
+    void resetEncoderControlValues();
 
     /*
      * Functions, which directly call motor functions for both motors
@@ -197,6 +200,8 @@ public:
     PWMDcMotor leftCarMotor;
 #endif
 };
+
+extern CarPWMMotorControl RobotCarMotorControl;
 
 #endif /* CarPWMMotorControl_H_ */
 

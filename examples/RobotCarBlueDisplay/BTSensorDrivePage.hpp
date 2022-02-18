@@ -1,12 +1,11 @@
 /*
- * BTSensorDrivePage.cpp
+ * BTSensorDrivePage.hpp
  *
  *  Contains all the GUI elements for driving the car with the smartphone sensors.
  *
  *  Requires BlueDisplay library.
  *
- *  Created on: 13.05.2019
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -19,8 +18,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
+#ifndef ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#define ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#include <Arduino.h>
 
-#include "RobotCar.h"
+#include "RobotCarPinDefinitionsAndMore.h"
+#include "RobotCarBlueDisplay.h"
+
 #include "RobotCarGui.h"
 
 // 4 Sliders for accelerometer
@@ -249,3 +253,5 @@ void loopBTSensorDrivePage(void) {
 
 void stopBTSensorDrivePage(void) {
 }
+#endif // ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#pragma once

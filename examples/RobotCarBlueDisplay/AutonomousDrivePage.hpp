@@ -1,5 +1,5 @@
 /*
- * AutonomousDrivePage.cpp
+ * AutonomousDrivePage.hpp
  *
  *  Contains all the GUI elements for autonomous driving.
  *  Cont ->Step / Step -> SStep, SStep->Cont: Switches mode from "continuous drive" to "drive until next turn" to "drive CENTIMETER_PER_RIDE_PRO"
@@ -8,7 +8,7 @@
  *
  *  Requires BlueDisplay library.
  *
- *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -22,7 +22,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#include "RobotCar.h"
+#ifndef ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#define ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#include <Arduino.h>
+
+#include "RobotCarPinDefinitionsAndMore.h"
+#include "RobotCarBlueDisplay.h"
 #include "RobotCarGui.h"
 #include "Distance.h"
 
@@ -40,21 +45,21 @@ BDButton TouchButtonScanSpeed;
 BDButton TouchButtonPathInfoPage;
 #endif
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 BDButton TouchButtonScanMode;
-const char sScanModeButtonStringMinMax[] PROGMEM = "Min->Max";
-const char sScanModeButtonStringMaxUS[] PROGMEM = "Max->US";
+const char sDistanceSourceModeButtonStringMinMax[] PROGMEM = "Min->Max";
+const char sDistanceSourceModeButtonStringMaxUS[] PROGMEM = "Max->US";
 #  ifdef CAR_HAS_IR_DISTANCE_SENSOR
-const char sScanModeButtonStringUSIr[] PROGMEM = "US->IR";
-const char sScanModeButtonStringIrMin[] PROGMEM = "IR->Min";
-const char * const sScanModeButtonCaptionStringArray[] PROGMEM = { sScanModeButtonStringMinMax, sScanModeButtonStringMaxUS,
-        sScanModeButtonStringUSIr, sScanModeButtonStringIrMin };
+const char sDistanceSourceModeButtonStringUSIr[] PROGMEM = "US->IR";
+const char sDistanceSourceModeButtonStringIrMin[] PROGMEM = "IR->Min";
+const char * const sDistanceSourceModeButtonCaptionStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax, sDistanceSourceModeButtonStringMaxUS,
+        sDistanceSourceModeButtonStringUSIr, sDistanceSourceModeButtonStringIrMin };
 # else
-const char sScanModeButtonStringUSTof[] PROGMEM = "US->ToF";
-const char sScanModeButtonStringTofMin[] PROGMEM = "ToF->Min";
+const char sDistanceSourceModeButtonStringUSTof[] PROGMEM = "US->ToF";
+const char sDistanceSourceModeButtonStringTofMin[] PROGMEM = "ToF->Min";
 
-const char * const sScanModeButtonCaptionStringArray[] PROGMEM = { sScanModeButtonStringMinMax, sScanModeButtonStringMaxUS,
-        sScanModeButtonStringUSTof, sScanModeButtonStringTofMin};
+const char * const sDistanceSourceModeButtonCaptionStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax, sDistanceSourceModeButtonStringMaxUS,
+        sDistanceSourceModeButtonStringUSTof, sDistanceSourceModeButtonStringTofMin};
 #  endif
 #endif
 
@@ -106,21 +111,21 @@ void setStepModeButtonCaption() {
     TouchButtonStepMode.setCaptionFromStringArrayPGM(sStepModeButtonCaptionStringArray, sStepMode);
 }
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 void setScanModeButtonCaption() {
-    TouchButtonScanMode.setCaptionFromStringArrayPGM(sScanModeButtonCaptionStringArray, sScanMode);
+    TouchButtonScanMode.setCaptionFromStringArrayPGM(sDistanceSourceModeButtonCaptionStringArray, sDistanceSourceMode);
 }
 
-void doScanMode(BDButton * aTheTouchedButton, int16_t aValue) {
-    sScanMode++;
-    if (sScanMode > SCAN_MODE_IR) {
-        sScanMode = SCAN_MODE_MINIMUM;
+void doDistanceSourceMode(BDButton * aTheTouchedButton, int16_t aValue) {
+    sDistanceSourceMode++;
+    if (sDistanceSourceMode > DISTANCE_SOURCE_MODE_IR) {
+        sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
     }
     setScanModeButtonCaption();
     TouchButtonScanMode.drawButton();
 }
 
-#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 
 void doChangeScanSpeed(BDButton * aTheTouchedButton, int16_t aValue) {
     sDoSlowScan = aValue;
@@ -128,7 +133,7 @@ void doChangeScanSpeed(BDButton * aTheTouchedButton, int16_t aValue) {
 
 void doSingleScan(BDButton * aTheTouchedButton, int16_t aValue) {
     if (sDriveMode == MODE_FOLLOWER) {
-        scanForTarget();
+        scanForTarget(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER);
     } else {
         clearPrintedForwardDistancesInfos();
         fillAndShowForwardDistancesInfo(true, true);
@@ -182,10 +187,10 @@ void initAutonomousDrivePage(void) {
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
     TouchButtonScanSpeed.setCaptionForValueTrue("Scan fast");
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
-    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, reinterpret_cast<const __FlashStringHelper *>(sScanModeButtonStringMinMax),
-    TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, SCAN_MODE_MINIMUM, &doScanMode);
+    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, reinterpret_cast<const __FlashStringHelper *>(sDistanceSourceModeButtonStringMinMax),
+    TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, DISTANCE_SOURCE_MODE_MINIMUM, &doDistanceSourceMode);
 #endif
 
     // use sDriveMode for reconnect during demo mode
@@ -217,7 +222,7 @@ void drawAutonomousDrivePage(void) {
     TouchButtonStep.drawButton();
     TouchButtonFollower.drawButton();
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.drawButton();
 #endif
     TouchButtonScanSpeed.drawButton();
@@ -233,7 +238,7 @@ void startAutonomousDrivePage(void) {
     TouchButtonStartStopUserAutonomousDrive.setValue(sDriveMode == MODE_AUTONOMOUS_DRIVE_USER);
     TouchButtonStartStopBuiltInAutonomousDrive.setValue(sDriveMode == MODE_AUTONOMOUS_DRIVE_BUILTIN);
     setStepModeButtonCaption();
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     setScanModeButtonCaption();
 #endif
 
@@ -258,40 +263,6 @@ void clearPrintedForwardDistancesInfos() {
     BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR16_WHITE);
 }
 
-/*
- * Draw values of ActualDistancesArray as vectors
- * Not used yet
- */
-void drawForwardDistancesInfos() {
-    color16_t tColor;
-    uint8_t tCurrentDegrees = 0;
-    /*
-     * Clear drawing area
-     */
-    clearPrintedForwardDistancesInfos();
-    for (int i = 0; i < NUMBER_OF_DISTANCES; ++i) {
-        /*
-         * Determine color
-         */
-        uint8_t tDistance = sForwardDistancesInfo.RawDistancesArray[i];
-        tColor = COLOR16_ORANGE;
-        if (tDistance >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
-            tDistance = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
-            tColor = COLOR16_GREEN;
-        }
-        if (tDistance > sCentimeterPerScanTimesTwo) {
-            tColor = COLOR16_GREEN;
-        } else if (tDistance < sCentimeterPerScan) {
-            tColor = COLOR16_RED;
-        }
-
-        /*
-         * Draw line
-         */
-        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tDistance, tCurrentDegrees, tColor, 3);
-        tCurrentDegrees += DEGREES_PER_STEP;
-    }
-}
 
 /*
  * Draws only if sCurrentPage == PAGE_AUTOMATIC_CONTROL
@@ -320,4 +291,5 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
         }
     }
 }
-
+#endif // ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#pragma once

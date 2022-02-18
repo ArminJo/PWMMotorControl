@@ -1,12 +1,11 @@
 /*
- * TestPage.cpp
+ * RobotCarTestPage.hpp
  *
  *  Contains all GUI elements for test controlling the RobotCarMotorControl.
  *
  *  Requires BlueDisplay library.
  *
- *  Created on: 20.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -19,7 +18,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
-#include "RobotCar.h"
+#ifndef ROBOT_CAR_TEST_PAGE_HPP
+#define ROBOT_CAR_TEST_PAGE_HPP
+#include <Arduino.h>
+
+#include "RobotCarPinDefinitionsAndMore.h"
+#include "RobotCarBlueDisplay.h"
+
 #include "RobotCarGui.h"
 #include "Distance.h"
 
@@ -28,7 +33,7 @@
  */
 BDButton TouchButtonReset;
 
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
 BDButton TouchButtonGetAndStoreSpeed;
 #endif
 
@@ -62,7 +67,7 @@ void doShowDebug(BDButton *aTheTouchedButton, int16_t aValue) {
  */
 void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
-    RobotCarMotorControl.resetControlValues();
+    RobotCarMotorControl.resetEncoderControlValues();
     sLastSpeedSliderValue = 0;
 }
 
@@ -74,11 +79,11 @@ void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
         }
         RobotCarMotorControl.startRotate(aValue, TURN_IN_PLACE);
     } else {
-        RobotCarMotorControl.startRotate(aValue, sRobotCarDirection);
+        RobotCarMotorControl.startRotate(aValue, (turn_direction_t)sRobotCarDirection);
     }
 }
 
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
 /*
  * Callback handler for user speed input
  * Store user speed input as DriveSpeed
@@ -146,7 +151,7 @@ void initTestPage(void) {
     TouchButtonReset.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
     COLOR16_BLUE, F("Reset"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doReset);
 
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     TouchButtonGetAndStoreSpeed.init(0, BUTTON_HEIGHT_4_LINE_4 - BUTTON_HEIGHT_6 - BUTTON_DEFAULT_SPACING_QUARTER, BUTTON_WIDTH_6,
     BUTTON_HEIGHT_6, COLOR16_BLUE, F("Set\nspeed"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doGetSpeedAsNumber);
 #endif
@@ -218,7 +223,7 @@ void drawTestPage(void) {
 
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     TouchButtonCompensationStore.drawButton();
 #endif
 
@@ -231,7 +236,7 @@ void drawTestPage(void) {
     SliderSpeedRight.drawSlider();
     SliderSpeedLeft.drawSlider();
 #endif
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     TouchButtonGetAndStoreSpeed.drawButton();
 #endif
 
@@ -239,7 +244,7 @@ void drawTestPage(void) {
     SliderUSPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     SliderIRDistance.drawSlider();
 #  endif
 
@@ -259,3 +264,5 @@ void loopTestPage(void) {
 
 void stopTestPage(void) {
 }
+#endif // ROBOT_CAR_TEST_PAGE_HPP
+#pragma once

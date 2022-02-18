@@ -14,7 +14,6 @@
  * With encoder: - distance is measured by Encoder.
  *
  *
- *  Created on: 12.05.2019
  *  Copyright (C) 2019-2021  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
@@ -39,9 +38,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "2.1.0"
+#define VERSION_PWMMOTORCONTROL "2.0.0"
 #define VERSION_PWMMOTORCONTROL_MAJOR 2
-#define VERSION_PWMMOTORCONTROL_MINOR 1
+#define VERSION_PWMMOTORCONTROL_MINOR 0
 // The change log is at the bottom of the file
 
 #define MILLIS_IN_ONE_SECOND 1000L
@@ -57,7 +56,7 @@
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
 #  if !defined(MOSFET_BRIDGE_USED)
-#define MOSFET_BRIDGE_USED
+#define MOSFET_BRIDGE_USED  // The Adafruit Motor Shield has a TB6612 MosFet driver
 #  endif
 #  if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
 #define FULL_BRIDGE_LOSS_MILLIVOLT             0
@@ -65,7 +64,7 @@
 #endif
 
 //#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
-#if ! defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#if !defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 #define USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 #endif
 
@@ -74,15 +73,17 @@
 /*
  * Helper macro for getting a macro definition as string
  */
+#if !defined(STR_HELPER)
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
+#endif
 
-#define MAX_SPEED_PWM   255
+#define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"
 
 /*
  * Circumference of my smart car wheel
  */
-#define DEFAULT_CIRCUMFERENCE_MILLIMETER   220
+#define DEFAULT_CIRCUMFERENCE_MILLIMETER     220
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LIPO)
@@ -112,20 +113,20 @@
 #define DEFAULT_START_MILLIVOLT_MOSFET      1000 // Voltage where motors start to turn
 #define DEFAULT_START_MILLIVOLT_L298        1500 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
-#define SPEED_PWM_FOR_1_VOLT                ((1000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define SPEED_FOR_8_VOLT                    ((8000L * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define SPEED_PWM_FOR_1_VOLT                ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define SPEED_FOR_8_VOLT                    ((8000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 
 // Default values - used if EEPROM values are invalid or nor available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
 // At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt, 68 for 7.4 volt
-#define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 
 #if !defined(DEFAULT_START_SPEED_PWM)
 #  if defined(MOSFET_BRIDGE_USED)
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #  else
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #  endif
 #endif
 
@@ -145,14 +146,14 @@
  * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
  * This corresponds to 5 cm/s every 20 ms
  */
-#define RAMP_INTERVAL_MILLIS               20 // The smaller the value the steeper the ramp
+#define RAMP_INTERVAL_MILLIS             20 // The smaller the value the steeper the ramp
 #define RAMP_VALUE_OFFSET_MILLIVOLT      2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
 #define RAMP_VALUE_OFFSET_SPEED_PWM      ((RAMP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define RAMP_VALUE_MIN_SPEED_PWM         (DEFAULT_DRIVE_SPEED_PWM / 2) // Minimal speed, if motor is still turning
 #define RAMP_VALUE_DELTA                 (SPEED_FOR_8_VOLT / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 8V/s = 0.8 volt per 100 ms
 #define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
 
-#define DEFAULT_MOTOR_START_TIME_MILLIS 15 // 15 to 20, constant value for the for the formula below
+#define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_FORWARD   0
@@ -167,6 +168,9 @@
 #define STOP_MODE_OR_MASK   0x02
 #define DEFAULT_STOP_MODE   MOTOR_RELEASE
 #define ForceStopMODE(aStopMode) ((aStopMode & STOP_MODE_AND_MASK) | STOP_MODE_OR_MASK)
+#ifdef DEBUG
+extern char sMotorModeCharArray[4];
+#endif
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
 #include <Wire.h>
@@ -265,6 +269,7 @@ public:
     /*
      * Implementation for non encoder motors. Not used by CarControl.
      */
+    void goDistanceMillimeter(int aRequestedDistanceMillimeter);
     void goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     void goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
 #endif
@@ -275,6 +280,7 @@ public:
     void readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber);
     void writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber);
 
+    void printValues(Print *aSerial);
     static void printSettings(Print *aSerial);
 
     /*
@@ -332,14 +338,12 @@ public:
 };
 
 /*
- * Version 2.1.0 - 10/2021
+ * Version 2.0.0 - 10/2021
  * - Removed all *Compensated functions, compensation now is always active.
  * - Removed StopSpeed from EepromMotorinfoStruct.
  * - Removed StartSpeed.
  * - Renamed *.cpp to *.hpp.
  * - Added and renamed functions.
- *
- * Version 2.0.0 - 11/2020
  * - IMU / MPU6050 support.
  * - Support of off the shelf smart cars.
  * - Added and renamed functions.

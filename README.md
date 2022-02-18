@@ -9,6 +9,7 @@ Available as Arduino library "PWMMotorControl"
 [![Build Status](https://github.com/ArminJo/PWMMotorControl/workflows/LibraryBuild/badge.svg)](https://github.com/ArminJo/PWMMotorControl/actions)
 ![Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_PWMMotorControl)
 
+
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
 - The CarPWMMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
@@ -40,7 +41,7 @@ Diagram of PWM, speed[rpm] and encoder count for 2 LiPo (7.5 volt) supply and a 
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
-Modify it by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for global compile (the latter is not possible with the Arduino IDE, so consider using [Sloeber](https://eclipse.baeyens.it).<br/>
+Modify them by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for global compile (the latter is not possible with the Arduino IDE, so consider using [Sloeber](https://eclipse.baeyens.it).<br/>
 Some options which are enabled by default can be disabled by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
 
 | Macro | Default | File | Description |
@@ -50,7 +51,7 @@ Some options which are enabled by default can be disabled by defining a *inhibit
 | `USE_ACCELERATOR_Y_FOR_SPEED` | undefined | CarIMUData.h | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
 | `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | undefined | CarIMUData.h | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
-| `USE_OWN_LIBRARY_FOR_`<br/>`ADAFRUIT_MOTOR_SHIELD` | enabled | PWMDcMotor.h | Disable macro=`USE_STANDARD_LIBRARY_`<br/>`FOR_ADAFRUIT_MOTOR_SHIELD`.<br/>Disabling savesaves around 694 bytes program memory. |
+| `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Enabling requires additionally 694 bytes program memory. |
 
 # Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
@@ -74,14 +75,15 @@ These values are used by functions and some can be overwritten by set* functions
 | `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | The derived `DEFAULT_DRIVE_SPEED_PWM` is the speed PWM value used for fixed distance driving. |
 | `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | PWMDCMotor.h | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeedPWM))` |
 
-### Modifying compile options with Arduino IDE
+### Changing include (*.h) files with Arduino IDE
 First, use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>
-If you did not yet stored the example as your own sketch, then you are instantly in the right library folder.<br/>
+If you have not yet saved the example as your own sketch, then you are instantly in the right library folder.<br/>
 Otherwise you have to navigate to the parallel `libraries` folder and select the library you want to access.<br/>
-In both cases the library files itself are located in the `src` directory.<br/>
+In both cases the library source and include files are located in the libraries `src` directory.<br/>
+The modification must be renewed for each new library version!
 
 ### Modifying compile options with Sloeber IDE
-If you are using Sloeber as your IDE, you can easily define global symbols with *Properties > Arduino > CompileOptions*.<br/>
+If you are using [Sloeber](https://eclipse.baeyens.it) as your IDE, you can easily define global symbols with *Properties > Arduino > CompileOptions*.<br/>
 ![Sloeber settings](https://github.com/ArminJo/ServoEasing/blob/master/pictures/SloeberDefineSymbols.png)
 
 # Full bridges
@@ -142,11 +144,11 @@ You may also overwrite the function fillAndShowForwardDistancesInfo(), if you us
 To customize the RobotCar example to cover different extensions, there are some compile options available.
 | Option | Default | File | Description |
 |-|-|-|-|
-| `USE_LAYOUT_FOR_NANO` | disabled | RobotCar.h | Use different pinout for Nano board. It has A6 and A7 available as pins. |
+| `USE_PIN_LAYOUT_FOR_NANO` | disabled | RobotCar.h | Use different pinout for Nano board. It has A6 and A7 available as pins. |
 | `CAR_HAS_4_WHEELS` | disabled | RobotCar.h | Use modified formula for turning the car. |
 | `USE_US_SENSOR_1_PIN_MODE` | disabled | RobotCar.h | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
-| `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | RobotCar.h | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
-| `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | RobotCar.h | Use VL53L1X TimeOfFlight distance sensor. |
+| `USE_IR_DISTANCE_SENSOR` | disabled | RobotCar.h | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
+| `USE_TOF_DISTANCE_SENSOR` | disabled | RobotCar.h | Use VL53L1X TimeOfFlight distance sensor. |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. |
 | `CAR_HAS_CAMERA` | disabled | RobotCar.h | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
 | `CAR_HAS_LASER` | disabled | RobotCar.h | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
@@ -190,10 +192,14 @@ Automatic control page with detected wall at right
 
 # Revision History
 ### Version 2.1.0 - work in progress
-- Renamed *.cpp to *.hpp.
-- Added and renamed functions.
 
 ### Version 2.0.0
+- Removed all *Compensated functions, compensation now is always active.
+- Removed StopSpeed from EepromMotorinfoStruct.
+- Removed StartSpeed.
+- Renamed *.cpp to *.hpp.
+- Added and renamed functions.
+- IMU / MPU6050 support.
 - Support of off the shelf smart cars.
 - Added and renamed functions.
 - Converted to voltage based formulas.

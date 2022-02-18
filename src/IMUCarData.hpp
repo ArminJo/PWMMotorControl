@@ -211,7 +211,7 @@ void IMUCarData::readCarDataFromMPU6050() {
 #endif
 
 // skip z, temp and 2 gyroscope values value
-    for (uint8_t i = 0; i < 8; i++) {
+    for (uint_fast8_t i = 0; i < 8; i++) {
         Wire.read();
     }
 
@@ -276,9 +276,9 @@ bool IMUCarData::readCarDataFromMPU6050Fifo() {
             Serial.println(tChunkCount * FIFO_CHUNK_SIZE);
         }
 #endif
-        for (uint8_t j = 0; j < tReceivedCount; j += FIFO_CHUNK_SIZE) {
+        for (uint_fast8_t j = 0; j < tReceivedCount; j += FIFO_CHUNK_SIZE) {
             // we must read all 3 values
-            for (uint8_t i = 0; i < FIFO_NUMBER_OF_ACCEL_VALUES; i++) {
+            for (uint_fast8_t i = 0; i < FIFO_NUMBER_OF_ACCEL_VALUES; i++) {
                 WordUnion tAcceleratorValue;
                 tAcceleratorValue.Byte.HighByte = Wire.read();
                 tAcceleratorValue.Byte.LowByte = Wire.read();
@@ -351,11 +351,11 @@ void IMUCarData::doAutoOffset() {
     if (AcceleratorForwardOffset != 0) {
         /*
          * Adjust Offsets, if sensor has not moved after NUMBER_OF_OFFSET_CALIBRATION_SAMPLES
-         * Requires 420 bytes FLASH
+         * Requires 420 bytes program space
          */
         int16_t tAccelDifference = abs(AcceleratorForwardLowPass8.Word.HighWord - AcceleratorForward.Word);
         if (tAccelDifference > ACCEL_MOVE_THRESHOLD || GyroscopePan.Word < -(GYRO_MOVE_THRESHOLD)
-                || GYRO_MOVE_THRESHOLD < GyroscopePan.Word) { // using abs() costs 6 byte FLASH
+                || GYRO_MOVE_THRESHOLD < GyroscopePan.Word) { // using abs() costs 6 byte program space
 #ifdef AUTO_OFFSET_DEBUG
             // just to show the removed deltas in Arduino Plotter
             if (AcceleratorForward.Word < -(ACCEL_MOVE_THRESHOLD) || ACCEL_MOVE_THRESHOLD < AcceleratorForward.Word) {

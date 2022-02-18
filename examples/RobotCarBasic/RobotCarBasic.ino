@@ -23,6 +23,11 @@
 #include <Arduino.h>
 
 //#define USE_ADAFRUIT_MOTOR_SHIELD
+/*
+ * Car configuration
+ */
+#include "RobotCarPinDefinitionsAndMore.h"
+
 #include "CarPWMMotorControl.hpp"
 
 #if defined(ESP32)
@@ -41,35 +46,6 @@
  */
 #define SPEED_PWM_COMPENSATION_RIGHT    0
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
-/*
- * Pins for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
- * 2 + 3 are reserved for encoder input
- */
-#define PIN_RIGHT_MOTOR_FORWARD     4 // IN4 <- Label on the L298N board
-#define PIN_RIGHT_MOTOR_BACKWARD    7 // IN3
-#define PIN_RIGHT_MOTOR_PWM         5 // ENB - Must be PWM capable
-
-#define PIN_LEFT_MOTOR_FORWARD      9 // IN1
-#define PIN_LEFT_MOTOR_BACKWARD     8 // IN2
-#define PIN_LEFT_MOTOR_PWM          6 // ENA - Must be PWM capable
-#endif
-
-#ifdef USE_ENCODER_MOTOR_CONTROL
-#define RIGHT_MOTOR_INTERRUPT    INT0 // Pin 2
-#define LEFT_MOTOR_INTERRUPT     INT1 // Pin 3
-#endif
-
-#define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield
-
-#define PIN_BUZZER                 12
-
-#define PIN_TRIGGER_OUT            A0 // Connections on the Arduino Sensor Shield
-#define PIN_ECHO_IN                A1
-
-//Car Control
-CarPWMMotorControl RobotCarMotorControl;
-
 Servo DistanceServo;
 
 void simpleObjectAvoidance();
@@ -87,11 +63,11 @@ void setup() {
     RobotCarMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
+    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
+    LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
+    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #endif
 
@@ -142,7 +118,7 @@ void loop() {
     /*
      * Try to turn by 90 degree.
      */
-    RobotCarMotorControl.rotate(90, DIRECTION_FORWARD);
+    RobotCarMotorControl.rotate(90, TURN_FORWARD);
     delay(2000);
 
 }
@@ -151,12 +127,15 @@ void simpleObjectAvoidance() {
     /*
      * Drive until distance too low, then stop, go back, turn random amount and drive again.
      */
-    unsigned int tCentimeter = getUSDistanceAsCentiMeter();
+    unsigned int tCentimeter = getUSDistanceAsCentimeter();
     Serial.print("US distance=");
     Serial.print(tCentimeter);
     Serial.println(" cm");
 
     if (tCentimeter < 20) {
+        /*
+         * Distance too low here -> Stop and go backwards
+         */
         RobotCarMotorControl.stop();
         delay(1000);
         RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
@@ -164,6 +143,9 @@ void simpleObjectAvoidance() {
         RobotCarMotorControl.stop();
         delay(1000);
 
+        /*
+         * Turn random amount and drive again
+         */
         int tTurnValueDegree = random(20, 180);
         Serial.print("Turn ");
         Serial.print(tTurnValueDegree);
@@ -173,6 +155,6 @@ void simpleObjectAvoidance() {
         RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 
-    delay(50);
+    delay(50); // Wait until next distance sample
 }
 

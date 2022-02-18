@@ -39,7 +39,7 @@
 //#define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
 #include "EncoderMotor.hpp"
 
-#include "PinDefinitionsAndMore.h"
+#include "RobotCarPinDefinitionsAndMore.h"
 
 EncoderMotor MotorUnderTest;
 
@@ -49,7 +49,7 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
     // Just to know which program is running on my Arduino
@@ -82,7 +82,7 @@ void loop() {
     /*
      * Print value after each encoder count change and increase PWM every DELAY_MILLIS_BETWEEN_CHANGE ms
      */
-//    for (uint8_t tSpeed = 0; tSpeed < 250; ++tSpeed) {
+//    for (uint_fast8_t tSpeed = 0; tSpeed < 250; ++tSpeed) {
 //        MotorUnderTest.setSpeed(tSpeed, sMotorDirection);
 //        uint32_t tStartMillis = millis();
 //        do {
@@ -101,7 +101,7 @@ void loop() {
     /*
      * Increase PWM and print values every DELAY_MILLIS_BETWEEN_CHANGE ms
      */
-    for (uint8_t tPWM = 0; tPWM < 249; ++tPWM) {
+    for (uint_fast8_t tPWM = 0; tPWM < 249; ++tPWM) {
         MotorUnderTest.setSpeedPWM(tPWM, sMotorDirection);
         delay(DELAY_MILLIS_BETWEEN_CHANGE);
         Serial.print(tPWM);

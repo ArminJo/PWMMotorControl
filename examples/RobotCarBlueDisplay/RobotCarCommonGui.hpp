@@ -1,5 +1,5 @@
 /*
- * RobotCarCommonGui.cpp
+ * RobotCarCommonGui.hpp
  *
  *  Contains all common GUI elements for operating and controlling the RobotCarMotorControl.
  *
@@ -9,8 +9,7 @@
  *
  *  Requires BlueDisplay library.
  *
- *  Created on: 20.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -23,8 +22,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
+#ifndef ROBOT_CAR_COMMON_GUI_HPP
+#define ROBOT_CAR_COMMON_GUI_HPP
+#include <Arduino.h>
 
-#include "RobotCar.h"
+#include "RobotCarPinDefinitionsAndMore.h"
+
+#include "RobotCarBlueDisplay.h"
 #include "RobotCarGui.h"
 #include "Distance.h"
 #ifdef USE_MPU6050_IMU
@@ -44,7 +48,7 @@ BDButton TouchButtonCompensationLeft;
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 BDButton TouchButtonCalibrate;
 #endif
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
 BDButton TouchButtonCompensationStore;
 #endif
 
@@ -66,7 +70,7 @@ BDSlider SliderSpeedLeft;
 BDSlider SliderUSPosition;
 BDSlider SliderUSDistance;
 unsigned int sSliderUSLastCentimeter;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 BDSlider SliderIRDistance;
 unsigned int sSliderIRLastCentimeter;
 #endif
@@ -146,6 +150,19 @@ void loopGUI(void) {
     checkAndHandleEvents();
 }
 
+void readAndShowDistancePeriodically() {
+    static long sLastUSMeasurementMillis;
+
+    // Do not show distanced during (time critical) acceleration or deceleration
+    if (!RobotCarMotorControl.isStateRamp()) {
+        long tMillis = millis();
+        if (tMillis - sLastUSMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
+            sLastUSMeasurementMillis = tMillis;
+            getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM, false, true);
+        }
+    }
+}
+
 /*
  * Handle Start/Stop
  */
@@ -210,7 +227,7 @@ void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart) {
 //    TouchButtonRobotCarStartStop.setValueAndDraw(RobotCarMotorControl.isStopped());
 //    if (RobotCarMotorControl.isStopped()) {
 //        RobotCarMotorControl.calibrate(&loopGUI);
-//#ifdef SUPPORT_EEPROM_STORAGE
+//#ifdef ENABLE_EEPROM_STORAGE
 //        RobotCarMotorControl.writeMotorValuesToEeprom();
 //#endif
 //    } else {
@@ -262,7 +279,7 @@ void doSetCompensation(BDButton *aTheTouchedButton, int16_t aRightMotorSpeedPWMC
     RobotCarMotorControl.changeSpeedPWMCompensation(aRightMotorSpeedPWMCompensation);
 }
 
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
 void doStoreCompensation(BDButton * aTheTouchedButton, int16_t aRightMotorSpeedPWMCompensation) {
     RobotCarMotorControl.writeMotorValuesToEeprom();
 }
@@ -335,8 +352,8 @@ void initRobotCarDisplay(void) {
 
     BlueDisplay1.setFlagsAndSize(BD_FLAG_FIRST_RESET_ALL | BD_FLAG_TOUCH_BASIC_DISABLE | BD_FLAG_USE_MAX_SIZE, DISPLAY_WIDTH,
     DISPLAY_HEIGHT);
-    BlueDisplay1.setCharacterMapping(0x87, 0x2227); // mapping for AND - Forward
-    BlueDisplay1.setCharacterMapping(0x88, 0x2228); // mapping for OR - Backwards
+    BlueDisplay1.setCharacterMapping(0x87, 0x2227); // mapping for unicode AND used as Forward symbol
+    BlueDisplay1.setCharacterMapping(0x88, 0x2228); // mapping for unicode OR used as Backwards symbol
 // Lock to landscape layout
     BlueDisplay1.setScreenOrientationLock(FLAG_SCREEN_ORIENTATION_LOCK_SENSOR_LANDSCAPE);
 
@@ -367,7 +384,7 @@ void initRobotCarDisplay(void) {
     TouchButtonCompensationRight.init(BUTTON_WIDTH_8_POS_5 - (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8_LINE_4,
     BUTTON_WIDTH_8 + (BUTTON_DEFAULT_SPACING_QUARTER - 1), BUTTON_HEIGHT_8, COLOR16_BLUE, F("mp->"), TEXT_SIZE_11,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doSetCompensation);
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     TouchButtonCompensationStore.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_BLUE,
             F("Store"), TEXT_SIZE_10, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doStoreCompensation);
 #endif
@@ -415,7 +432,7 @@ void initRobotCarDisplay(void) {
     SliderUSPosition.setScaleFactor(180.0 / US_SLIDER_SIZE); // Values from 0 to 180 degrees
     SliderUSPosition.setValueUnitString("\xB0"); // \xB0 is degree character
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR) || (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO))
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) || (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO))
 #define US_DISTANCE_SLIDER_IS_SMALL
 #endif
     /*
@@ -428,8 +445,8 @@ void initRobotCarDisplay(void) {
             DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW, 2,
-            COLOR16_BLACK,
-            COLOR16_WHITE);
+    COLOR16_BLACK,
+    COLOR16_WHITE);
     SliderUSDistance.setCaption("US");
     // below caption - left aligned
     SliderUSDistance.setPrintValueProperties(11, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW,
@@ -447,7 +464,7 @@ void initRobotCarDisplay(void) {
     /*
      * One thin IR distance slider
      */
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     // Small IR distance slider with captions and without cm units
     SliderIRDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
             (BUTTON_WIDTH_10 / 2) - 2,
@@ -457,8 +474,8 @@ void initRobotCarDisplay(void) {
     SliderIRDistance.setBarThresholdColor(DISTANCE_TIMEOUT_COLOR);
     // Caption properties
     SliderIRDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW, 2,
-            COLOR16_BLACK,
-            COLOR16_WHITE);
+    COLOR16_BLACK,
+    COLOR16_WHITE);
     // Captions
     SliderIRDistance.setCaption("IR");
     // value below caption - right aligned
@@ -764,7 +781,7 @@ void showUSDistance(unsigned int aCentimeter, bool aForceDraw) {
     }
 }
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 void showIRDistance(unsigned int aCentimeter) {
 // feedback as slider length
     if (aCentimeter != sSliderIRLastCentimeter) {
@@ -773,3 +790,6 @@ void showIRDistance(unsigned int aCentimeter) {
     }
 }
 #endif
+
+#endif // ROBOT_CAR_COMMON_GUI_HPP
+#pragma once

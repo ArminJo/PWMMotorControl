@@ -44,7 +44,7 @@
 
 #include "IMUCarData.hpp"
 
-#include "PinDefinitionsAndMore.h"
+#include "RobotCarPinDefinitionsAndMore.h"
 
 #define ONLY_ARDUINO_PLOTTER_OUTPUT
 #define PRINTS_PER_SECOND 50
@@ -61,7 +61,7 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
     // Just to know which program is running on my Arduino
@@ -182,7 +182,7 @@ void loop() {
  */
 void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) {
 
-    for (uint8_t i = 0; i < aDataSetsToPrint;) {
+    for (uint_fast8_t i = 0; i < aDataSetsToPrint;) {
         if (aUseRamp) {
             if (CarPWMMotorControl.updateMotors()) {
                 // do not count as long as car is driving

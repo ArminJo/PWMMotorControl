@@ -1,21 +1,11 @@
 /*
- * RobotCarGui.cpp
+ * RobotCarHomePage.hpp
  *
- *  Contains all common GUI elements for operating and controlling the RobotCarMotorControl.
- *
- *  Calibration: Sets lowest speed for which wheels are moving.
- *  Speed Slider left: Sets speed for manual control which serves also as maximum speed for autonomous drive if "Stored"
- *  Store: Stores calibration info and maximum speed.
- *  Cont ->Step / Step -> SStep, SStep->Cont: Switches mode from "continuous drive" to "drive until next turn" to "drive CENTIMETER_PER_RIDE_PRO"
- *  Start Simple: Start simple driving algorithm (using the 2 "simple" functions in RobotCarMotorControl.cpp)
- *  Start Pro: Start elaborated driving algorithm
- *
- *  insertToPath() and DrawPath() to show the path we were driving.
+ *  Contains the GUI elements of the home page of RobotCarMotorControl.
  *
  *  Requires BlueDisplay library.
  *
- *  Created on: 20.09.2016
- *  Copyright (C) 2016  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -29,14 +19,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#include "RobotCar.h"
+#ifndef ROBOT_CAR_HOME_PAGE_HPP
+#define ROBOT_CAR_HOME_PAGE_HPP
+
+#include <Arduino.h>
+
+#include "RobotCarPinDefinitionsAndMore.h"
+#include "RobotCarBlueDisplay.h"
+
 #include "RobotCarGui.h"
 #include "Distance.h"
 
 BDButton TouchButtonTestPage;
 BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
 BDButton TouchButtonMelody;
 #endif
 #ifdef CAR_HAS_CAMERA
@@ -65,7 +62,7 @@ void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
 }
 #endif
 
-#ifdef CAR_HAS_LASER
+#ifdef LASER_MOUNTED
 void doLaserOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
     digitalWrite(PIN_LASER_OUT, aValue);
 }
@@ -77,7 +74,7 @@ void doCameraSupplyOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 #endif
 
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
 void doPlayMelody(BDButton * aTheTouchedButton, int16_t aValue) {
     sPlayMelody = aValue;
 }
@@ -101,13 +98,13 @@ void initHomePage(void) {
             false, &doCameraSupplyOnOff);
 #endif
 
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
     TouchButtonMelody.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Melody"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sPlayMelody, &doPlayMelody);
 #endif
 
-#ifdef CAR_HAS_LASER
+#ifdef LASER_MOUNTED
     TouchButtonLaser.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Laser"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doLaserOnOff);
@@ -138,10 +135,10 @@ void drawHomePage(void) {
 #ifdef CAR_HAS_CAMERA
     TouchButtonCameraOnOff.drawButton();
 #endif
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
     TouchButtonMelody.drawButton();
 #endif
-#ifdef CAR_HAS_LASER
+#ifdef LASER_MOUNTED
     TouchButtonLaser.drawButton();
 #endif
     TouchButtonBTSensorDrivePage.drawButton();
@@ -154,7 +151,7 @@ void drawHomePage(void) {
 #endif
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     TouchButtonCompensationStore.drawButton();
 #endif
 
@@ -163,7 +160,7 @@ void drawHomePage(void) {
 
     SliderUSDistance.drawSlider();
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
     SliderIRDistance.drawSlider();
 #endif
 
@@ -187,7 +184,7 @@ void startHomePage(void) {
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
 #endif
-#if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)
+#if defined(CAR_HAS_TILT_SERVO) && defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5);
 #endif
     drawHomePage();
@@ -201,9 +198,11 @@ void stopHomePage(void) {
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
-#if defined(CAR_HAS_TILT_SERVO) && defined(SUPPORT_EEPROM_STORAGE)
+#if defined(CAR_HAS_TILT_SERVO) && defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4);
 #endif
     startStopRobotCar(false);
 }
+#endif // ROBOT_CAR_HOME_PAGE_HPP
+#pragma once
 

@@ -40,7 +40,7 @@
 #define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
 #include "PWMDcMotor.hpp"
 
-#include "PinDefinitionsAndMore.h"
+#include "RobotCarPinDefinitionsAndMore.h"
 
 PWMDcMotor rightMotor;
 PWMDcMotor leftMotor;
@@ -51,7 +51,7 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
     // Just to know which program is running on my Arduino

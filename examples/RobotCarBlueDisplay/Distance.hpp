@@ -1,12 +1,17 @@
 /*
- * Distance.cpp
+ * Distance.hpp
  *
  *  Contains all distance measurement functions.
  *
- *  Copyright (C) 2020  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
+ *
+ *  Arduino-RobotCar is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,22 +22,32 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
+#ifndef ROBOT_CAR_DISTANCE_HPP
+#define ROBOT_CAR_DISTANCE_HPP
+
 #include "Distance.h"
-#include "RobotCar.h"
-#include "RobotCarGui.h"
 
 #include "HCSR04.h"
+#include "pitches.h"
+
+bool sDoSlowScan = false;
+
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+uint8_t sDistanceSourceMode =  DISTANCE_SOURCE_MODE_DEFAULT; // one of DISTANCE_SOURCE_MODE_MINIMUM, DISTANCE_SOURCE_MODE_MAXIMUM, DISTANCE_SOURCE_MODE_US or DISTANCE_SOURCE_MODE_IR
+#endif
+
+uint8_t sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 #if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
-Servo DistanceServo;
+Servo DistanceServo;            // Use standard servo library, because we have more servos and cannot use LightweightServo library
 #else
-#include "LightweightServo.hpp"
+#include "LightweightServo.hpp" // Use LightweightServo library, because we have only one servo
 #endif
 uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
-#ifdef CAR_HAS_TOF_DISTANCE_SENSOR
+#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
 VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
 #endif
@@ -41,16 +56,18 @@ VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
  * This initializes the pins too
  */
 void initDistance() {
-#ifdef USE_US_SENSOR_1_PIN_MODE
-    initUSDistancePin(PIN_TRIGGER_OUT);
+#if defined(US_SENSOR_SUPPORTS_1_PIN_MODE)
+    initUSDistancePin (PIN_TRIGGER_OUT);
 #else
     initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
 #endif
 
-#ifdef CAR_HAS_TOF_DISTANCE_SENSOR
+#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(USE_BLUE_DISPLAY_GUI)
     if (sToFDistanceSensor.VL53L1X_SensorInit() != 0) { //Begin returns 0 on a good init
         BlueDisplay1.debug("ToF sensor connect failed!");
     }
+#  endif
     // Short mode max distance is limited to 1.3 m but better ambient immunity. Above 1.3 meter we get error 4 (wrap around).
     sToFDistanceSensor.VL53L1X_SetDistanceMode(1); // 1 for Mode short
     //sToFDistanceSensor.setDistanceModeLong(); // default
@@ -83,7 +100,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     }
 
     uint8_t tDeltaDegrees;
-#ifdef USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
+#if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
     int8_t tOvershootDegrees; // Experimental
 #endif
     uint8_t tLastServoAngleInDegrees = sLastServoAngleInDegrees;
@@ -93,12 +110,12 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
         return;
     } else if (aTargetDegrees > tLastServoAngleInDegrees) {
         tDeltaDegrees = aTargetDegrees - tLastServoAngleInDegrees;
-#ifdef USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
+#if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
         tOvershootDegrees = 3; // Experimental
 #endif
     } else {
         tDeltaDegrees = tLastServoAngleInDegrees - aTargetDegrees;
-#ifdef USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
+#if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
         tOvershootDegrees = -3; // Experimental
 #endif
     }
@@ -106,7 +123,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     /*
      * Move servo
      */
-#ifdef USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
+#if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
     /*
      * Experimental!
      * Compensate (set target to more degrees) for fast servo speed
@@ -118,7 +135,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     }
 #endif
 
-#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
+#if defined(DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN)
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;
 #endif
@@ -148,7 +165,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
         if (sDoSlowScan) {
             tWaitDelayforServo = tDeltaDegrees * 16; // 16 => 288 ms for 18 degrees
         } else {
-#ifdef USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
+#if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
             tWaitDelayforServo = tDeltaDegrees * 5;
 #else
 #  ifdef CAR_HAS_IR_DISTANCE_SENSOR
@@ -158,45 +175,43 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 #  endif
 #endif
         }
+#if defined(USE_BLUE_DISPLAY_GUI)
         delayAndLoopGUI(tWaitDelayforServo);
+#else
+        delay(tWaitDelayforServo);
+#endif
     }
 }
 
 /*
  * Stop, scan 70, 90 and 110 degree for moved target and returns NextDegreesToTurn.
+ * @return NO_TARGET_FOUND (360) if no target found
  */
-int scanForTarget() {
+int scanForTarget(unsigned int aMaximumTargetDistance) {
     uint8_t tDegreeFound = 0;
     unsigned int tCentimeter;
-    uint8_t tScanDegree;
+    uint8_t tServoDegreeToScan;
     int tDeltaDegree;
     /*
      * Set start values according to last servo position
      */
     if (sLastServoAngleInDegrees < 90) {
         // Start searching at right
-        tScanDegree = 70;
+        tServoDegreeToScan = 70;
         tDeltaDegree = 20;
     } else {
         // Start searching at left
-        tScanDegree = 110;
+        tServoDegreeToScan = 110;
         tDeltaDegree = -20;
     }
     /*
-     * Scan and display 3 distances
+     * Scan (and display) 3 distances
      */
-    for (uint8_t i = 0; i < 3; ++i) {
-        DistanceServoWriteAndDelay(tScanDegree, true);
-        tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_FOLLOWER, true);
+    for (uint_fast8_t i = 0; i < 3; ++i) {
+        DistanceServoWriteAndDelay(tServoDegreeToScan, true);
+        tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true, false);
 
-        uint8_t tCurrentIndex;
-        if (tDeltaDegree > 0) {
-            // scan from 70 to 110 -> 0 contains value for 70 degrees, 1 for 90 and 2 for 110
-            tCurrentIndex = i;
-        } else {
-            tCurrentIndex = 2 - i;
-        }
-
+#if defined(USE_BLUE_DISPLAY_GUI)
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
             /*
              * Determine color and draw distance line
@@ -209,38 +224,56 @@ int scanForTarget() {
                 tColor = COLOR16_YELLOW;
             }
 
+            uint8_t tCurrentIndex;
+            if (tDeltaDegree > 0) {
+                // scan from 70 to 110 -> 0 contains value for 70 degrees, 1 for 90 and 2 for 110
+                tCurrentIndex = i;
+            } else {
+                tCurrentIndex = 2 - i;
+            }
+
             // Clear old line
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
-                    sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tScanDegree,
-                    COLOR16_WHITE, 3);
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tScanDegree, tColor, 3);
+                    sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tServoDegreeToScan, COLOR16_WHITE, 3);
+            // draw new one and store value in distances array for next scan
+            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tServoDegreeToScan, tColor, 3);
+            sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
         }
-        sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
-        if (tCentimeter <= FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
-            tDegreeFound = tScanDegree;
+#else
+        Serial.print('@');
+        Serial.print(tServoDegreeToScan);
+        Serial.print(' ');
+#endif
+        if (tCentimeter <= aMaximumTargetDistance) {
+            tDegreeFound = tServoDegreeToScan;
             break;
         }
         // prepare for next measurement
+#if defined(USE_BLUE_DISPLAY_GUI)
         loopGUI();
-        tScanDegree += tDeltaDegree;
+#endif
+        tServoDegreeToScan += tDeltaDegree;
     }
 
     if (tDegreeFound != 0) {
         /*
          * Target found -> print turn info
          */
-        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tScanDegree - 90, tCentimeter); // \xB0 is degree character
+#if defined(USE_BLUE_DISPLAY_GUI)
+        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tServoDegreeToScan - 90, tCentimeter); // \xB0 is degree character
         BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
-        COLOR16_BLACK, COLOR16_WHITE);
+                COLOR16_BLACK, COLOR16_WHITE);
+#endif
 
         // reset distance servo direction
         DistanceServoWriteAndDelay(90, false);
-        return tScanDegree - 90;
+        return tServoDegreeToScan - 90;
     } else {
-        return SCAN_AGAIN;
+        return NO_TARGET_FOUND;
     }
 }
 
+#if defined(USE_BLUE_DISPLAY_GUI)
 /*
  * Get 7 distances starting at 9 degrees (right) increasing by 18 degrees up to 171 degrees (left)
  * Avoid 0 and 180 degrees since at this position the US sensor might see the wheels of the car as an obstacle.
@@ -290,7 +323,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             // User sent an event -> stop and return now
             return true;
         }
-        unsigned int tCentimeter = getDistanceAsCentiMeter(false, DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
+        unsigned int tCentimeter = getDistanceAsCentimeter( DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true, false);
         if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimeterPerScanTimesTwo) {
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
@@ -329,6 +362,42 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
     }
     return false;
 }
+
+/*
+ * Draw values of ActualDistancesArray as vectors
+ * Not used yet
+ */
+void drawForwardDistancesInfos() {
+    color16_t tColor;
+    uint8_t tCurrentDegrees = 0;
+    /*
+     * Clear drawing area
+     */
+    clearPrintedForwardDistancesInfos();
+    for (int i = 0; i < NUMBER_OF_DISTANCES; ++i) {
+        /*
+         * Determine color
+         */
+        uint8_t tDistance = sForwardDistancesInfo.RawDistancesArray[i];
+        tColor = COLOR16_ORANGE;
+        if (tDistance >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
+            tDistance = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
+            tColor = COLOR16_GREEN;
+        }
+        if (tDistance > (DISTANCE_MAX_FOR_WALL_DETECTION_CM / 2)) {
+            tColor = COLOR16_GREEN;
+        } else if (tDistance < (DISTANCE_MAX_FOR_WALL_DETECTION_CM / 2)) {
+            tColor = COLOR16_RED;
+        }
+
+        /*
+         * Draw line
+         */
+        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tDistance, tCurrentDegrees, tColor, 3);
+        tCurrentDegrees += DEGREES_PER_STEP;
+    }
+}
+#endif
 
 /*
  * This documentation assumes 20 degrees stepping.
@@ -438,9 +507,9 @@ void doWallDetection() {
      */
     uint8_t tLastDistance = tTempDistancesArray[0];
     uint8_t tCurrentDistance = tTempDistancesArray[1];
-    for (uint8_t i = 1; i < STEPS_PER_SCAN; ++i) {
+    for (uint_fast8_t i = 1; i < STEPS_PER_SCAN; ++i) {
         uint8_t tNextDistanceOriginal = tTempDistancesArray[i + 1];
-        if (tLastDistance < sCentimeterPerScanTimesTwo && tCurrentDistance < sCentimeterPerScanTimesTwo) {
+        if (tLastDistance < DISTANCE_MAX_FOR_WALL_DETECTION_CM && tCurrentDistance < DISTANCE_MAX_FOR_WALL_DETECTION_CM) {
             /*
              * 2 adjacent short distances -> assume a wall -> adjust adjacent values
              */
@@ -487,10 +556,12 @@ void doWallDetection() {
                 // store and draw adjusted value
                 tTempDistancesArray[i + 1] = tNextDistanceComputed;
                 tNextDistanceOriginal = tNextDistanceComputed;
+#if defined(USE_BLUE_DISPLAY_GUI)
                 if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                     BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextDistanceComputed,
                             tCurrentAngleToCheck, COLOR16_WHITE, 1);
                 }
+#endif
             }
         }
         tLastDistance = tCurrentDistance;
@@ -510,7 +581,7 @@ void doWallDetection() {
     /*
      * check values at i and i+1 and adjust value at i-1
      */
-    for (uint8_t i = STEPS_PER_SCAN - 1; i > 0; --i) {
+    for (uint_fast8_t i = STEPS_PER_SCAN - 1; i > 0; --i) {
         uint8_t tNextValue = tTempDistancesArray[i - 1];
 
 // Do it only if none of the 3 values are processed before
@@ -521,7 +592,7 @@ void doWallDetection() {
             /*
              * check values at i+1 and i and adjust value at i-1
              */
-            if (tLastDistance < sCentimeterPerScanTimesTwo && tCurrentDistance < sCentimeterPerScanTimesTwo) {
+            if (tLastDistance < DISTANCE_MAX_FOR_WALL_DETECTION_CM && tCurrentDistance < DISTANCE_MAX_FOR_WALL_DETECTION_CM) {
                 /*
                  * Wall detected -> adjust adjacent values
                  * Use computeNeigbourValue in the intended way, so do not change sign of tDegreeOfConnectingLine!
@@ -561,10 +632,12 @@ void doWallDetection() {
                     //Adjust and draw next value if original value is greater
                     sForwardDistancesInfo.ProcessedDistancesArray[i - 1] = tNextValueComputed;
                     tNextValue = tNextValueComputed;
+#if defined(USE_BLUE_DISPLAY_GUI)
                     if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                         BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextValueComputed,
                                 tCurrentAngleToCheck, COLOR16_WHITE, 1);
                     }
+#endif
                 }
             }
         }
@@ -584,9 +657,9 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
     unsigned int tMin = __UINT16_MAX__; // = 65535
     sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold = 0xFF;
     // scan simultaneously from 0 to 4 and 9 to 5 to prefer headmost values/indexes, if distances are the same.
-    for (uint8_t i = 0; i < (NUMBER_OF_DISTANCES + 1) / 2; ++i) {
+    for (uint_fast8_t i = 0; i < (NUMBER_OF_DISTANCES + 1) / 2; ++i) {
         uint8_t tIndex = i;
-        for (uint8_t j = 0; j < 2; ++j) {
+        for (uint_fast8_t j = 0; j < 2; ++j) {
             uint8_t tDistance;
             // Check if we have processed distances, otherwise take the raw ones
             if (sForwardDistancesInfo.ProcessedDistancesArray[0] != 0) {
@@ -612,114 +685,158 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
     }
 }
 
-void readAndShowDistancePeriodically() {
-    static long sLastUSMeasurementMillis;
+unsigned int getDistanceAsCentimeterAndPlayTone() {
+    /*
+     * Get distance
+     */
+    unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true, true);
 
-    // Do not show distanced during (time critical) acceleration or deceleration
-    if (!RobotCarMotorControl.isStateRamp()) {
-        long tMillis = millis();
-        if (tMillis - sLastUSMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
-            sLastUSMeasurementMillis = tMillis;
-            getDistanceAsCentiMeter(true, DISTANCE_TIMEOUT_CM, false);
+    /*
+     * Play tone
+     */
+    if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
+        if (tCentimeter > 0) {
+            if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_PENTATONIC) {
+                /*
+                 * Map distance to an index in a pentatonic pitch table
+                 */
+                uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
+                if (tIndex > ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1) {
+                    tIndex = ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1;
+                }
+                tone(PIN_BUZZER, NoteC5ToC7Pentatonic[tIndex]); // 523 to 2093 Hz for 0 to 100 cm
+            } else {
+                /*
+                 * Play feedback tone proportional to measured distance
+                 */
+                int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
+                tone(PIN_BUZZER, tFrequency);
+            }
         }
     }
+    return tCentimeter;
 }
 
 /*
  * Timeout is DISTANCE_TIMEOUT_CM (1 meter)
- * aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
+ * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
+ * @param doShow show distance value in the GUI
  */
-unsigned int getDistanceAsCentiMeter(bool doShow, uint8_t aDistanceTimeout, bool aWaitForCurrentMeasurementToEnd) {
+unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeout, bool aWaitForCurrentMeasurementToEnd, bool doShow) {
 #if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
-    (void) aWaitForCurrentMeasurementToEnd; // not used
+    (void) aWaitForCurrentMeasurementToEnd; // suppress compiler warnings
 #endif
-#ifdef CAR_HAS_TOF_DISTANCE_SENSOR
-    if (sScanMode != SCAN_MODE_US) {
+#if (defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+    if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
         sToFDistanceSensor.VL53L1X_StartRanging();
     }
 #endif
 
-    unsigned int tCentimeter = getUSDistanceAsCentiMeterWithCentimeterTimeout(aDistanceTimeout);
+    unsigned int tCentimeter = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeout);
     if (tCentimeter == 0) {
         tCentimeter = aDistanceTimeout;
     }
+#if defined(USE_BLUE_DISPLAY_GUI)
     if (doShow) {
         showUSDistance(tCentimeter);
     }
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#else
+    (void) doShow; // suppress compiler warnings
+#endif
+
+#if !(defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+    /*
+     * If only US sensor is used or available, we do not check for scan mode and return here
+     */
+    return tCentimeter;
+#else
     unsigned int tIRCentimeter;
-    if (sScanMode != SCAN_MODE_US) {
+    if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
+        /*
+         * Scan mode here is: take minimum or maximum of the US and IR or TOF values
+         * So get IR or TOF value now
+         */
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-        if (sScanMode != SCAN_MODE_US) {
-            tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
-            if (doShow) {
-                showIRDistance(tIRCentimeter);
-            }
-        }
+        tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
 #  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-        if (sScanMode != SCAN_MODE_US) {
-            tIRCentimeter = readToFDistanceAsCentimeter();
-            if(doShow){
-                showIRDistance(tIRCentimeter);
-            }
-        }
+        tIRCentimeter = readToFDistanceAsCentimeter();
 #  endif
-        if (sScanMode == SCAN_MODE_IR) {
+#    if defined(USE_BLUE_DISPLAY_GUI)
+        if (doShow) {
+            showIRDistance(tIRCentimeter);
+        }
+#    endif
+        if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_IR) {
             tCentimeter = tIRCentimeter;
-        } else if (sScanMode == SCAN_MODE_MINIMUM) {
-            // Scan mode MINIMUM => Take the minimum of the two values
+        } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MINIMUM) {
+            // Scan mode MINIMUM => Take the minimum of the US and IR or TOF values
             if (tCentimeter > tIRCentimeter) {
                 tCentimeter = tIRCentimeter;
             }
-        } else if (sScanMode == SCAN_MODE_MAXIMUM) {
-            // Scan mode MAXIMUM => Take the maximum of the two values
+        } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MAXIMUM) {
+            // Scan mode MAXIMUM => Take the maximum of the US and IR or TOF values
             if (tCentimeter < tIRCentimeter) {
                 tCentimeter = tIRCentimeter;
             }
         }
     }
-#endif
     return tCentimeter;
+#endif
 }
 
-#ifdef CAR_HAS_IR_DISTANCE_SENSOR
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
+#define IR_SENSOR_TYPE_1080
+#  endif
 /*
- * The 1080 needs 39 ms for each measurement cycle
+ * The Sharp 1080 takes 39 ms for each measurement cycle
  */
 uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
-    uint8_t tOldADMUX = checkAndWaitForReferenceAndChannelToSwitch(PIN_IR_DISTANCE_SENSOR, DEFAULT);
-    // check for voltage changed then a new measurement is started
     if (aWaitForCurrentMeasurementToEnd) {
-        uint16_t tOldValue = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 4 samples
-//        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+        /*
+         * Check for a voltage change which indicates that a new measurement is started
+         */
+        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
         uint32_t tStartMillis = millis();
         do {
-            int16_t tNewValue = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 100 us
-//            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
             if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
                 // assume, that voltage has changed because of the end of a measurement
                 break;
             }
+#if defined(USE_BLUE_DISPLAY_GUI)
             loopGUI();
+#endif
         } while (millis() - tStartMillis <= IR_SENSOR_MEASUREMENT_TIME_MILLIS);
         // now a new measurement has started, wait for the result
+#if defined(USE_BLUE_DISPLAY_GUI)
         delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
+#else
+        delay(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
+#endif
     }
 
-    float tVolt = readADCChannelWithReferenceOversampleFast(PIN_IR_DISTANCE_SENSOR, DEFAULT, 2); // 4 samples
-//    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
-    ADMUX = tOldADMUX; // Switch back (to INTERNAL)
+    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+    // tVolt * 0.004887585 = 5(V) for tVolt == 1023
 
-    // * 0.004887585 for 1023 = 5V
-    // Model 1080 / GP2Y0A21YK0F
+#  if defined(IR_SENSOR_TYPE_430) // 4 to 30 cm, 18 ms, GP2YA41SK0F
+    return (12.08 * pow(tVolt * 0.004887585, -1.058)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+
+#  elif defined(IR_SENSOR_TYPE_1080) // 10 to 80 cm, GP2Y0A21YK0F
     return (29.988 * pow(tVolt * 0.004887585, -1.173)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+//    return 4800/(analogRead(PIN_IR_DISTANCE_SENSOR)-20);    // see https://github.com/qub1750ul/Arduino_SharpIR/blob/master/src/SharpIR.cpp
 
-    // Model 20150 - Do not forget to add at least 100uF capacitor across the Vcc and GND connections on the sensor
-//    return (60.374 * pow(tVolt * 0.004887585, -1.16)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+#  elif defined(IR_SENSOR_TYPE_20150) // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
+    // Model 20150 - Do not forget to add at least 100uF capacitor between the Vcc and GND connections on the sensor
+    return (60.374 * pow(tVolt * 0.004887585, -1.16)) + 0.5;// see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+
+#  elif defined(IR_SENSOR_TYPE_100550) // GP2Y0A02YK0F // 100 to 550 cm, 18 ms, GP2Y0A710K0F
+    return 1.0 / (((tVolt * 0.004887585 - 1.1250)) / 137.5);
+#  endif
 }
-#endif
+#endif // CAR_HAS_IR_DISTANCE_SENSOR
 
-#ifdef CAR_HAS_TOF_DISTANCE_SENSOR
+#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 /*
  * No start of measurement, just read result.
  */
@@ -734,7 +851,11 @@ uint8_t readToFDistanceAsCentimeter() {
         if (tDataReady & 1) {
             break;
         }
+#  if defined(USE_BLUE_DISPLAY_GUI)
         delayAndLoopGUI(4);
+#else
+        delay(4);
+#endif
         i++;
     }
 
@@ -763,4 +884,6 @@ uint8_t getToFDistanceAsCentimeter() {
     return readToFDistanceAsCentimeter();
 }
 
-#endif
+#endif // CAR_HAS_TOF_DISTANCE_SENSOR
+#endif // #ifndef ROBOT_CAR_DISTANCE_HPP
+#pragma once

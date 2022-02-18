@@ -1,8 +1,7 @@
 /*
  * RobotCarGui.h
  *
- *  Created on: 20.09.2016
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -16,8 +15,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef SRC_ROBOTCARGUI_H_
-#define SRC_ROBOTCARGUI_H_
+#ifndef ROBOT_CAR_GUI_H
+#define ROBOT_CAR_GUI_H
+
+#define USE_BLUE_DISPLAY_GUI
 
 #include "BlueDisplay.h"
 #include "AutonomousDrive.h"
@@ -47,6 +48,7 @@ extern char sStringBuffer[128];
 #define LASER_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
 #define DISTANCE_SLIDER_SIZE    (BUTTON_HEIGHT_4_LINE_3 - BUTTON_HEIGHT_8)  // 104
 #define DISTANCE_SLIDER_SCALE_FACTOR    2 // Slider is virtually 2 times larger, values were divided by 2
+#define DISTANCE_DISPLAY_PERIOD_MILLIS      500
 
 #define US_DISTANCE_MAP_ORIGIN_X 200
 #define US_DISTANCE_MAP_ORIGIN_Y 150
@@ -81,7 +83,7 @@ void insertToPath(int aLength, int aDegree, bool aAddEntry);
 // from AutonomousDrivePage
 extern BDButton TouchButtonStep;
 extern BDButton TouchButtonScanSpeed;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDButton TouchButtonScanMode;
 #endif
 
@@ -120,7 +122,7 @@ void stopTestPage(void);
 
 // from HomePage
 extern BDButton TouchButtonMelody;
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
 extern bool sPlayMelody;
 #endif
 
@@ -160,7 +162,7 @@ extern BDButton TouchButtonCalibrate;
 #endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
 extern BDButton TouchButtonCompensationStore;
 #endif
 
@@ -173,7 +175,7 @@ extern BDSlider SliderSpeedLeft;
 
 extern BDSlider SliderUSPosition;
 extern BDSlider SliderUSDistance;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDSlider SliderIRDistance;
 #endif
 
@@ -229,5 +231,4 @@ extern uint8_t sRobotCarDirection;
 extern bool sRuningAutonomousDrive;
 
 #endif /* SRC_ROBOTCARGUI_H_ */
-
 #pragma once

@@ -39,7 +39,7 @@
 #define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
 #include "CarPWMMotorControl.hpp"
 
-#include "PinDefinitionsAndMore.h"
+#include "RobotCarPinDefinitionsAndMore.h"
 
 /*
  * Speed compensation to enable driving straight ahead.
@@ -57,7 +57,7 @@ void setup() {
 
     Serial.begin(115200);
 
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
     // Just to know which program is running on my Arduino
@@ -100,14 +100,14 @@ void loop() {
         /*
          * Try to turn by 90 degree.
          */
-        RobotCarPWMMotorControl.rotate(90, sMotorDirection, NULL, true);
+        RobotCarPWMMotorControl.rotate(90, TURN_FORWARD, true, NULL);
         delay(400);
     }
 
     /*
      * Turn car around and switch direction
      */
-    RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE, NULL, true);
+    RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE, NULL);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

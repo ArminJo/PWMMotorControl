@@ -51,6 +51,8 @@
 //#define TRACE
 //#define DEBUG
 
+char sMotorModeCharArray[4] ={'F','B', 'S','R'};
+
 // Flags e.g. for display update control
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
 volatile bool PWMDcMotor::SensorValuesHaveChanged; // true if encoder count and derived encoder speed, or one of the TMU data have changed
@@ -156,7 +158,7 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
     ForwardPin = aForwardPin;
     BackwardPin = aBackwardPin;
     PWMPin = aPWMPin;
-    DefaultStopMode = MOTOR_RELEASE;
+    DefaultStopMode = DEFAULT_STOP_MODE;
 
     pinMode(aForwardPin, OUTPUT);
     pinMode(aBackwardPin, OUTPUT);
@@ -243,9 +245,9 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
 #ifdef DEBUG
         Serial.print(PWMPin);
         Serial.print(F(" Change motor mode from "));
-        Serial.print(CurrentDirectionOrBrakeMode);
+        Serial.print(sMotorModeCharArray[CurrentDirectionOrBrakeMode]);
         Serial.print(F(" to "));
-        Serial.println(aRequestedDirection);
+        Serial.println(sMotorModeCharArray[aRequestedDirection]);
 #endif
         setMotorDriverMode(aRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
     }
@@ -357,7 +359,7 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
 #ifdef DEBUG
     Serial.print(PWMPin);
     Serial.print(F(" Stop motor StopMode="));
-    Serial.println(ForceStopMODE(aStopMode));
+    Serial.println(sMotorModeCharArray[ForceStopMODE(aStopMode)]);
 #endif
 }
 
@@ -424,7 +426,7 @@ void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aReques
     Serial.print(F(" CurrentSpeedPWM="));
     Serial.print(CurrentSpeedPWM);
     Serial.print(F(" MotorMode="));
-    Serial.print(CurrentDirectionOrBrakeMode);
+    Serial.print(sMotorModeCharArray[CurrentDirectionOrBrakeMode]);
     Serial.println();
 #endif
 #if defined(DO_NOT_SUPPORT_RAMP)
@@ -486,6 +488,7 @@ bool PWMDcMotor::updateMotor() {
     if (tNewSpeedPWM > 0) {
         if (CheckDistanceInUpdateMotor && millis() > computedMillisOfMotorStopForDistance) {
             stop(STOP_MODE_KEEP); // resets CheckDistanceInUpdateMotor and sets MOTOR_STATE_STOPPED;
+            return false;
         }
     }
 
@@ -589,6 +592,14 @@ void PWMDcMotor::setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillime
     MillisPerMillimeter = MILLIS_IN_ONE_SECOND / aMillimeterPerSecond;
 }
 
+void PWMDcMotor::goDistanceMillimeter(int aRequestedDistanceMillimeter) {
+    uint8_t tRequestedDirection = DIRECTION_FORWARD;
+    if (aRequestedDistanceMillimeter < 0) {
+        tRequestedDirection = DIRECTION_BACKWARD;
+    }
+    goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, tRequestedDirection);
+}
+
 void PWMDcMotor::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
     goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
 }
@@ -637,12 +648,20 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
      * Estimate duration for given distance
      * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
      */
-    uint32_t tComputedMillisOfMotorStopForDistance = millis()
-            + (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
+    uint32_t tComputedMillisOfMotorStopForDistance =
+            (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
 
     if (isStopped()) {
+        // add startup time
         tComputedMillisOfMotorStopForDistance += DEFAULT_MOTOR_START_TIME_MILLIS;
     }
+
+#ifdef DEBUG
+    Serial.print(F("MillisForDistance="));
+    Serial.println(tComputedMillisOfMotorStopForDistance);
+#endif
+    tComputedMillisOfMotorStopForDistance += millis();
+
     computedMillisOfMotorStopForDistance = tComputedMillisOfMotorStopForDistance;
 
     CheckDistanceInUpdateMotor = true;
@@ -682,12 +701,25 @@ void PWMDcMotor::writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumbe
 }
 #endif // defined(E2END)
 
+void PWMDcMotor::printValues(Print *aSerial) {
+    aSerial->print(PWMPin);
+    aSerial->print(F(" CurrentSpeedPWM="));
+    aSerial->print(CurrentSpeedPWM);
+    aSerial->print(F(" DriveSpeedPWM="));
+    aSerial->print(DriveSpeedPWM);
+    aSerial->print(F(" SpeedPWMCompensation="));
+    aSerial->print(SpeedPWMCompensation);
+    aSerial->print(F(" CurrentDirectionOrBrakeMode="));
+    aSerial->print(sMotorModeCharArray[CurrentDirectionOrBrakeMode]);
+    aSerial->println();
+}
+
 const char StringNot[] PROGMEM = { " not" };
 const char StringDefined[] PROGMEM = { " defined" };
 
 void PWMDcMotor::printSettings(Print *aSerial) {
     aSerial->println();
-    aSerial->println(F("Settings from PWMDcMotor.h:"));
+    aSerial->println(F("Settings (from PWMDcMotor.h):"));
 
     aSerial->print(F("USE_ENCODER_MOTOR_CONTROL:"));
 #ifndef USE_ENCODER_MOTOR_CONTROL
@@ -731,7 +763,7 @@ void PWMDcMotor::printSettings(Print *aSerial) {
 }
 
 //void PanicWithLed(unsigned int aDelay, uint8_t aCount) {
-//    for (uint8_t i = 0; i < aCount; ++i) {
+//    for (uint_fast8_t i = 0; i < aCount; ++i) {
 //        digitalWrite(LED_BUILTIN, HIGH);
 //        delay(aDelay);
 //        digitalWrite(LED_BUILTIN, LOW);

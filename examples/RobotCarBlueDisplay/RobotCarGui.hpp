@@ -1,7 +1,9 @@
 /*
- * RobotCarPinDefinitionsAndMore.h
+ * RobotCarGui.hpp
  *
- *  Copyright (C) 2016-2021  Armin Joachimsmeyer
+ * includes all files of BlueDisplay GUI for robot car.
+ *
+ *  Copyright (C) 2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -15,15 +17,22 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOTCAR_PIN_DEFINITIONS_PERIPHERALS_AND_MORE_H
-#define ROBOTCAR_PIN_DEFINITIONS_PERIPHERALS_AND_MORE_H
+#ifndef ROBOT_CAR_GUI_HPP
+#define ROBOT_CAR_GUI_HPP
 
-#include <Arduino.h>
+#define USE_BLUE_DISPLAY_GUI
 
+#include "BlueDisplay.h"
 
+#include "RobotCarCommonGui.hpp"
+#include "RobotCarHomePage.hpp"
+#include "RobotCarTestPage.hpp"
+#include "AutonomousDrive.hpp"
+#include "AutonomousDrivePage.hpp"
+#include "BTSensorDrivePage.hpp"
+#if defined(ENABLE_PATH_INFO_PAGE)
+#include "PathInfoPage.hpp"
+#endif
 
-#include "CarPWMMotorControl.h"
-
-
-#endif /* ROBOTCAR_PIN_DEFINITIONS_PERIPHERALS_AND_MORE_H */
+#endif // ROBOT_CAR_GUI_HPP
 #pragma once

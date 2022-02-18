@@ -4,7 +4,7 @@
  *  Enables follower mode driving of a 2 or 4 wheel car with an Arduino.
  *  To find the target to follow, a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo scans the area on demand. (not yet implemented)
  *
- *  Copyright (C) 2020  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -26,58 +26,70 @@
 
 #include <Arduino.h>
 
-/*
- * You will need to change these values according to your motor, H-bridge and motor supply voltage.
- * You must specify this before the include of "CarPWMMotorControl.hpp"
- */
-//#define USE_ENCODER_MOTOR_CONTROL  // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
-//#define USE_ADAFRUIT_MOTOR_SHIELD  // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
-//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD  // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
-#define VIN_2_LIPO                 // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                 // Or if you use a Mosfet bridge, 1 LIPO (around 3.7 volt) may be sufficient.
-//#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
-//#define MOSFET_BRIDGE_USED  // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
-//#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
-//#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-// Assume you switched to 2 LIPO batteries as motor supply if you also took the effort and mounted the servo head down
-#define VIN_2_LIPO
-#else
-//#define VIN_2_LIPO // Activate it to use speed values for 7.4 Volt
-#endif
-#include "CarPWMMotorControl.hpp"
+#define MONITOR_VIN_VOLTAGE
+#define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+//#define USE_IR_REMOTE               // Use an IR remote receiver attached for car control
 
-#include "PinDefinitionsAndMore.h"
+/*
+ * Car configuration
+ */
+#define ENCODER_MOTOR_SHIELD_2WD_IR_TOF
+//#define LAVWIN_IR_CONFIGURATION
+#include "RobotCarConfigurations.h"
+#include "RobotCarPinDefinitionsAndMore.h"
+
+//#define DEBUG
+#include "CarPWMMotorControl.h"
+#include "CarPWMMotorControl.hpp"
+CarPWMMotorControl RobotCarPWMMotorControl;
 
 #if defined(ESP32)
 #include <ESP32Servo.h>
 #else
 #include <Servo.h>
 #endif
+Servo DistanceServo;
+
 #include "HCSR04.h"
 #include "pitches.h"
+#include "Distance.hpp" // requires definitions from RobotCarGui.h
+
+#if defined(USE_IR_REMOTE)
+#define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
+#define USE_LAFVIN_REMOTE
+#include "IRCommandDispatcher.h" // for RETURN_IF_STOP
+#include "RobotCarIRCommands.hpp"
+#define INFO
+#include "IRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
+#include "IRCommandDispatcher.hpp"
+#endif
+
+#if defined(MONITOR_VIN_VOLTAGE)
+#include "ADCUtils.h"
+float sVINVoltage;
+#endif
 
 /*
  * Speed compensation to enable driving straight ahead.
  * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
  * If negative, -value is subtracted from the left speed -> the car turns slightly left.
  */
-#define SPEED_PWM_COMPENSATION_RIGHT            0
+#define SPEED_PWM_COMPENSATION_RIGHT                 0
 
-#define DISTANCE_MINIMUM_CENTIMETER         20 // If measured distance is less than this value, go backwards
-#define DISTANCE_MAXIMUM_CENTIMETER         30 // If measured distance is greater than this value, go forward
-#define DISTANCE_DELTA_CENTIMETER           (DISTANCE_MAXIMUM_CENTIMETER - DISTANCE_MINIMUM_CENTIMETER)
-#define DISTANCE_TARGET_SCAN_CENTIMETER     70 // search if target moved to side
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER        30 // If measured distance is less than this value, go backwards
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER        40 // If measured distance is greater than this value, go forward
+#define FOLLOWER_DISTANCE_DELTA_CENTIMETER          (FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER - FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
+#define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER    70 // search if target moved to side
 
-#define MAX_SPEED_PWM_FOLLOWER              (DEFAULT_DRIVE_SPEED_PWM * 2) // Max speed PWM value used for follower.
+#if (DEFAULT_DRIVE_SPEED_PWM * 2) > 255
+#define MAX_SPEED_PWM_FOLLOWER                     255
+#else
+#define MAX_SPEED_PWM_FOLLOWER                      (DEFAULT_DRIVE_SPEED_PWM * 2) // Max speed PWM value used for follower.
+#endif
 
-//#define PLOTTER_OUTPUT // Activate this, if you want to see the result of the US distance sensor and resulting speed in Arduino plotter
-
-CarPWMMotorControl RobotCarPWMMotorControl;
-Servo DistanceServo;
-
-unsigned int getDistanceAndPlayTone();
+//#define INFO
+void doFollowerOneStep(unsigned int aCentimeter);
+void readCheckAndPrintVinPeriodically();
 
 /*
  * Start of robot car control program
@@ -86,18 +98,14 @@ void setup() {
     Serial.begin(115200);
 
     // Just to know which program is running on my Arduino
-#ifdef PLOTTER_OUTPUT
-    Serial.println(F("Distance[cm] Speed"));
-#else
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
-#endif
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarPWMMotorControl.init();
+        RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT, LEFT_MOTOR_FORWARD_PIN,
-    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
+        RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT, LEFT_MOTOR_FORWARD_PIN,
+                LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
     RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
@@ -106,171 +114,212 @@ void setup() {
 
     RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 
+    /*
+     * Set US servo to forward position
+     */
     DistanceServo.attach(PIN_DISTANCE_SERVO);
     DistanceServo.write(90);
+
     initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
 
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
+    /*
+     * Tone feedback for end of boot
+     */
     tone(PIN_BUZZER, 2200, 100);
 
     /*
      * Do not start immediately with driving
      */
 #ifdef USE_MPU6050_IMU
-    /*
-     * Wait after pressing the reset button, or attaching the power
-     * and then take offset values for 1/2 second
-     */
-    delay(1000);
-    tone(PIN_BUZZER, 2200, 50);
-    delay(100);
-    RobotCarPWMMotorControl.initIMU();
-    RobotCarPWMMotorControl.printIMUOffsets(&Serial);
-    tone(PIN_BUZZER, 2200, 50);
+        /*
+         * Wait after pressing the reset button, or attaching the power
+         * and then take offset values for 1/2 second
+         */
+        delay(1000);
+        tone(PIN_BUZZER, 2200, 50);
+        delay(100);
+        RobotCarPWMMotorControl.initIMU();
+        RobotCarPWMMotorControl.printIMUOffsets(&Serial);
+        tone(PIN_BUZZER, 2200, 50);
 #endif
-    delay(4000);
+#if defined(USE_IR_REMOTE)
+    IRDispatcher.init();
+    Serial.print(F("Listening to IR remote of type "));
+    Serial.print(IR_REMOTE_NAME);
+    Serial.println(F(" at pin " STR(IR_RECEIVE_PIN)));
+#endif
+
+    delay(2000);
 
     /*
-     * Tone feedback for start of driving
+     * Servo feedback for start of loop
      */
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    tone(PIN_BUZZER, 2200, 100);
+    DistanceServo.write(135);
+    delay(500);
+    DistanceServo.write(45);
+    delay(500);
+    DistanceServo.write(90);
+    delay(500);
+
+    Serial.println(F("Start loop"));
 }
 
+// Todo call update for ramps
+
 void loop() {
+    static uint8_t sLoopCount = 0;
 
-    unsigned int tCentimeter = getDistanceAndPlayTone();
+#if defined(USE_IR_REMOTE)
+    /*
+     * Check for IR commands and execute them.
+     * Returns only AFTER finishing of requested movement
+     */
+    IRDispatcher.checkAndRunSuspendedBlockingCommands();
+#endif
+
+    unsigned int tCentimeter = getDistanceAsCentimeterAndPlayTone();
+
+    Serial.print(tCentimeter);
+    Serial.print("cm, ");
+    if ((sLoopCount & 0x07) == 0) {
+        Serial.println();
+        Serial.print("Distance=");
+    }
+
+#if defined(USE_IR_REMOTE)
+    if (sEnableKeepDistance || sEnableFollower) {
+        doFollowerOneStep(tCentimeter);
+    }
+#else
+    doFollowerOneStep(tCentimeter);
+#endif
+
+#if defined(MONITOR_VIN_VOLTAGE)
+    readCheckAndPrintVinPeriodically();
+#endif
+
+#ifdef USE_ENCODER_MOTOR_CONTROL
+    RobotCarPWMMotorControl.delayAndUpdateMotors(100);
+#else
+    delay(100);
+#endif
+    sLoopCount++;
+}
+
+void doFollowerOneStep(unsigned int aCentimeter) {
     unsigned int tSpeedPWM;
+    Serial.print(F(" -> "));
 
-    if (tCentimeter == 0 || tCentimeter > DISTANCE_TARGET_SCAN_CENTIMETER) {
+    if (aCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
         /*
-         * Distance too high or timeout / target not found -> search for target at different directions and turn if found
+         * Target too close -> drive BACKWARD with speed proportional to the gap
          */
-        noTone(PIN_BUZZER);
-        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
-#ifndef PLOTTER_OUTPUT
-            Serial.print(F("Stop and search"));
-#endif
-            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
-        }
-
-        // check additionally at 70 and 110 degree for vanished target
-        for (uint8_t i = 70; i <= 110; i += 40) {
-            DistanceServo.write(i);
-            delay(200); // To let the servo reach its position
-            unsigned int tCentimeterCheck = getUSDistanceAsCentiMeter();
-            if (tCentimeterCheck != 0 && tCentimeterCheck < DISTANCE_TARGET_SCAN_CENTIMETER) {
-                /*
-                 * Target found -> turn and proceed
-                 */
-#ifdef DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN
-                RobotCarPWMMotorControl.rotate(90 - i);
-#else
-                RobotCarPWMMotorControl.rotate(i - 90);
-#endif
-                DistanceServo.write(90);
-                break;
-            }
-        }
-        // reset servo position
-        DistanceServo.write(90);
-        delay(100); // Additional delay to let the servo reach its position
-
-    } else if (tCentimeter > DISTANCE_MAXIMUM_CENTIMETER) {
-        /*
-         * Target too far -> drive forward with speed proportional to the gap
-         */
-        tSpeedPWM = DEFAULT_START_SPEED_PWM + (tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) * 2;
+        tSpeedPWM = DEFAULT_DRIVE_SPEED_PWM + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - aCentimeter) * 4;
         if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
             tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
         }
-#ifdef PLOTTER_OUTPUT
-        Serial.print(tSpeedPWM);
-#else
-        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
-            Serial.println(F("Go forward"));
-        }
-        Serial.print(F("SpeedPWM="));
-        Serial.print(tSpeedPWM);
-#endif
-#ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2) * 10,
-                DIRECTION_FORWARD);
-#else
-        RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
-#endif
 
-    } else if (tCentimeter < DISTANCE_MINIMUM_CENTIMETER) {
-        /*
-         * Target too close -> drive backwards
-         */
-        tSpeedPWM = DEFAULT_START_SPEED_PWM + (DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
-        if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
-            tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
-        }
-#ifdef PLOTTER_OUTPUT
-        Serial.print(tSpeedPWM);
-#else
         if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
-            Serial.println(F("Go backward"));
+            Serial.println(F("go backward")); // print only once at direction change
         }
         Serial.print(F("SpeedPWM="));
         Serial.print(tSpeedPWM);
-#endif
+
 #ifdef USE_ENCODER_MOTOR_CONTROL
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((tCentimeter - DISTANCE_MAXIMUM_CENTIMETER) + DISTANCE_DELTA_CENTIMETER / 2) * 10,
-                DIRECTION_BACKWARD);
+            RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
+                    DIRECTION_BACKWARD);
 #else
         RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_BACKWARD);
 #endif
-    } else {
+
+    } else if (aCentimeter < FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
         /*
-         * Target is in the right distance -> stop once
+         * Target is in the right distance -> stop
          */
         if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
-#ifndef PLOTTER_OUTPUT
-            Serial.print(F("Stop"));
+            Serial.print(F("stop"));
+            RobotCarPWMMotorControl.stop(MOTOR_RELEASE); // stop only once
+        }
+    } else {
+
+#if defined(USE_IR_REMOTE)
+        if (sEnableFollower && (aCentimeter == 0 || aCentimeter > FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER)) {
+#else
+        if (aCentimeter == 0 || aCentimeter > FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
 #endif
-            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+            /*
+             * Distance too high or timeout / target not found -> search for target at different directions and turn if found
+             */
+            int_fast8_t tRotationDegree = scanForTarget(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER);
+            // reset servo position
+            DistanceServo.write(90);
+
+            if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+                Serial.print(F(" stop and"));
+                RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+            }
+
+            if (tRotationDegree != 0) {
+                Serial.print(F(" rotate "));
+                Serial.print(tRotationDegree);
+                RobotCarPWMMotorControl.rotate(tRotationDegree, TURN_IN_PLACE, false); // do not use slow speed for turn
+//            RobotCarPWMMotorControl.rotate(tRotationDegree);
+            }
+
+            delay(500); // Additional delay to let the servo reach its position
+        } else {
+            /*
+             * Target too far -> drive FORWARD with speed proportional to the gap
+             */
+            tSpeedPWM = DEFAULT_DRIVE_SPEED_PWM + (aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
+            if (tSpeedPWM > MAX_SPEED_PWM_FOLLOWER) {
+                tSpeedPWM = MAX_SPEED_PWM_FOLLOWER;
+            }
+
+            if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
+                Serial.println(F("go forward")); // print only once at direction change
+            }
+            Serial.print(F("SpeedPWM="));
+            Serial.print(tSpeedPWM);
+#ifdef USE_ENCODER_MOTOR_CONTROL
+                RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
+                        DIRECTION_FORWARD);
+#else
+            RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
+#endif
         }
     }
-
     Serial.println();
-#ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarPWMMotorControl.delayAndUpdateMotors(1000);
-#else
-    delay(100);
-#endif
 }
 
-unsigned int getDistanceAndPlayTone() {
-    /*
-     * Get distance
-     */
-    unsigned int tCentimeter = getUSDistanceAsCentiMeter();
-    if (tCentimeter == 0) {
-        // Timeout, just try again, it may be a dropout
-        delay(20);
-        tCentimeter = getUSDistanceAsCentiMeter();
-    }
-#ifdef PLOTTER_OUTPUT
-    Serial.print(tCentimeter);
-    Serial.print(' ');
-#else
-    Serial.print("Distance=");
-    Serial.print(tCentimeter);
-    Serial.print("cm. ");
-#endif
-    /*
-     * Play tone
-     */
-    if (tCentimeter > 0) {
-        uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
-        tone(PIN_BUZZER, NoteC5ToC7Pentatonic[tIndex]);
-    } else {
-        noTone(PIN_BUZZER);
-    }
-    return tCentimeter;
+#if defined(MONITOR_VIN_VOLTAGE)
+
+void readVINVoltage() {
+    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
+
+//    BlueDisplay1.debug("VIN Raw=", tVIN);
+
+// assume resistor network of 1MOhm / 100kOhm (divider by 11)
+// tVIN * 0,01182795
+#  if defined(VIN_VOLTAGE_CORRECTION)
+    // we have a diode (requires 0.8 volt) between LIPO and VIN
+    sVINVoltage = (tVIN * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
+#  else
+    sVINVoltage = tVIN * ((11.0 * 1.1) / 1023);
+#  endif
 }
+
+void readCheckAndPrintVinPeriodically() {
+    static uint32_t sMillisOfLastVCCInfo;
+    uint32_t tMillis = millis();
+
+    if (tMillis - sMillisOfLastVCCInfo >= PRINT_VOLTAGE_PERIOD_MILLIS) {
+        sMillisOfLastVCCInfo = tMillis;
+        readVINVoltage();
+        Serial.print(F("VIN="));
+        Serial.print(sVINVoltage);
+        Serial.print(F("V "));
+    }
+}
+
+#endif // MONITOR_VIN_VOLTAGE

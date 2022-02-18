@@ -11,9 +11,9 @@
  *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
  *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
  *
- *  Program size of GUI is 63 percent. 27% vs. 90%.
+ *  Program size of GUI is 63 percent of 32kByte. 27% vs. 90%.
  *
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -29,20 +29,34 @@
 
 #include <Arduino.h>
 
-#include "RobotCar.h"
+//#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
+//#define MONITOR_VIN_VOLTAGE         // Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1MOhm to VIN, 100kOhm to ground
+//#define CAR_ENABLE_RTTTL            // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+//#define ENABLE_PATH_INFO_PAGE       // Saves program space
+
+/*
+ * Car configuration
+ */
+#include "RobotCarPinDefinitionsAndMore.h"
+
+#include "RobotCarBlueDisplay.h"
 #include "CarPWMMotorControl.hpp" // include source of library
 #if defined(USE_MPU6050_IMU)
 #include "IMUCarData.hpp" // include source of library
 #endif
-
-#include "RobotCarGui.h"
-#include "Distance.h"
-
-#include "HCSR04.h"
-
-#ifdef ENABLE_RTTTL
+#include "RobotCarGui.hpp"
+#include "Distance.hpp" // requires definitions from RobotCarGui.h
+#ifdef CAR_ENABLE_RTTTL
+//#define USE_NO_RTX_EXTENSIONS       // saves program space if defined globally
 #include <PlayRtttl.h>
 #endif
+
+
+/*
+ * Timeouts for demo mode and inactivity remainder
+ */
+#define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
+#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
 
 //#define DEBUG_TRACE_INIT
 //#include "AvrTracing.hpp"
@@ -57,13 +71,9 @@
 
 #define VERSION_EXAMPLE "3.0"
 
-/*
- * Car Control
- */
-CarPWMMotorControl RobotCarMotorControl;
 float sVINVoltage;
 
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
 bool sPlayMelody = false;
 void playRandomMelody();
 #endif
@@ -76,6 +86,9 @@ void initServos();
  * Checks distances and returns degree to turn
  * @return 0 -> no turn, >0 -> turn left, <0 -> turn right
  *************************************************************************************/
+#define MINIMUM_DISTANCE_TO_SIDE 21
+#define MINIMUM_DISTANCE_TO_FRONT 35
+
 int doUserCollisionDetection() {
 // if left three distances are all less than 21 centimeter then turn right.
     if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT] <= MINIMUM_DISTANCE_TO_SIDE
@@ -148,7 +161,7 @@ void setup() {
     // initialize the digital pin as an output.
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW); // on my UNO R3 the LED is on otherwise
-#if defined(CAR_HAS_LASER) && (PIN_LASER_OUT != LED_BUILTIN)
+#if defined(LASER_MOUNTED) && (PIN_LASER_OUT != LED_BUILTIN)
     pinMode(PIN_LASER_OUT, OUTPUT);
 #endif
 
@@ -163,15 +176,15 @@ void setup() {
     RobotCarMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, RIGHT_MOTOR_INTERRUPT, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM, LEFT_MOTOR_INTERRUPT);
+    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
+    LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(PIN_RIGHT_MOTOR_FORWARD, PIN_RIGHT_MOTOR_BACKWARD, PIN_RIGHT_MOTOR_PWM, PIN_LEFT_MOTOR_FORWARD,
-    PIN_LEFT_MOTOR_BACKWARD, PIN_LEFT_MOTOR_PWM);
+    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #endif
 
-#ifdef SUPPORT_EEPROM_STORAGE
+#ifdef ENABLE_EEPROM_STORAGE
     RobotCarMotorControl.readMotorValuesFromEeprom();
 #endif
 
@@ -193,7 +206,7 @@ void setup() {
 //        BlueDisplay1.debug("sMCUSR=", sMCUSR);
     } else {
 #if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_USB) || defined(SERIAL_PORT_USBVIRTUAL)  || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
         // Just to know which program is running on my Arduino
@@ -243,7 +256,7 @@ void loop() {
         /*
          * Timeout just reached, play melody and start autonomous drive
          */
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
         playRandomMelody();
         delayAndLoopGUI(1000);
 #else
@@ -283,7 +296,7 @@ void loop() {
 #endif
     }
 
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
     /*
      * check for playing melody
      */
@@ -305,21 +318,22 @@ void loop() {
 
 #if defined(MONITOR_VIN_VOLTAGE)
 void readVINVoltage() {
-    uint16_t tVIN = readADCChannelWithReferenceOversampleFast(VIN_11TH_IN_CHANNEL, INTERNAL, 2); // 4 samples
+    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
+
 //    BlueDisplay1.debug("VIN Raw=", tVIN);
 
 // assume resistor network of 1MOhm / 100kOhm (divider by 11)
 // tVIN * 0,01182795
-#ifdef VIN_VOLTAGE_CORRECTION
+#  ifdef VIN_VOLTAGE_CORRECTION
     // we have a diode (requires 0.8 volt) between LIPO and VIN
     sVINVoltage = (tVIN * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
-#else
+#  else
     sVINVoltage = tVIN * ((11.0 * 1.1) / 1023);
-#endif
+#  endif
 }
-#endif
+#endif // MONITOR_VIN_VOLTAGE
 
-#ifdef ENABLE_RTTTL
+#ifdef CAR_ENABLE_RTTTL
 #include "digitalWriteFast.h"
 /*
  * Prepare for tone, use motor as loudspeaker
@@ -386,7 +400,7 @@ ISR(TIMER2_COMPB_vect) {
     digitalWriteFast(PIN_LEFT_MOTOR_BACKWARD, !digitalReadFast(PIN_LEFT_MOTOR_FORWARD));
 }
 #endif
-#endif // ENABLE_RTTTL
+#endif // CAR_ENABLE_RTTTL
 
 /*
  * Pn tilt servo stuff
@@ -411,11 +425,9 @@ void resetServos() {
 
 void initServos() {
 #if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
-//        DistanceServo.attach(PIN_DISTANCE_SERVO, DISTANCE_SERVO_MIN_PULSE_WIDTH, DISTANCE_SERVO_MAX_PULSE_WIDTH);
-    DistanceServo.attach(PIN_DISTANCE_SERVO);
+    DistanceServo.attach(PIN_DISTANCE_SERVO); // Use standard servo library, because we have more servos and cannot use LightweightServo library
 #else
-    // Servo for distance sensor
-    initLightweightServoPin10();
+    initLightweightServoPin10(); // Use LightweightServo library, because we have only one servo
 #endif
 
 #ifdef CAR_HAS_PAN_SERVO
