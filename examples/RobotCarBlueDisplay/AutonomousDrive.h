@@ -24,8 +24,8 @@
  * Different autonomous driving modes
  */
 #define MODE_MANUAL_DRIVE               0
-#define MODE_AUTONOMOUS_DRIVE_BUILTIN   1
-#define MODE_AUTONOMOUS_DRIVE_USER      2
+#define MODE_COLLISION_AVOIDING_BUILTIN 1
+#define MODE_COLLISION_AVOIDING_USER    2 // like MODE_COLLISION_AVOIDING_BUILTIN but use doUserCollisionDetection()
 #define MODE_FOLLOWER                   3
 extern uint8_t sDriveMode;
 
@@ -51,8 +51,9 @@ extern uint8_t sCentimeterPerScan; // = sCentimeterPerScanTimesTwo / 2
 
 int postProcessAndCollisionDetection();
 
-void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
 void driveAutonomousOneStep();
+void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
+void driveCollisonAvoidingOneStep();
 void driveFollowerModeOneStep();
 
 #endif /* SRC_AUTONOMOUSDRIVE_H_ */

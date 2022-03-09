@@ -31,7 +31,6 @@
 
 #define PATH_LENGTH_MAX 100
 
-#define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #define PRINT_MOTOR_INFO_PERIOD_MILLIS 200
 
 // a string buffer for BD info output
@@ -64,8 +63,8 @@ extern char sStringBuffer[128];
 #define PAGE_LAST_NUMBER        PAGE_SHOW_PATH
 extern uint8_t sCurrentPage;
 
-void showUSDistance(unsigned int aCentimeter, bool aForceDraw = false);
-void showIRDistance(unsigned int aCentimeter);
+void showUSDistance();
+void showIROrTofDistance();
 
 #ifdef ENABLE_PATH_INFO_PAGE
 // from PathInfoPage
@@ -140,7 +139,6 @@ void stopHomePage(void);
  */
 extern uint8_t sCurrentPage;
 extern BDButton TouchButtonAutomaticDrivePage;
-extern BDButton TouchButtonReset;
 extern BDButton TouchButtonBack;
 void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue);
 void startCurrentPage();
@@ -148,6 +146,9 @@ void startCurrentPage();
 /*
  * Common GUI elements
  */
+extern BDButton TouchButtonReset;
+extern BDButton TouchButtonRes;
+
 extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
@@ -176,7 +177,7 @@ extern BDSlider SliderSpeedLeft;
 extern BDSlider SliderUSPosition;
 extern BDSlider SliderUSDistance;
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
-extern BDSlider SliderIRDistance;
+extern BDSlider SliderIROrTofDistance;
 #endif
 
 #ifdef CAR_HAS_PAN_SERVO
@@ -200,6 +201,7 @@ extern char sStringBuffer[128];
 
 void setupGUI(void);
 void loopGUI(void);
+void initCommonGui(void);
 
 void initRobotCarDisplay(void);
 void readAndShowDistancePeriodically();
@@ -228,7 +230,6 @@ void drawForwardDistancesInfos();
 void drawCollisionDecision(int aDegreesToTurn, uint8_t aLengthOfVector, bool aDoClearVector);
 
 extern uint8_t sRobotCarDirection;
-extern bool sRuningAutonomousDrive;
 
 #endif /* SRC_ROBOTCARGUI_H_ */
 #pragma once

@@ -59,7 +59,7 @@ class EncoderMotor: public PWMDcMotor {
 public:
 
     EncoderMotor();
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init(uint8_t aMotorNumber);
     void init(uint8_t aMotorNumber, uint8_t aInterruptNumber);
 #else
@@ -91,7 +91,7 @@ public:
 #else
     void handleEncoderInterrupt();
 #endif
-    void attachInterrupt(uint8_t aInterruptPinNumber);
+    void attachEncoderInterrupt(uint8_t aEncoderInterruptPinNumber);
     static void enableINT0AndINT1InterruptsOnRisingEdge();
 
     uint8_t getDirection();

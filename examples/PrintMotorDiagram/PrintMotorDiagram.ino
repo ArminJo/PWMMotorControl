@@ -3,10 +3,10 @@
  *  Prints PWM, distance and speed diagram of an encoder motor.
  *
  *
- *  Copyright (C) 2020-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
  *  PWMMotorControl is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,24 +24,34 @@
  */
 
 #include <Arduino.h>
+
+//#define USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR
+
 /*
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.
- * You must specify this before the include of "CarPWMMotorControl.hpp"
+ * You must specify this before the include of "CarPWMMotorControl.hpp" or "EncoderMotor.hpp".
  */
-#define USE_ENCODER_MOTOR_CONTROL  // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
-//#define USE_ADAFRUIT_MOTOR_SHIELD  // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
-//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD  // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
-#define VIN_2_LIPO                 // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                 // Or if you use a Mosfet bridge, 1 LIPO (around 3.7 volt) may be sufficient.
+#define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+//#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+//#define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
+//#define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+//#define VIN_1_LIPO                  // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
-//#define MOSFET_BRIDGE_USED  // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
+//#define MOSFET_BRIDGE_USED          // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP  // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+//#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+
+#if defined (USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
+#include "CarPWMMotorControl.hpp"
+#define MotorUnderTest RobotCarPWMMotorControl.rightCarMotor
+#else
 #include "EncoderMotor.hpp"
+EncoderMotor MotorUnderTest;
+#endif
 
 #include "RobotCarPinDefinitionsAndMore.h"
 
-EncoderMotor MotorUnderTest;
+//#define ENABLE_EXTRA_NON_PLOTTER_OUTPUT // Generate verbose output for SerialMonitor but this not compatible with Arduino Plotter
 
 void setup() {
 // initialize the digital pin as an output.
@@ -52,18 +62,30 @@ void setup() {
 #if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
+#if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
     // Just to know which program is running on my Arduino
-//    Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
+    Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
+#endif
 
     // Print caption
     Serial.println(F("PWM Speed Average Encoder"));
 
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
+#  if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+    RobotCarPWMMotorControl.init();
+#  else
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
+#  endif
+#else // defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
+#  if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     // For Adafruit Motor Shield v2
     MotorUnderTest.init(2, RIGHT_MOTOR_INTERRUPT);
-#else
+#  else
     MotorUnderTest.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT);
+#  endif
 #endif
+
     delay(2000);
 }
 
@@ -164,6 +186,8 @@ void loop() {
     Serial.print(tStopPWM);
     Serial.print('_');
     Serial.print(tStopSpeed);
+    Serial.print(F("_Delay="));
+    Serial.print(DELAY_MILLIS_BETWEEN_CHANGE);
     Serial.println();
 
     /*

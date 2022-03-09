@@ -1,7 +1,7 @@
 /*
  * RobotCarHomePage.hpp
  *
- *  Contains the GUI elements of the home page of RobotCarMotorControl.
+ *  Contains the GUI elements of the home page of RobotCarPWMMotorControl.
  *
  *  Requires BlueDisplay library.
  *
@@ -155,13 +155,12 @@ void drawHomePage(void) {
     TouchButtonCompensationStore.drawButton();
 #endif
 
-    SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
+//    SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
     SliderUSPosition.drawSlider();
-
     SliderUSDistance.drawSlider();
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
-    SliderIRDistance.drawSlider();
+    SliderIROrTofDistance.drawSlider();
 #endif
 
 #ifdef CAR_HAS_PAN_SERVO

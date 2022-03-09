@@ -66,7 +66,7 @@ public:
     CarPWMMotorControl();
 //    virtual ~CarPWMMotorControl();
 
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init();
 #else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
@@ -95,7 +95,7 @@ public:
     void calculateAndPrintIMUOffsets(Print *aSerial);
 #endif
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
     // retrieves values from right motor
     unsigned int getDistanceCount();
     unsigned int getDistanceMillimeter();
@@ -143,8 +143,8 @@ public:
     void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
             void (*aLoopCallback)(void) = NULL);
 #else
-    void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = true);
-    void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = true,
+    void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = false);
+    void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
             void (*aLoopCallback)(void) = NULL);
 #endif
 
@@ -192,7 +192,7 @@ public:
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
     void setStopMode(uint8_t aStopMode);
 
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
     EncoderMotor rightCarMotor; // 40 bytes RAM
     EncoderMotor leftCarMotor;
 #else
@@ -201,7 +201,7 @@ public:
 #endif
 };
 
-extern CarPWMMotorControl RobotCarMotorControl;
+extern CarPWMMotorControl RobotCarPWMMotorControl;
 
 #endif /* CarPWMMotorControl_H_ */
 

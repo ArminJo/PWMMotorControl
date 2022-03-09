@@ -1,7 +1,7 @@
 /*
  * RobotCarTestPage.hpp
  *
- *  Contains all GUI elements for test controlling the RobotCarMotorControl.
+ *  Contains all GUI elements for test controlling the RobotCarPWMMotorControl.
  *
  *  Requires BlueDisplay library.
  *
@@ -54,7 +54,7 @@ bool sShowDebug = false;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
-    RobotCarMotorControl.startGoDistanceMillimeter(aValue, sRobotCarDirection);
+    RobotCarPWMMotorControl.startGoDistanceMillimeter(aValue, sRobotCarDirection);
 }
 
 void doShowDebug(BDButton *aTheTouchedButton, int16_t aValue) {
@@ -67,7 +67,7 @@ void doShowDebug(BDButton *aTheTouchedButton, int16_t aValue) {
  */
 void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
-    RobotCarMotorControl.resetEncoderControlValues();
+    RobotCarPWMMotorControl.resetEncoderControlValues();
     sLastSpeedSliderValue = 0;
 }
 
@@ -77,9 +77,9 @@ void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
         if (sRobotCarDirection != DIRECTION_FORWARD) {
             aValue = -aValue;
         }
-        RobotCarMotorControl.startRotate(aValue, TURN_IN_PLACE);
+        RobotCarPWMMotorControl.startRotate(aValue, TURN_IN_PLACE);
     } else {
-        RobotCarMotorControl.startRotate(aValue, (turn_direction_t)sRobotCarDirection);
+        RobotCarPWMMotorControl.startRotate(aValue, (turn_direction_t)sRobotCarDirection);
     }
 }
 
@@ -92,10 +92,10 @@ void doStoreSpeed(float aValue) {
     uint16_t tValue = aValue;
     if (tValue > 10 && tValue < 256) {
         // must use value for compensation not compensated value
-        RobotCarMotorControl.rightCarMotor.DriveSpeed = tValue;
+        RobotCarPWMMotorControl.rightCarMotor.DriveSpeed = tValue;
         // use the same value here !
-        RobotCarMotorControl.leftCarMotor.DriveSpeed = tValue;
-        RobotCarMotorControl.writeMotorValuesToEeprom();
+        RobotCarPWMMotorControl.leftCarMotor.DriveSpeed = tValue;
+        RobotCarPWMMotorControl.writeMotorValuesToEeprom();
     }
     printMotorValues();
 }
@@ -240,12 +240,11 @@ void drawTestPage(void) {
     TouchButtonGetAndStoreSpeed.drawButton();
 #endif
 
-    SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
     SliderUSPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
-    SliderIRDistance.drawSlider();
+    SliderIROrTofDistance.drawSlider();
 #  endif
 
     PWMDcMotor::MotorControlValuesHaveChanged = true; // trigger drawing of values

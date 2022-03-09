@@ -1,7 +1,7 @@
 /*
- * RobotCarGui.hpp
+ * RobotCarUtils.h
  *
- * includes all files of BlueDisplay GUI for robot car.
+ *  Contains miscellaneous convenience utility functions for the robot cars.
  *
  *  Copyright (C) 2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -17,24 +17,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_GUI_HPP
-#define ROBOT_CAR_GUI_HPP
+#ifndef ROBOT_CAR_UTILS_H
+#define ROBOT_CAR_UTILS_H
 
-#define USE_BLUE_DISPLAY_GUI
+#include <Arduino.h>
 
-#include "BlueDisplay.h"
+void printConfigInfo();
+void initRobotCarPWMMotorControl();
+unsigned int getDistanceAndPlayTone();
+void checkVinPeriodicallyAndPrintIfChanged();
 
-#include "RobotCarGui.h" // this helps the eclipse indexer :-(
-
-#include "RobotCarCommonGui.hpp"
-#include "RobotCarHomePage.hpp"
-#include "RobotCarTestPage.hpp"
-#include "AutonomousDrive.hpp"
-#include "AutonomousDrivePage.hpp"
-#include "BTSensorDrivePage.hpp"
-#if defined(ENABLE_PATH_INFO_PAGE)
-#include "PathInfoPage.hpp"
-#endif
-
-#endif // ROBOT_CAR_GUI_HPP
+#endif //  ROBOT_CAR_UTILS_H
 #pragma once

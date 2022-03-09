@@ -128,7 +128,7 @@ unsigned int getUSDistance(unsigned int aTimeoutMicros) {
      * At 20 degree celsius => 50cm gives 2914 us, 2m gives 11655 us
      *
      * Use pulseInLong, this uses micros() as counter, relying on interrupts being enabled, which is not disturbed by (e.g. the 1 ms timer) interrupts.
-     * Only thing is that the pulse ends when we are in an interrupt routine, thus prolonging the measured pulse duration.
+     * Only thing is, that the pulse ends when we are in an interrupt routine, thus prolonging the measured pulse duration.
      * I measured 6 us for the millis() and 14 to 20 us for the Servo signal generating interrupt. This is equivalent to around 1 to 3 mm distance.
      * Alternatively we can use pulseIn() in a noInterrupts() context, but this will effectively stop the millis() timer for duration of pulse / or timeout.
      */
@@ -137,7 +137,7 @@ unsigned int getUSDistance(unsigned int aTimeoutMicros) {
     unsigned long tUSPulseMicros = pulseIn(tEchoInPin, HIGH, aTimeoutMicros);
     interrupts();
 #else
-    unsigned long tUSPulseMicros = pulseInLong(tEchoInPin, HIGH, aTimeoutMicros);
+    unsigned long tUSPulseMicros = pulseInLong(tEchoInPin, HIGH, aTimeoutMicros); // returns 0 for timeout
 #endif
     return tUSPulseMicros;
 }

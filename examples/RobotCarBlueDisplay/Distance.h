@@ -22,18 +22,19 @@
 
 #include <Arduino.h>
 
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
+#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)  || defined(USE_STANDARD_SERVO_LIBRARY)
+#  if !defined(USE_STANDARD_SERVO_LIBRARY)
+#define USE_STANDARD_SERVO_LIBRARY // Use standard servo library, because we have more servos and cannot use LightweightServo library
+#  endif
 #  if defined(ESP32)
 #include <ESP32Servo.h>
 #  else
 #include <Servo.h>
 #  endif
+extern Servo DistanceServo;
+
 #else
 #include "LightweightServo.h"
-#endif
-
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
-extern Servo DistanceServo; // Use standard servo library, because we have more servos and cannot use LightweightServo library
 #endif
 
 /*
@@ -52,7 +53,7 @@ extern uint8_t sDistanceFeedbackMode;
 #define DISTANCE_SOURCE_MODE_MINIMUM   0 // Take the minimum of the US and IR or TOF values
 #define DISTANCE_SOURCE_MODE_MAXIMUM   1
 #define DISTANCE_SOURCE_MODE_US        2 // Take just US value
-#define DISTANCE_SOURCE_MODE_IR        3 // Take just IR or TOF value
+#define DISTANCE_SOURCE_MODE_IR_OR_TOF 3 // Take just IR or TOF value
 #define DISTANCE_SOURCE_MODE_DEFAULT   DISTANCE_SOURCE_MODE_US
 extern uint8_t sDistanceSourceMode;
 #endif
@@ -106,6 +107,8 @@ struct ForwardDistancesInfoStruct {
 //    uint8_t WallLeftDistance;
 };
 extern ForwardDistancesInfoStruct sForwardDistancesInfo;
+extern unsigned int sUSDistanceCentimeter;
+extern unsigned int sIROrTofDistanceCentimeter;
 
 extern bool sDoSlowScan;
 extern uint8_t sLastServoAngleInDegrees; // needed for optimized delay for servo repositioning
@@ -115,9 +118,10 @@ extern int sNextDegreesToTurn;
 extern int sLastDegreesTurned;
 
 void initDistance();
-unsigned int getDistanceAsCentimeterAndPlayTone();
-unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeout = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
-        bool aWaitForCurrentMeasurementToEnd = false, bool doShow = false);
+bool printDistanceIfChanged(Print *aSerial);
+unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, bool aWaitForCurrentMeasurementToEnd = false);
+unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
+        bool aWaitForCurrentMeasurementToEnd = false);
 
 #define NO_TARGET_FOUND     360
 int scanForTarget(unsigned int aMaximumTargetDistance);
@@ -137,7 +141,7 @@ uint8_t readToFDistanceAsCentimeter(); // no start of measurement, just read res
 #endif
 
 #ifdef CAR_HAS_IR_DISTANCE_SENSOR
-uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd);
+uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
 #define IR_SENSOR_NEW_MEASUREMENT_THRESHOLD 2 // If the output value changes by this amount, we can assume that a new measurement is started
 #define IR_SENSOR_MEASUREMENT_TIME_MILLIS   41 // the IR sensor takes 39 ms for one measurement
 #endif

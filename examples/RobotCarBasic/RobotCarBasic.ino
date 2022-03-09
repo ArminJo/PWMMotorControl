@@ -60,13 +60,13 @@ void setup() {
     Serial.println("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
 
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarMotorControl.init();
+    RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
     LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #endif
@@ -74,10 +74,10 @@ void setup() {
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 #if ! defined(USE_ENCODER_MOTOR_CONTROL)
     // set factor for converting distance to drive time
-    RobotCarMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
+    RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
 #endif
 
     /*
@@ -103,8 +103,8 @@ void setup() {
      */
     tone(PIN_BUZZER, 2200, 50);
     delay(100);
-    RobotCarMotorControl.initIMU();
-    RobotCarMotorControl.printIMUOffsets(&Serial);
+    RobotCarPWMMotorControl.initIMU();
+    RobotCarPWMMotorControl.printIMUOffsets(&Serial);
     tone(PIN_BUZZER, 2200, 50);
 #endif
     delay(1000);
@@ -113,12 +113,12 @@ void setup() {
 
 void loop() {
 
-    RobotCarMotorControl.goDistanceMillimeter(200, DIRECTION_FORWARD);
+    RobotCarPWMMotorControl.goDistanceMillimeter(200, DIRECTION_FORWARD);
     delay(2000);
     /*
      * Try to turn by 90 degree.
      */
-    RobotCarMotorControl.rotate(90, TURN_FORWARD);
+    RobotCarPWMMotorControl.rotate(90, TURN_FORWARD);
     delay(2000);
 
 }
@@ -136,11 +136,11 @@ void simpleObjectAvoidance() {
         /*
          * Distance too low here -> Stop and go backwards
          */
-        RobotCarMotorControl.stop();
+        RobotCarPWMMotorControl.stop();
         delay(1000);
-        RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+        RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
         delay(200);
-        RobotCarMotorControl.stop();
+        RobotCarPWMMotorControl.stop();
         delay(1000);
 
         /*
@@ -150,9 +150,9 @@ void simpleObjectAvoidance() {
         Serial.print("Turn ");
         Serial.print(tTurnValueDegree);
         Serial.println(" degree");
-        RobotCarMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
+        RobotCarPWMMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
-        RobotCarMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+        RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 
     delay(50); // Wait until next distance sample

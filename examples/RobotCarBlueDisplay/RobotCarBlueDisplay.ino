@@ -29,28 +29,38 @@
 
 #include <Arduino.h>
 
-//#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
-//#define MONITOR_VIN_VOLTAGE         // Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1MOhm to VIN, 100kOhm to ground
-//#define CAR_ENABLE_RTTTL            // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
-//#define ENABLE_PATH_INFO_PAGE       // Saves program space
+#define VERSION_EXAMPLE "3.0"
 
 /*
  * Car configuration
  */
 #include "RobotCarPinDefinitionsAndMore.h"
 
+/*
+ * Enable functionality of this program
+ */
+//#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
+//#define CAR_ENABLE_RTTTL            // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+//#define ENABLE_PATH_INFO_PAGE       // Saves program space
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+#define MONITOR_VIN_VOLTAGE
+#define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+#endif
+
+#include "BlueDisplay.h"    // This helps the eclipse indexer
 #include "RobotCarBlueDisplay.h"
 #include "CarPWMMotorControl.hpp" // include source of library
 #if defined(USE_MPU6050_IMU)
-#include "IMUCarData.hpp" // include source of library
+#include "IMUCarData.hpp"       // include source of library
 #endif
 #include "RobotCarGui.hpp"
+
+#include "Distance.h"   // This helps the eclipse indexer
 #include "Distance.hpp" // requires definitions from RobotCarGui.h
 #ifdef CAR_ENABLE_RTTTL
-//#define USE_NO_RTX_EXTENSIONS       // saves program space if defined globally
+//#define USE_NO_RTX_EXTENSIONS // saves program space if defined globally
 #include <PlayRtttl.h>
 #endif
-
 
 /*
  * Timeouts for demo mode and inactivity remainder
@@ -69,9 +79,10 @@
 #define BLUETOOTH_BAUD_RATE BAUD_9600
 #endif
 
-#define VERSION_EXAMPLE "3.0"
-
+#if defined(MONITOR_VIN_VOLTAGE)
+#include "ADCUtils.h"
 float sVINVoltage;
+#endif
 
 #ifdef CAR_ENABLE_RTTTL
 bool sPlayMelody = false;
@@ -173,29 +184,27 @@ void setup() {
 
     // initialize motors, this also stops motors
 #ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarMotorControl.init();
+    RobotCarPWMMotorControl.init();
 #else
 #  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
     LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
-    RobotCarMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #endif
 
 #ifdef ENABLE_EEPROM_STORAGE
-    RobotCarMotorControl.readMotorValuesFromEeprom();
+    RobotCarPWMMotorControl.readMotorValuesFromEeprom();
 #endif
-
-    sRuningAutonomousDrive = false;
 
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized
 
     sLastServoAngleInDegrees = 90; // is required before setupGUI()
 
-    // Must be after RobotCarMotorControl.init, since it tries to stop motors in connect callback
+    // Must be after RobotCarPWMMotorControl.init, since it tries to stop motors in connect callback
     setupGUI(); // this enables output by BlueDisplay1 and lasts around 100 milliseconds
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
@@ -220,7 +229,7 @@ void setup() {
     pinMode(PIN_CAMERA_SUPPLY_CONTROL, OUTPUT);
 #endif
 
-    initServos(); // must be after RobotCarMotorControl.init() since it uses is2WDCar set there.
+    initServos(); // must be after RobotCarPWMMotorControl.init() since it uses is2WDCar set there.
 
 // reset all values
 #ifdef ENABLE_PATH_INFO_PAGE
@@ -242,6 +251,32 @@ void setup() {
 }
 
 void loop() {
+
+    /*
+     * Required, if we use rotation, ramps and fixed distance driving
+     */
+    RobotCarPWMMotorControl.updateMotors();
+
+    /*
+     * check for user input and update display output
+     */
+    loopGUI();
+
+    /*
+     * Handle autonomous driving
+     */
+    driveAutonomousOneStep();
+
+#ifdef CAR_ENABLE_RTTTL
+    /*
+     * check for playing melody
+     */
+    if (sPlayMelody) {
+        RobotCarPWMMotorControl.stop();
+        playRandomMelody();
+    }
+
+#endif
 
     /*
      * check if timeout, no Bluetooth connection and connected to LIPO battery
@@ -269,19 +304,10 @@ void loop() {
             if (sBootReasonWasPowerUp) {
                 startStopAutomomousDrive(true, MODE_FOLLOWER);
             } else {
-                startStopAutomomousDrive(true, MODE_AUTONOMOUS_DRIVE_BUILTIN);
+                startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
             }
         }
     }
-
-    /*
-     * Required, if we use rotation, ramps and fixed distance driving
-     */
-    RobotCarMotorControl.updateMotors();
-    /*
-     * check for user input and update display output
-     */
-    loopGUI();
 
     /*
      * After 4 minutes of user inactivity, make noise by scanning with US Servo and repeat it every 2. minute
@@ -294,25 +320,6 @@ void loop() {
 #else
         write10(90);
 #endif
-    }
-
-#ifdef CAR_ENABLE_RTTTL
-    /*
-     * check for playing melody
-     */
-    if (sPlayMelody) {
-        RobotCarMotorControl.stop();
-        playRandomMelody();
-    }
-
-#endif
-
-    if (sRuningAutonomousDrive) {
-        if (sDriveMode == MODE_FOLLOWER) {
-            driveFollowerModeOneStep();
-        } else {
-            driveAutonomousOneStep();
-        }
     }
 }
 
@@ -403,7 +410,7 @@ ISR(TIMER2_COMPB_vect) {
 #endif // CAR_ENABLE_RTTTL
 
 /*
- * Pn tilt servo stuff
+ * Pan tilt servo stuff
  */
 #ifdef CAR_HAS_PAN_SERVO
 Servo PanServo;

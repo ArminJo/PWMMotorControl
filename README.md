@@ -1,7 +1,7 @@
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Available as Arduino library "PWMMotorControl"
 
-### [Version 2.1.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
+### [Version 2.0.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
@@ -144,11 +144,10 @@ You may also overwrite the function fillAndShowForwardDistancesInfo(), if you us
 To customize the RobotCar example to cover different extensions, there are some compile options available.
 | Option | Default | File | Description |
 |-|-|-|-|
-| `USE_PIN_LAYOUT_FOR_NANO` | disabled | RobotCar.h | Use different pinout for Nano board. It has A6 and A7 available as pins. |
 | `CAR_HAS_4_WHEELS` | disabled | RobotCar.h | Use modified formula for turning the car. |
-| `USE_US_SENSOR_1_PIN_MODE` | disabled | RobotCar.h | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
-| `USE_IR_DISTANCE_SENSOR` | disabled | RobotCar.h | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
-| `USE_TOF_DISTANCE_SENSOR` | disabled | RobotCar.h | Use VL53L1X TimeOfFlight distance sensor. |
+| `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | RobotCar.h | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
+| `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | RobotCar.h | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
+| `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | RobotCar.h | Use VL53L1X TimeOfFlight distance sensor. |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. |
 | `CAR_HAS_CAMERA` | disabled | RobotCar.h | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
 | `CAR_HAS_LASER` | disabled | RobotCar.h | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
@@ -191,9 +190,7 @@ Automatic control page with detected wall at right
 - The tiny black bar is the rotation chosen by doCollisionDetection() function.
 
 # Revision History
-### Version 2.1.0 - work in progress
-
-### Version 2.0.0
+### Version 2.0.0 - work in progress
 - Removed all *Compensated functions, compensation now is always active.
 - Removed StopSpeed from EepromMotorinfoStruct.
 - Removed StartSpeed.

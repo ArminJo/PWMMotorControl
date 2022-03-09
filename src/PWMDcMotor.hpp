@@ -63,7 +63,7 @@ bool PWMDcMotor::MotorPWMHasChanged;              // true if CurrentSpeedPWM has
 PWMDcMotor::PWMDcMotor() { // @suppress("Class members should be properly initialized")
 }
 
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 void PWMDcMotor::PCA9685WriteByte(uint8_t aAddress, uint8_t aData) {
     Wire.beginTransmission(PCA9685_DEFAULT_ADDRESS);
@@ -181,7 +181,7 @@ void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
         // set only directions, no brake modes
         LastDirection = aMotorDriverMode;
     }
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     // until here DIRECTION_FORWARD is 0 back is 1, Adafruit library starts with 1
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
     switch (aMotorDriverMode) {
@@ -281,7 +281,7 @@ void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirec
             Serial.println(CurrentSpeedPWM);
 #endif
             MotorPWMHasChanged = true;
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
             PCA9685SetPWM(PWMPin, 0, 16 * aRequestedSpeedPWM);
 #  else
@@ -343,7 +343,7 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
 #ifndef USE_ENCODER_MOTOR_CONTROL
     CheckDistanceInUpdateMotor = false;
 #endif
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
     PCA9685SetPWM(PWMPin, 0, 0);
 #  else
@@ -733,7 +733,7 @@ void PWMDcMotor::printSettings(Print *aSerial) {
 #endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     aSerial->print(F("USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD:"));
 #ifndef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
     aSerial->print(reinterpret_cast<const __FlashStringHelper *>(StringNot));

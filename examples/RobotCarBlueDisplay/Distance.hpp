@@ -26,6 +26,9 @@
 #define ROBOT_CAR_DISTANCE_HPP
 
 #include "Distance.h"
+#if !defined(USE_STANDARD_SERVO_LIBRARY)
+#include "LightweightServo.hpp"
+#endif
 
 #include "HCSR04.h"
 #include "pitches.h"
@@ -33,17 +36,20 @@
 bool sDoSlowScan = false;
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-uint8_t sDistanceSourceMode =  DISTANCE_SOURCE_MODE_DEFAULT; // one of DISTANCE_SOURCE_MODE_MINIMUM, DISTANCE_SOURCE_MODE_MAXIMUM, DISTANCE_SOURCE_MODE_US or DISTANCE_SOURCE_MODE_IR
+// Default is US. One of DISTANCE_SOURCE_MODE_MINIMUM, DISTANCE_SOURCE_MODE_MAXIMUM, DISTANCE_SOURCE_MODE_US or DISTANCE_SOURCE_MODE_IR_OR_TOF
+uint8_t sDistanceSourceMode =  DISTANCE_SOURCE_MODE_DEFAULT;
 #endif
 
 uint8_t sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
+unsigned int sUSDistanceCentimeter;
+unsigned int sIROrTofDistanceCentimeter;
+unsigned int sEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
+unsigned int sLastEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
 
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
-Servo DistanceServo;            // Use standard servo library, because we have more servos and cannot use LightweightServo library
-#else
-#include "LightweightServo.hpp" // Use LightweightServo library, because we have only one servo
+#if defined(USE_STANDARD_SERVO_LIBRARY)
+Servo DistanceServo;
 #endif
 uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
@@ -95,7 +101,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
         // handle underflow
         aTargetDegrees = 0;
     } else if (aTargetDegrees > 180) {
-        // handle underflow
+        // handle overflow
         aTargetDegrees = 180;
     }
 
@@ -139,7 +145,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;
 #endif
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
+#if defined(USE_STANDARD_SERVO_LIBRARY)
     DistanceServo.write(aTargetDegrees);
 #else
     write10(aTargetDegrees);
@@ -209,7 +215,7 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
      */
     for (uint_fast8_t i = 0; i < 3; ++i) {
         DistanceServoWriteAndDelay(tServoDegreeToScan, true);
-        tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true, false);
+        tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true);
 
 #if defined(USE_BLUE_DISPLAY_GUI)
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
@@ -236,19 +242,23 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
                     sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tServoDegreeToScan, COLOR16_WHITE, 3);
             // draw new one and store value in distances array for next scan
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tServoDegreeToScan, tColor, 3);
+            if(tCentimeter != 0) {
+                BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tServoDegreeToScan, tColor, 3);
+            }
             sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
         }
 #else
-        Serial.print('@');
+
+        Serial.print(tCentimeter);
+        Serial.print(F("cm@"));
         Serial.print(tServoDegreeToScan);
         Serial.print(' ');
 #endif
-        if (tCentimeter <= aMaximumTargetDistance) {
+        if (tCentimeter != 0 && tCentimeter <= aMaximumTargetDistance) {
             tDegreeFound = tServoDegreeToScan;
             break;
         }
-        // prepare for next measurement
+        // prepare for next degree
 #if defined(USE_BLUE_DISPLAY_GUI)
         loopGUI();
 #endif
@@ -323,12 +333,12 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             // User sent an event -> stop and return now
             return true;
         }
-        unsigned int tCentimeter = getDistanceAsCentimeter( DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true, false);
+        unsigned int tCentimeter = getDistanceAsCentimeter( DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
         if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimeterPerScanTimesTwo) {
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
              */
-            RobotCarMotorControl.stop();
+            RobotCarPWMMotorControl.stop();
         }
 
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
@@ -497,8 +507,8 @@ void doWallDetection() {
     int8_t tDegreeOfConnectingLine;
     sForwardDistancesInfo.WallRightAngleDegrees = 0;
     sForwardDistancesInfo.WallLeftAngleDegrees = 0;
-//    sForwardDistancesInfo.WallRightDistance = 0xFF;
-//    sForwardDistancesInfo.WallLeftDistance = 0xFF;
+//    sForwardDistancesInfo.WallRightDistance = UINT8_MAX;
+//    sForwardDistancesInfo.WallLeftDistance = UINT8_MAX;
 
     /*
      * Parse the array from 0 to STEPS_PER_SCAN
@@ -520,7 +530,7 @@ void doWallDetection() {
              */
             uint8_t tNextDistanceComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
             DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
             BlueDisplay1.debug("i=", i);
             BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
             BlueDisplay1.debug("Original distance @i+1=", tNextDistanceOriginal);
@@ -540,7 +550,7 @@ void doWallDetection() {
                  * Negative raw values means the wall is more in front / the the wall angle is greater,
                  */
                 int tDegreeOfWallAngle = tCurrentAngleToCheck - tDegreeOfConnectingLine;
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
                 BlueDisplay1.debug("tDegreeOfWallAngle=", tDegreeOfWallAngle);
 #endif
                 if (tDegreeOfWallAngle <= 90) {
@@ -599,7 +609,7 @@ void doWallDetection() {
                  */
                 uint8_t tNextValueComputed = computeNeigbourValue(tCurrentDistance, tLastDistance,
                 DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, &tDegreeOfConnectingLine);
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
                 BlueDisplay1.debug("i=", i);
                 BlueDisplay1.debug("AngleToCheck @i+1=", tCurrentAngleToCheck);
                 BlueDisplay1.debug("Original distance @i-1=", tNextValue);
@@ -610,21 +620,21 @@ void doWallDetection() {
                     // start with i = 8 and adjust for 7
                     // degrees at index i-1 are ((i - 1) * DEGREES_PER_STEP) + START_DEGREES
                     int tWallBackwardDegrees = tCurrentAngleToCheck + tDegreeOfConnectingLine;
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
                     BlueDisplay1.debug("tWallBackwardDegrees=", tWallBackwardDegrees);
 #endif
                     if (tWallBackwardDegrees <= 90) {
                         // wall at right - overwrite only if greater
                         if (sForwardDistancesInfo.WallRightAngleDegrees < tWallBackwardDegrees) {
                             sForwardDistancesInfo.WallRightAngleDegrees = tWallBackwardDegrees;
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
                             BlueDisplay1.debug("WallRightAngleDegrees=", sForwardDistancesInfo.WallRightAngleDegrees);
 #endif
                         }
                     } else if (sForwardDistancesInfo.WallLeftAngleDegrees < (180 - tWallBackwardDegrees)) {
                         // wall at right - overwrite only if greater
                         sForwardDistancesInfo.WallLeftAngleDegrees = 180 - tWallBackwardDegrees;
-#ifdef TRACE
+#if defined(TRACE) && defined(USE_BLUE_DISPLAY_GUI)
                         BlueDisplay1.debug("WallLeftAngleDegrees=", sForwardDistancesInfo.WallLeftAngleDegrees);
 #endif
 
@@ -654,7 +664,7 @@ void doWallDetection() {
  */
 void postProcessDistances(uint8_t aDistanceThreshold) {
     unsigned int tMax = 0;
-    unsigned int tMin = __UINT16_MAX__; // = 65535
+    unsigned int tMin = UINT16_MAX; // = 65535
     sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold = 0xFF;
     // scan simultaneously from 0 to 4 and 9 to 5 to prefer headmost values/indexes, if distances are the same.
     for (uint_fast8_t i = 0; i < (NUMBER_OF_DISTANCES + 1) / 2; ++i) {
@@ -685,31 +695,52 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
     }
 }
 
-unsigned int getDistanceAsCentimeterAndPlayTone() {
+unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
     /*
      * Get distance
      */
-    unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true, true);
-
-    /*
-     * Play tone
-     */
-    if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
-        if (tCentimeter > 0) {
-            if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_PENTATONIC) {
-                /*
-                 * Map distance to an index in a pentatonic pitch table
-                 */
-                uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
-                if (tIndex > ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1) {
-                    tIndex = ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1;
-                }
-                tone(PIN_BUZZER, NoteC5ToC7Pentatonic[tIndex]); // 523 to 2093 Hz for 0 to 100 cm
+    unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true);
+#if defined(USE_BLUE_DISPLAY_GUI)
+            showUSDistance();
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+            showIROrTofDistance();
+#  endif
+#endif
+    if (sLastEffectiveDistanceCentimeter != tCentimeter) {
+        sLastEffectiveDistanceCentimeter = tCentimeter;
+        /*
+         * Play tone
+         */
+        if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
+            if (tCentimeter == 0) {
+                noTone (PIN_BUZZER);
             } else {
-                /*
-                 * Play feedback tone proportional to measured distance
-                 */
-                int tFrequency = map(tCentimeter, 0, 100, 110, 1760); // 4 octaves per meter
+                int tFrequency;
+                if (sDistanceFeedbackMode == DISTANCE_FEEDBACK_PENTATONIC) {
+                    /*
+                     * Map distance to an index in a pentatonic pitch table
+                     */
+                    uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
+                    if (tIndex > ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1) {
+                        tIndex = ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1;
+                    }
+                    tFrequency = NoteC5ToC7Pentatonic[tIndex]; // 523 to 2093 Hz for 0 to 100 cm
+                } else {
+                    /*
+                     * Play feedback tone proportional to measured distance
+                     */
+#if defined(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) && defined(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER)
+                if(tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER){
+                    tFrequency = map(tCentimeter, 0, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, 100, 200);
+                } else if(tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER){
+                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 200, 2000, 6000);
+                } else {
+                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 440, 880); // 1 octaves for gap
+                }
+#else
+                    tFrequency = map(tCentimeter, 0, 100, 110, 7040); // 6 octaves per meter
+#endif
+                }
                 tone(PIN_BUZZER, tFrequency);
             }
         }
@@ -718,70 +749,73 @@ unsigned int getDistanceAsCentimeterAndPlayTone() {
 }
 
 /*
- * Timeout is DISTANCE_TIMEOUT_CM (1 meter)
+ * Print without a newline
+ * @return true if distance has changed and was printed
+ */
+bool printDistanceIfChanged(Print *aSerial) {
+    static unsigned int sLastPrintedDistanceCentimeter;
+
+    if (sLastPrintedDistanceCentimeter != sEffectiveDistanceCentimeter) {
+        sLastPrintedDistanceCentimeter = sEffectiveDistanceCentimeter;
+        if (sEffectiveDistanceCentimeter == 0) {
+            aSerial->print("Distance timeout ");
+        } else {
+            aSerial->print("Distance=");
+            aSerial->print(sEffectiveDistanceCentimeter);
+            aSerial->print("cm");
+        }
+        return true;
+    }
+    return false;
+}
+
+/*
  * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
  * @param doShow show distance value in the GUI
+ * @return 0 for timeout
  */
-unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeout, bool aWaitForCurrentMeasurementToEnd, bool doShow) {
+unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
 #if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
     (void) aWaitForCurrentMeasurementToEnd; // suppress compiler warnings
 #endif
 #if (defined(CAR_HAS_TOF_DISTANCE_SENSOR))
     if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
-        sToFDistanceSensor.VL53L1X_StartRanging();
+        sToFDistanceSensor.VL53L1X_StartRanging(); // start TOF measurement at start of function
     }
 #endif
 
-    unsigned int tCentimeter = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeout);
-    if (tCentimeter == 0) {
-        tCentimeter = aDistanceTimeout;
-    }
-#if defined(USE_BLUE_DISPLAY_GUI)
-    if (doShow) {
-        showUSDistance(tCentimeter);
-    }
-#else
-    (void) doShow; // suppress compiler warnings
-#endif
-
-#if !(defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
     /*
-     * If only US sensor is used or available, we do not check for scan mode and return here
+     * Always get US distance
      */
-    return tCentimeter;
-#else
-    unsigned int tIRCentimeter;
-    if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
-        /*
-         * Scan mode here is: take minimum or maximum of the US and IR or TOF values
-         * So get IR or TOF value now
-         */
+    unsigned int tCentimeterToReturn = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeoutCentimeter);
+
+    sUSDistanceCentimeter = tCentimeterToReturn;
+#if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-        tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
+    sIROrTofDistanceCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
 #  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-        tIRCentimeter = readToFDistanceAsCentimeter();
+    sIROrTofDistanceCentimeter = readToFDistanceAsCentimeter();
 #  endif
-#    if defined(USE_BLUE_DISPLAY_GUI)
-        if (doShow) {
-            showIRDistance(tIRCentimeter);
+    /*
+     * IR or TOF sensor is used, we check for distance source mode
+     * (take IR or minimum or maximum of the US and (IR or TOF) values)
+     */
+    if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_IR_OR_TOF) {
+        tCentimeterToReturn = sIROrTofDistanceCentimeter;
+    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MINIMUM) {
+        // Scan mode MINIMUM => Take the minimum of the US and IR or TOF values
+        if (tCentimeterToReturn > sIROrTofDistanceCentimeter) {
+            tCentimeterToReturn = sIROrTofDistanceCentimeter;
         }
-#    endif
-        if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_IR) {
-            tCentimeter = tIRCentimeter;
-        } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MINIMUM) {
-            // Scan mode MINIMUM => Take the minimum of the US and IR or TOF values
-            if (tCentimeter > tIRCentimeter) {
-                tCentimeter = tIRCentimeter;
-            }
-        } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MAXIMUM) {
-            // Scan mode MAXIMUM => Take the maximum of the US and IR or TOF values
-            if (tCentimeter < tIRCentimeter) {
-                tCentimeter = tIRCentimeter;
-            }
+    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MAXIMUM) {
+        // Scan mode MAXIMUM => Take the maximum of the US and IR or TOF values
+        if (tCentimeterToReturn < sIROrTofDistanceCentimeter) {
+            tCentimeterToReturn = sIROrTofDistanceCentimeter;
         }
     }
-    return tCentimeter;
 #endif
+    sEffectiveDistanceCentimeter = tCentimeterToReturn;
+    return tCentimeterToReturn;
 }
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR)
