@@ -7,7 +7,7 @@
  *  Requires EncoderMotor.hpp
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -86,8 +86,8 @@ void CarPWMMotorControl::init() {
 
 #else // USE_ADAFRUIT_MOTOR_SHIELD
 void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
-        uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin) {
-    leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin);
+        uint8_t aLeftMotorForwardPin, uint8_t aLeftMotorBackwardPin, uint8_t aLeftMotorPWMPin) {
+    leftCarMotor.init(aLeftMotorForwardPin, aLeftMotorBackwardPin, aLeftMotorPWMPin);
     rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
     CarDirectionOrBrakeMode = DEFAULT_STOP_MODE;
 
@@ -234,10 +234,10 @@ bool CarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequestedDirecti
 /*
  *  Direct motor control, no state or flag handling
  */
-void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+void CarPWMMotorControl::setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
-    rightCarMotor.setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
-    leftCarMotor.setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
+    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
+    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
 }
 
 /*
@@ -251,28 +251,28 @@ void CarPWMMotorControl::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
 /*
  * Sets speed adjusted by current compensation value and handle motor state and flags
  * @param aLeftRightSpeedPWM if positive, this value is subtracted from the left motor value, if negative subtracted from the right motor value
- *
  */
-void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM) {
+void CarPWMMotorControl::setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
+        int8_t aLeftRightSpeedPWMDelta) {
     checkAndHandleDirectionChange(aRequestedDirection);
 #if defined(USE_ENCODER_MOTOR_CONTROL)
     EncoderMotor *tMotorWithModifiedSpeedPWM;
 #else
     PWMDcMotor *tMotorWithModifiedSpeedPWM;
 #endif
-    if (aLeftRightSpeedPWM >= 0) {
-        rightCarMotor.setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
+    if (aLeftRightSpeedPWMDelta >= 0) {
+        rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
         tMotorWithModifiedSpeedPWM = &leftCarMotor;
     } else {
-        aLeftRightSpeedPWM = -aLeftRightSpeedPWM;
-        leftCarMotor.setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
+        aLeftRightSpeedPWMDelta = -aLeftRightSpeedPWMDelta;
+        leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
         tMotorWithModifiedSpeedPWM = &rightCarMotor;
     }
 
-    if (aRequestedSpeedPWM >= aLeftRightSpeedPWM) {
-        tMotorWithModifiedSpeedPWM->setSpeedPWM(aRequestedSpeedPWM - aLeftRightSpeedPWM, aRequestedDirection);
+    if (aRequestedSpeedPWM >= aLeftRightSpeedPWMDelta) {
+        tMotorWithModifiedSpeedPWM->setSpeedPWMAndDirection(aRequestedSpeedPWM - aLeftRightSpeedPWMDelta, aRequestedDirection);
     } else {
-        tMotorWithModifiedSpeedPWM->setSpeedPWM(0, aRequestedDirection);
+        tMotorWithModifiedSpeedPWM->setSpeedPWMAndDirection(0, aRequestedDirection);
     }
 }
 
@@ -465,8 +465,8 @@ void CarPWMMotorControl::startRampUp(uint8_t aRequestedDirection) {
 
 void CarPWMMotorControl::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
-    rightCarMotor.setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
-    leftCarMotor.setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+    rightCarMotor.setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+    leftCarMotor.setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 }
 
 /*
@@ -474,10 +474,14 @@ void CarPWMMotorControl::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t
  * @param aLoopCallback The callback called while waiting for motor to reach MOTOR_STATE_DRIVE.
  */
 void CarPWMMotorControl::waitForDriveSpeedPWM(void (*aLoopCallback)(void)) {
+#if !defined(DO_NOT_SUPPORT_RAMP)
     while (updateMotors(aLoopCallback)
             && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE || leftCarMotor.MotorRampState != MOTOR_STATE_DRIVE)) {
         ;
     }
+#else
+    (void) aLoopCallback;
+#endif
 }
 
 /*
@@ -584,7 +588,12 @@ void CarPWMMotorControl::waitUntilStopped(void (*aLoopCallback)(void)) {
 }
 
 bool CarPWMMotorControl::isState(uint8_t aState) {
+#if defined(DO_NOT_SUPPORT_RAMP)
+    (void) aState;
+    return true;
+#else
     return (rightCarMotor.MotorRampState == aState && leftCarMotor.MotorRampState == aState);
+#endif
 }
 
 bool CarPWMMotorControl::isStopped() {
@@ -596,8 +605,12 @@ bool CarPWMMotorControl::isStopped() {
  * Used to suppress time consuming display of motor values
  */
 bool CarPWMMotorControl::isStateRamp() {
+#if defined(DO_NOT_SUPPORT_RAMP)
+    return false;
+#else
     return (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP
             || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP);
+#endif
 }
 
 void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter) {
@@ -704,10 +717,10 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
 #if defined(USE_MPU6050_IMU)
     // We do not really have ramps for turn speed
     if (tDistanceMillimeterRight > 0) {
-        tRightMotorIfPositiveTurn->setSpeedPWM(tTurnSpeedPWMRight, DIRECTION_FORWARD);
+        tRightMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMRight, DIRECTION_FORWARD);
     }
     if (tDistanceMillimeterLeft > 0) {
-        tLeftMotorIfPositiveTurn->setSpeedPWM(tTurnSpeedPWMLeft, DIRECTION_BACKWARD);
+        tLeftMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMLeft, DIRECTION_BACKWARD);
     }
 #else
     tRightMotorIfPositiveTurn->startGoDistanceMillimeter(tTurnSpeedPWMRight, tDistanceMillimeterRight, DIRECTION_FORWARD);
@@ -795,10 +808,10 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 //// as long as no start speed is computed increase speed
 //        if (rightCarMotor.StartSpeedPWM == 0) {
 //            // as long as no start speed is computed, increase motor speed
-//            rightCarMotor.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
+//            rightCarMotor.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_FORWARD);
 //        }
 //        if (leftCarMotor.StartSpeedPWM == 0) {
-//            leftCarMotor.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
+//            leftCarMotor.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_FORWARD);
 //        }
 //
 //        /*

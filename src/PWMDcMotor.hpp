@@ -19,7 +19,7 @@
  *
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -51,7 +51,7 @@
 //#define TRACE
 //#define DEBUG
 
-char sMotorModeCharArray[4] ={'F','B', 'S','R'};
+char sMotorModeCharArray[4] = { 'F', 'B', 'S', 'R' };
 
 // Flags e.g. for display update control
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
@@ -175,10 +175,13 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
  *  @brief  Control the DC motor driver direction and stop mode
  *  @param  aMotorDriverMode The mode can be FORWARD, BACKWARD (BRAKE motor connection are shortened) or RELEASE ( motor connections are high impedance)
  */
+void PWMDcMotor::setDirection(uint8_t aMotorDirection) {
+    setMotorDriverMode(aMotorDirection);
+}
 void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
     CurrentDirectionOrBrakeMode = aMotorDriverMode; // The only statement which changes CurrentDirectionOrBrakeMode
-    if (!(aMotorDriverMode & STOP_MODE_OR_MASK)) {
-        // set only directions, no brake modes
+    if (!(aMotorDriverMode & STOP_MODE_MASK)) {
+        // we want to set only directions, no brake modes
         LastDirection = aMotorDriverMode;
     }
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
@@ -229,12 +232,54 @@ void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
 }
 
 /*
+ * Sets active PWM and handles speed compensation
+ */
+void PWMDcMotor::setSpeed(uint8_t aRequestedSpeedPWM) {
+    /*
+     * Handle speed compensation
+     */
+    uint8_t tCompensatedSpeedPWM;
+    if (aRequestedSpeedPWM > SpeedPWMCompensation) {
+        tCompensatedSpeedPWM = aRequestedSpeedPWM - SpeedPWMCompensation; // The only statement which sets CurrentSpeedPWM to a value != 0
+    } else {
+        tCompensatedSpeedPWM = 0; // no stop mode here
+    }
+#ifdef TRACE
+        Serial.print(PWMPin);
+        Serial.print(F(" RequestedSpeedPWM="));
+        Serial.println(aRequestedSpeedPWM);
+        Serial.print(F(" CompensatedSpeedPWM="));
+        Serial.println(tCompensatedSpeedPWM);
+#endif
+    if (CurrentSpeedPWM != tCompensatedSpeedPWM) {
+        CurrentSpeedPWM = tCompensatedSpeedPWM;
+        MotorPWMHasChanged = true;
+        /*
+         * Write to hardware
+         */
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+        PCA9685SetPWM(PWMPin, 0, 16 * aRequestedSpeedPWM);
+#  else
+        Adafruit_MotorShield_DcMotor->setSpeedPWM(aRequestedSpeedPWM);
+#  endif
+#else
+        analogWrite(PWMPin, aRequestedSpeedPWM);
+#endif
+    }
+}
+
+/*
  * @return true if direction has changed AND motor was stopped
  */
 bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
-    aRequestedDirection &= DIRECTION_MASK; // since we are never called with "brake directions" but may be called with TURN_IN_PLACE direction
+    /*
+     * Reduce to FORWARD or BACKWARD
+     * we are never called with "brake directions" but may be called with TURN_IN_PLACE direction
+     */
+    uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_MASK;
     bool tReturnValue = false;
-    if (CurrentDirectionOrBrakeMode != aRequestedDirection) {
+    if (CurrentDirectionOrBrakeMode != tRequestedDirection) {
         if (!isStopped()) {
             /*
              * Direction change requested but motor still running-> first stop motor
@@ -247,9 +292,9 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
         Serial.print(F(" Change motor mode from "));
         Serial.print(sMotorModeCharArray[CurrentDirectionOrBrakeMode]);
         Serial.print(F(" to "));
-        Serial.println(sMotorModeCharArray[aRequestedDirection]);
+        Serial.println(sMotorModeCharArray[tRequestedDirection]);
 #endif
-        setMotorDriverMode(aRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
+        setDirection(tRequestedDirection); // this in turn sets CurrentDirectionOrBrakeMode
     }
     return tReturnValue;
 }
@@ -263,34 +308,12 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
  *  PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
  *  PWM period is 1030 us for using AnalogWrite on pin 5 + 6.
  */
-void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+void PWMDcMotor::setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     if (aRequestedSpeedPWM == 0) {
         stop(STOP_MODE_KEEP);
     } else {
         checkAndHandleDirectionChange(aRequestedDirection);
-        if (CurrentSpeedPWM != aRequestedSpeedPWM) {
-
-            if (aRequestedSpeedPWM > SpeedPWMCompensation) {
-                CurrentSpeedPWM = aRequestedSpeedPWM - SpeedPWMCompensation; // The only statement which sets CurrentSpeedPWM to a value != 0
-            } else {
-                CurrentSpeedPWM = 0; // no stop mode here
-            }
-#ifdef TRACE
-            Serial.print(PWMPin);
-            Serial.print(F(" SpeedPWM="));
-            Serial.println(CurrentSpeedPWM);
-#endif
-            MotorPWMHasChanged = true;
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
-            PCA9685SetPWM(PWMPin, 0, 16 * aRequestedSpeedPWM);
-#  else
-            Adafruit_MotorShield_DcMotor->setSpeedPWM(aRequestedSpeedPWM);
-#  endif
-#else
-            analogWrite(PWMPin, aRequestedSpeedPWM);
-#endif
-        }
+        setSpeed(aRequestedSpeedPWM);
     }
 }
 
@@ -299,7 +322,7 @@ void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirec
  */
 void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
     if (!isStopped()) {
-        setSpeedPWM(aRequestedSpeedPWM, CurrentDirectionOrBrakeMode); // output PWM value to motor
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, CurrentDirectionOrBrakeMode); // output PWM value to motor
     }
 }
 
@@ -309,9 +332,9 @@ void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
 void PWMDcMotor::setSpeedPWM(int aRequestedSpeedPWM) {
     if (aRequestedSpeedPWM < 0) {
         aRequestedSpeedPWM = -aRequestedSpeedPWM;
-        setSpeedPWM(aRequestedSpeedPWM, DIRECTION_BACKWARD);
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_BACKWARD);
     } else {
-        setSpeedPWM(aRequestedSpeedPWM, DIRECTION_FORWARD);
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_FORWARD);
     }
 }
 
@@ -319,7 +342,7 @@ void PWMDcMotor::setSpeedPWM(int aRequestedSpeedPWM) {
  * Starts motor using current drive speed
  */
 void PWMDcMotor::start(uint8_t aRequestedDirection) {
-    setSpeedPWM(DriveSpeedPWM, aRequestedDirection);
+    setSpeedPWMAndDirection(DriveSpeedPWM, aRequestedDirection);
 }
 
 /*
@@ -338,13 +361,15 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
     CurrentSpeedPWM = 0; // The only statement which sets CurrentSpeedPWM to 0
     MotorPWMHasChanged = true;
     CheckDistanceInUpdateMotor = false;
+#if !defined(DO_NOT_SUPPORT_RAMP)
     MotorRampState = MOTOR_STATE_STOPPED;
+#endif
 
-#ifndef USE_ENCODER_MOTOR_CONTROL
+#if !defined(USE_ENCODER_MOTOR_CONTROL)
     CheckDistanceInUpdateMotor = false;
 #endif
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     PCA9685SetPWM(PWMPin, 0, 0);
 #  else
         Adafruit_MotorShield_DcMotor->setSpeedPWM(0);
@@ -379,7 +404,7 @@ void PWMDcMotor::setStopMode(uint8_t aStopMode) {
 void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
     DriveSpeedPWM = DEFAULT_DRIVE_SPEED_PWM;
     SpeedPWMCompensation = 0;
-#ifndef USE_ENCODER_MOTOR_CONTROL
+#if !defined(USE_ENCODER_MOTOR_CONTROL)
     MillisPerMillimeter = DEFAULT_MILLIS_PER_MILLIMETER;
 #endif
     MotorControlValuesHaveChanged = true;
@@ -409,14 +434,14 @@ void PWMDcMotor::updateDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     MotorControlValuesHaveChanged = true;
     // DriveSpeedPWM = 0 makes no sense and just stops the car
     if (!isStopped() && aDriveSpeedPWM != 0) {
-        setSpeedPWMWithRamp(aDriveSpeedPWM, CurrentDirectionOrBrakeMode);
+        setSpeedPWMAndDirectionWithRamp(aDriveSpeedPWM, CurrentDirectionOrBrakeMode);
     }
 }
 
 /*
  * Changes RequestedDriveSpeedPWM and uses ramp for transitions if it makes sense
  */
-void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+void PWMDcMotor::setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
 #ifdef DEBUG
     Serial.print(PWMPin);
     Serial.print(F(" Set PWM to "));
@@ -430,7 +455,7 @@ void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aReques
     Serial.println();
 #endif
 #if defined(DO_NOT_SUPPORT_RAMP)
-    setSpeedPWM(aRequestedSpeedPWM,aRequestedDirection);
+    setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
 #else
     if (isStopped()) {
         checkAndHandleDirectionChange(aRequestedDirection);
@@ -443,7 +468,7 @@ void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aReques
         /*
          * motor is running, -> just change speed
          */
-        setSpeedPWM(aRequestedSpeedPWM, aRequestedDirection);
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
     }
     // else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
 #  ifdef DEBUG
@@ -458,7 +483,7 @@ void PWMDcMotor::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aReques
  * Takes the current DriveSpeedPWM for ramp up
  */
 void PWMDcMotor::startRampUp(uint8_t aRequestedDirection) {
-    setSpeedPWMWithRamp(DriveSpeedPWM, aRequestedDirection);
+    setSpeedPWMAndDirectionWithRamp(DriveSpeedPWM, aRequestedDirection);
 }
 
 void PWMDcMotor::startRampDown() {
@@ -576,7 +601,7 @@ bool PWMDcMotor::updateMotor() {
         Serial.print(F("Ns="));
         Serial.println(tNewSpeedPWM);
 #endif
-        PWMDcMotor::setSpeedPWM(tNewSpeedPWM, CurrentDirectionOrBrakeMode); // sets MOTOR_STATE_STOPPED if speed is 0
+        PWMDcMotor::setSpeedPWMAndDirection(tNewSpeedPWM, CurrentDirectionOrBrakeMode); // sets MOTOR_STATE_STOPPED if speed is 0
     }
 #endif // #if defined(DO_NOT_SUPPORT_RAMP)
     return (CurrentSpeedPWM > 0); // current speed == 0
@@ -643,7 +668,7 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
         return;
     }
 
-    setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+    setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
     /*
      * Estimate duration for given distance
      * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
@@ -722,20 +747,20 @@ void PWMDcMotor::printSettings(Print *aSerial) {
     aSerial->println(F("Settings (from PWMDcMotor.h):"));
 
     aSerial->print(F("USE_ENCODER_MOTOR_CONTROL:"));
-#ifndef USE_ENCODER_MOTOR_CONTROL
+#if !defined(USE_ENCODER_MOTOR_CONTROL)
     aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
 #endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 
     aSerial->print(F("USE_ADAFRUIT_MOTOR_SHIELD:"));
-#ifndef USE_ADAFRUIT_MOTOR_SHIELD
+#if !defined(USE_ADAFRUIT_MOTOR_SHIELD)
     aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
 #endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     aSerial->print(F("USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD:"));
-#ifndef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#if !defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     aSerial->print(reinterpret_cast<const __FlashStringHelper *>(StringNot));
 #endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));

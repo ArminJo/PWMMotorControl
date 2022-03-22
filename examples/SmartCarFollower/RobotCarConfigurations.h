@@ -40,7 +40,9 @@
 //#define MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION    // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION // Basic + encoder + 4 Wheels + IR distance
 //#define MOTOR_SHIELD_2WD_FULL_CONFIGURATION       // Basic + encoder + VL53L1X TimeOfFlight sensor + MPU6050
-//#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version without shield, with TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
+//#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version with TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
+//#define CAR_HAS_4_MECANUM_WHEELS                  // Nano Breadboard version with 2 TB6612 mosfet bridges, pan servo, MPU6050
+//#define CAR_IS_ESP32_CAM_BASED                    // Car controlled by an ESP32-CAM like https://github.com/ArminJo/ESP32-Cam-Sewer-inspection-car
 //////////////////////////////////////////////////////
 //
 /*

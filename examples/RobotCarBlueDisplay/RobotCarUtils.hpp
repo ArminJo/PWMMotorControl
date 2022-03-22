@@ -43,12 +43,17 @@ void printConfigInfo() {
 void initRobotCarPWMMotorControl() {
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     RobotCarPWMMotorControl.init();
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+    MecanumWheelCarMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
+    FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
+    BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
 #else
     RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
             LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 }
 
+#if !defined(CAR_HAS_4_MECANUM_WHEELS)
 unsigned int getDistanceAndPlayTone() {
     /*
      * Get distance
@@ -68,10 +73,12 @@ unsigned int getDistanceAndPlayTone() {
     unsigned int tCentimeter = getDistanceAsCentimeterAndPlayTone(150, true); // timeout at 150 cm
     return tCentimeter;
 }
+#endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
 /*
  * Check VIN every 2 seconds (PRINT_VOLTAGE_PERIOD_MILLIS) and print if changed
+ * Resolution is 10 mV
  */
 void checkVinPeriodicallyAndPrintIfChanged() {
 #  if defined(ESP32)
@@ -94,6 +101,11 @@ void checkVinPeriodicallyAndPrintIfChanged() {
 //        delay(10);                                      // wait to settle signal
 //        tVINRaw = analogRead(PIN_VIN_11TH_IN);
 #    endif
+//        Serial.print(F("VINRaw="));
+//        Serial.println(tVINRaw);
+        /*
+         * Compute and print if changed
+         */
         if(abs(sLastVINRaw - tVINRaw) > 2) {
             sLastVINRaw = tVINRaw;
             /*

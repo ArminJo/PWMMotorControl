@@ -2,7 +2,7 @@
  *  Start.cpp
  *  Example for controlling 2 motors without using the basic PWMDcMotor class
  *
- *  Copyright (C) 2020-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
@@ -77,12 +77,12 @@ void loop() {
     /*
      * Try start speed (from PWMDCMotor.h), at which the motor starts to move.
      */
-    rightMotor.setSpeedPWM(DEFAULT_START_SPEED_PWM, sMotorDirection);
+    rightMotor.setSpeedPWMAndDirection(DEFAULT_START_SPEED_PWM, sMotorDirection);
     delay(1000);               // wait for a second
     /*
      * Now set speed to the default drive speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
      */
-    rightMotor.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
+    rightMotor.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
     delay(1000);               // wait for a second
     /*
      * Stop motor
@@ -98,9 +98,9 @@ void loop() {
     /*
      * Run left motor
      */
-    leftMotor.setSpeedPWM(DEFAULT_START_SPEED_PWM, sMotorDirection);
+    leftMotor.setSpeedPWMAndDirection(DEFAULT_START_SPEED_PWM, sMotorDirection);
     delay(1000);
-    leftMotor.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
+    leftMotor.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
     delay(1000);
     leftMotor.stop();
     delay(1000);

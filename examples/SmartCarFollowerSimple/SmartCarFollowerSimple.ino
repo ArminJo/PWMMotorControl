@@ -56,6 +56,7 @@
 #include <Servo.h>
 #endif
 #include "HCSR04.h"
+#include "CarPWMMotorControl.h" // helps the eclipse indexer
 #include "CarPWMMotorControl.hpp"
 
 Servo DistanceServo;
@@ -120,7 +121,7 @@ void loop() {
             if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
                 Serial.print(F(" -> go forward")); // print only once at direction change
             }
-            RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+            RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
             tone(PIN_BUZZER, 1500);
 
             // tCentimeter == 0 is timeout
@@ -131,7 +132,7 @@ void loop() {
             if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
                 Serial.print(F(" -> go backward")); // print only once at direction change
             }
-            RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+            RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
             tone(PIN_BUZZER, 666);
 
         } else {

@@ -73,7 +73,9 @@ jobs:
             required-libraries: ESP32Servo # contains analogWrite
             sketches-exclude: PrintMotorDiagram,TestMotorWithIMU,RobotCarBlueDisplay,RobotCarFollower  # no Encoder support yet
             build-properties: # the flags were put in compiler.cpp.extra_flags
+              All: -DCAR_IS_ESP32_CAM_BASED
               RobotCarBlueDisplay:
+                -DCAR_IS_ESP32_CAM_BASED
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
                 -DBREADBOARD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE

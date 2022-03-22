@@ -3,7 +3,7 @@
  *
  * IR remote button codes, strings, and functions to call for quadruped IR control
  *
- *  Copyright (C) 2019-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  * Mapping for controlling a mePed Robot V2 with 8 servos using an IR Remote at pin A0

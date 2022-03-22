@@ -75,11 +75,12 @@
 #define RIGHT_MOTOR_INTERRUPT       INT0 // Pin 2
 #define LEFT_MOTOR_INTERRUPT        INT1 // Pin 3
 #else
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
 #define US_DISTANCE_SENSOR_ENABLE_PIN   3 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
-#endif
+#  endif
+#endif // defined(USE_ENCODER_MOTOR_CONTROL)
 
-#endif
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(ESP32)
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #define IR_INPUT_PIN                9 // on Adafruit Motor Shield marked as Servo Nr. 2
@@ -94,7 +95,7 @@
 #define LEFT_MOTOR_PWM_PIN          6 // ENA - Must be PWM capable
 
 #define IR_INPUT_PIN               11
-#endif
+#endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
 //Servo pins
 #define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield - can be controlled by LightweightServo library
@@ -106,7 +107,7 @@
 #define PIN_BUZZER                 A6
 #else
 #define PIN_BUZZER                 12
-#endif
+#endif // defined(CAR_HAS_TILT_SERVO)
 
 // For HCSR04 ultrasonic distance sensor
 #define PIN_TRIGGER_OUT            A0 // "URF 01 +" Connector on the Arduino Sensor Shield
@@ -114,13 +115,6 @@
 #define PIN_ECHO_IN                A1
 #endif
 #define PIN_IR_DISTANCE_SENSOR     A3 // Sharp IR distance sensor
-
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-// Pin A0 for VCC monitoring - ADC channel 2
-// Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
-#define VIN_11TH_IN_CHANNEL         2 // = A2
-#define PIN_VIN_11TH_IN            A2
-#endif
 
 #if defined(LASER_MOUNTED)
 #define PIN_LASER_OUT               LED_BUILTIN
@@ -130,7 +124,37 @@
 #define PIN_CAMERA_SUPPLY_CONTROL  A7
 #endif
 
-#elif defined(ESP32)
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+// Pin A0 for VCC monitoring - ADC channel 2
+// Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
+#define VIN_11TH_IN_CHANNEL         2 // = A2
+#define PIN_VIN_11TH_IN            A2
+#endif
+#endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(ESP32)
+
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+//2 + 3 are reserved for encoder input
+#define MOTOR_PWM_PIN                   5 // PWMB + PWMA <- Label on the TB6612 board
+
+#define BACK_RIGHT_MOTOR_FORWARD_PIN    4 // BIN1 <- Label on the TB6612 board
+#define BACK_RIGHT_MOTOR_BACKWARD_PIN   6 // BIN2
+#define BACK_LEFT_MOTOR_FORWARD_PIN     7 // AIN1
+#define BACK_LEFT_MOTOR_BACKWARD_PIN    8 // AIN2
+
+#define FRONT_RIGHT_MOTOR_FORWARD_PIN   9 // BIN1 <- Label on the TB6612 board
+#define FRONT_RIGHT_MOTOR_BACKWARD_PIN 10 // BIN2
+#define FRONT_LEFT_MOTOR_FORWARD_PIN   11 // AIN1
+#define FRONT_LEFT_MOTOR_BACKWARD_PIN  12 // AIN2
+#define PIN_DISTANCE_SERVO             13
+
+#define PIN_BUZZER                     A3
+// Pin A0 for VCC monitoring - ADC channel 7
+// Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
+#define VIN_11TH_IN_CHANNEL             7 // = A7
+#define PIN_VIN_11TH_IN                A7
+#endif // defined(CAR_HAS_4_MECANUM_WHEELS)
+
+#if defined(CAR_IS_ESP32_CAM_BASED)
 #define RIGHT_MOTOR_FORWARD_PIN    17 // IN4 <- Label on the L298N board
 #define RIGHT_MOTOR_BACKWARD_PIN   18 // IN3
 #define RIGHT_MOTOR_PWM_PIN        16 // ENB - Must be PWM capable
@@ -149,11 +173,11 @@
 #define PIN_DISTANCE_SERVO         27 // Servo Nr. 2 on Adafruit Motor Shield
 #define PIN_BUZZER                 23
 
-
 // for ESP32 LED_BUILTIN is defined as: static const uint8_t LED_BUILTIN 2
-#if !defined(LED_BUILTIN) && !defined(ESP32)
+#  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
 #define LED_BUILTIN PB1
-#endif
+#  endif
+#endif //defined(ESP32)
 
 #endif /* ROBOT_CAR_PIN_DEFINITIONS_AND_MORE_H */
 #pragma once

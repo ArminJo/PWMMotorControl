@@ -23,8 +23,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef CarPWMMotorControl_H_
-#define CarPWMMotorControl_H_
+#ifndef CAR_PWM_MOTOR_CONTROL_H
+#define CAR_PWM_MOTOR_CONTROL_H
 
 #include "EncoderMotor.h"
 
@@ -70,7 +70,7 @@ public:
     void init();
 #else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
-            uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
+            uint8_t aLeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aRightInterruptNumber,
             uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, uint8_t aLeftInterruptNumber);
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
@@ -185,8 +185,8 @@ public:
      * Functions, which directly call motor functions for both motors
      */
     void setSpeedPWM(int aRequestedSpeedPWM);
-    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWM);
+    void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWMDelta);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
 
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
@@ -203,7 +203,7 @@ public:
 
 extern CarPWMMotorControl RobotCarPWMMotorControl;
 
-#endif /* CarPWMMotorControl_H_ */
+#endif /* CAR_PWM_MOTOR_CONTROL_H */
 
 #pragma once
 

@@ -4,7 +4,7 @@
  *  Encoder and IMU data are printed simultaneously, to compare and to detect slipping
  *
  *
- *  Copyright (C) 2020-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
@@ -132,7 +132,7 @@ void loop() {
                 // print 20 data sets after stopping
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
             } else {
-                CarPWMMotorControl.setSpeedPWM(sSpeedPWM, sDirection);
+                CarPWMMotorControl.setSpeedPWMAndDirection(sSpeedPWM, sDirection);
                 printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
 #if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.println(F("Stop motors"));

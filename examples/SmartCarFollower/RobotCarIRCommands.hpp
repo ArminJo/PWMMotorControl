@@ -57,7 +57,7 @@ void stepDistanceFeedbackMode() {
     sDistanceFeedbackMode++;
     if (sDistanceFeedbackMode > DISTANCE_FEEDBACK_MAX) {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-        noTone (PIN_BUZZER);
+        noTone(PIN_BUZZER);
     }
 }
 
@@ -68,28 +68,28 @@ void stepDistanceSourceMode() {
     Serial.print(sDistanceSourceMode);
     Serial.print(F(" / "));
     switch (sDistanceSourceMode) {
-        case DISTANCE_SOURCE_MODE_MINIMUM:
-            Serial.println(F("Min"));
-            break;
-        case DISTANCE_SOURCE_MODE_MAXIMUM:
-            Serial.println(F("Max"));
-            break;
-        case DISTANCE_SOURCE_MODE_US:
-            Serial.println(F("US"));
-            break;
-        case DISTANCE_SOURCE_MODE_IR_OR_TOF:
-            Serial.println(F("IR"));
-            break;
-        default:
-            sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
-            break;
-        }
+    case DISTANCE_SOURCE_MODE_MINIMUM:
+        Serial.println(F("Min"));
+        break;
+    case DISTANCE_SOURCE_MODE_MAXIMUM:
+        Serial.println(F("Max"));
+        break;
+    case DISTANCE_SOURCE_MODE_US:
+        Serial.println(F("US"));
+        break;
+    case DISTANCE_SOURCE_MODE_IR_OR_TOF:
+        Serial.println(F("IR"));
+        break;
+    default:
+        sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
+        break;
+    }
 }
 #endif
 
 void toggleDistanceScanSpeed() {
     sDoSlowScan = !sDoSlowScan;
-    doBeepFeedback (sDoSlowScan);
+    doBeepFeedback(sDoSlowScan);
 }
 
 void doBeepFeedback(bool aEnableFlag) {
@@ -116,7 +116,8 @@ void doReset() {
     sDistanceSourceMode = DISTANCE_SOURCE_MODE_DEFAULT;
 #endif
     sDoSlowScan = false;
-    noTone (PIN_BUZZER);
+    sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
+    noTone(PIN_BUZZER);
 }
 
 void doDefaultSpeed() {
@@ -159,7 +160,7 @@ void turnRight() {
 }
 
 /*
- * Rotate by 9 times 10 degree in place with slow motion and with normal motion
+ * Rotate by 9 times 10 degree in place with normal and with slow motion
  */
 void testRotation() {
 #define DEGREE_OF_TEST_ROTATION    10
@@ -176,13 +177,13 @@ void testRotation() {
     }
     DELAY_AND_RETURN_IF_STOP(2000);
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, false);
+        RobotCarPWMMotorControl.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     DELAY_AND_RETURN_IF_STOP(2000);
 
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, false);
+        RobotCarPWMMotorControl.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     DELAY_AND_RETURN_IF_STOP(2000);
@@ -206,11 +207,11 @@ void testCommand() {
     uint8_t tDirection = DIRECTION_FORWARD;
     for (int i = 0; i < 2; ++i) {
         RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
-        DELAY_AND_RETURN_IF_STOP(500);
+        DELAY_AND_RETURN_IF_STOP(2000);
         RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
-        DELAY_AND_RETURN_IF_STOP(1000);
+        DELAY_AND_RETURN_IF_STOP(2000);
         RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4, tDirection);
-        DELAY_AND_RETURN_IF_STOP(1000);
+        DELAY_AND_RETURN_IF_STOP(2000);
         RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 2, tDirection);
         DELAY_AND_RETURN_IF_STOP(1000);
         RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, tDirection);

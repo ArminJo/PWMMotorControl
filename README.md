@@ -21,7 +21,9 @@ Available as Arduino library "PWMMotorControl"
 
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
-- `setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWM(int Signed_RequestedSpeedPWM)`.
+- `setDirection(uint8_t aMotorDirection)`.
+- `setSpeed(uint8_t aSpeedPWM)`.
+- `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWM(int Signed_RequestedSpeedPWM)`.
 - `stop()` or `setSpeedPWM(0)`.
 - `startRampUp(uint8_t aRequestedDirection)`, `goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);`,  `startGoDistanceMillimeter(int aRequestedDistanceMillimeter)` and `updateMotor()`.
 - `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for encoder motors or MPU6050 IMU equipped cars.
@@ -41,19 +43,20 @@ Diagram of PWM, speed[rpm] and encoder count for 2 LiPo (7.5 volt) supply and a 
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
-Modify them by commenting them out or in, or change the values if applicable. Or define the macro with the -D compiler option for global compile (the latter is not possible with the Arduino IDE, so consider using [Sloeber](https://eclipse.baeyens.it).<br/>
-Some options which are enabled by default can be disabled by defining a *inhibit* macro like `USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD`.
+These macros must be defined in your program before the line `#include <CarPWMMotorControl.hpp>`, `#include <EncoderMotor.hpp>` or `#include <PWMDcMotor.hpp>`to take effect.<br/>
+Modify them by enabling / disabling them, or change the values if applicable.
 
-| Macro | Default | File | Description |
-|-|-|-|-|
-| `USE_ENCODER_MOTOR_CONTROL` | disabled | PWMDCMotor.h | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
+| Macro | Default | Description |
+|-|-|-|
+| `USE_ENCODER_MOTOR_CONTROL` | disabled | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
 | `USE_MPU6050_IMU` | disabled | CarIMUData.h | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
-| `USE_ACCELERATOR_Y_FOR_SPEED` | undefined | CarIMUData.h | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
-| `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | undefined | CarIMUData.h | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
-| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This disables tone output by using motor as loudspeaker, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, analogWrite the millis() timer0 is used since we use pin 5 & 6. |
-| `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | PWMDcMotor.h | Enabling requires additionally 694 bytes program memory. |
+| `USE_ACCELERATOR_Y_FOR_SPEED` | disabled | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
+| `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | disabled | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
+| `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, the millis() timer0 is used for analogWrite since we use pin 5 & 6. |
+| `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | Enabling requires additionally 694 bytes program memory. |
+| `DO_NOT_SUPPORT_RAMP` | disabled | Enabling saves 378 bytes program memory. |
 
-# Default car geometry dependent values used in this library
+## Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
 | Macro | Default | File | Description |
 |-|-|-|-|
@@ -61,19 +64,19 @@ These values are for a standard 2 WD car as can be seen on the pictures below.
 | `ENCODER_COUNTS_PER_FULL_ROTATION` | 20 | EncoderMotor.h | This value is for 20 slot encoder discs, giving 20 on and 20 off counts per full rotation. |
 | `FACTOR_DEGREE_TO_MILLIMETER_DEFAULT` | 2.2777 for 2 wheel drive cars, 5.0 for 4 WD cars | CarPWMMotorControl.h | Reflects the geometry of the standard 2 WD car sets. The 4 WD car value is estimated for slip on smooth surfaces. |
 
-# Other default values for this library
+## Other default values for this library
 These values are used by functions and some can be overwritten by set* functions.
-| Macro | Default | File | Description |
-|-|-|-|-|
-| `VIN_2_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
-| `VIN_1_LIPO` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 3700. |
-| `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | PWMDCMotor.h | The supply voltage used for the full bridge. |
+| Macro | Default | Description |
+|-|-|-|
+| `VIN_2_LIPO` | undefined | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
+| `VIN_1_LIPO` | undefined | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 3700. |
+| `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | The supply voltage used for the full bridge. |
 | `MOSFET_BRIDGE_USED` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 0. |
-| `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | PWMDCMotor.h | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
-| `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | PWMDCMotor.h | The effective voltage available for the motor. |
-| `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | PWMDCMotor.h | The DC Voltage at which the motor start to move / dead band voltage. |
-| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | PWMDCMotor.h | The derived `DEFAULT_DRIVE_SPEED_PWM` is the speed PWM value used for fixed distance driving. |
-| `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | PWMDCMotor.h | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeedPWM))` |
+| `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
+| `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | The effective voltage available for the motor. |
+| `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | The DC Voltage at which the motor start to move / dead band voltage. |
+| `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | The derived `DEFAULT_DRIVE_SPEED_PWM` is the speed PWM value used for fixed distance driving. |
+| `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`computedMillisOf`<br/>`MotorStopForDistance = 150 + (10 * ((aRequestedDistanceCount * DistanceToTimeFactor) / DriveSpeedPWM))` |
 
 ### Changing include (*.h) files with Arduino IDE
 First, use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>

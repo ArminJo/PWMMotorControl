@@ -56,7 +56,6 @@
 #include "digitalWriteFast.h"
 #include "AvrTracing.h" // Contains function prototypes
 
-#define SUPPRESS_LEADING_ZERO // Suppress leading zero, i.e printPC=0x35A instead of PC=0x035A / costs 36 bytes of program space
 //#define DEBUG_TRACE_INIT // To see internal information at call of initTrace() costs 52 (static) / 196 (dynamic) bytes of program space
 
 /*
@@ -99,6 +98,8 @@ union WordUnionForTracing {
 
 extern volatile unsigned long timer0_millis;
 extern volatile unsigned long timer0_overflow_count;
+uint8_t sPrintCount = 0;
+uint8_t sLastMSBytePrinted = 0;
 
 //uint16_t sCallCount = 0;
 /*
@@ -190,11 +191,10 @@ void INT0_vect(void) {
      * PC (after init()) has value from __bad_interrupt + 2 where e.g. micros() start
      * to __stop_program (== _etext - 2)
      */
-    if (tPC.UWord >= (uint16_t) &__init && tPC.UWord <= (uint16_t) &_etext) {
-        sendPCHex(tPC.UWord); // PC=0x03DC (11 character@115200 baud) => 954,86 us or 1047,2727 Hz rate. But I had to trigger it externally with 1070 Hz to get no misses.
-    } else {
-        sendHex(tPC.UWord, 'X'); // no valid address
+    if (!(tPC.UWord >= (uint16_t) &__init && tPC.UWord <= (uint16_t) &_etext)) {
+        sendUSARTForTrace('X');  // no valid address
     }
+    sendPCHex(tPC.UWord); // PC=0x03DC (11 character@115200 baud) => 954,86 us or 1047,2727 Hz rate. But I had to trigger it externally with 1070 Hz to get no misses.
 
     /*
      * Check for millis() interrupt pending
@@ -273,13 +273,27 @@ __attribute__((optimize("-Os"))) void sendStringForTrace(const char *aStringPtr)
 }
 
 __attribute__((optimize("-Os"))) void sendPCHex(uint16_t aPC) {
-    sendUSARTForTrace('P');
-    sendUSARTForTrace('C');
-    sendUSARTForTrace('=');
-    sendUnsignedIntegerHex(aPC);
-    sendLineFeed();
+    if (sPrintCount == 0) {
+        sendUSARTForTrace('P');
+        sendUSARTForTrace('C');
+        sendUSARTForTrace('=');
+        sendUSARTForTrace('0');
+        sendUSARTForTrace('x');
+        sLastMSBytePrinted = 0;
+    }
+    sendUnsignedInteger(aPC);
+    sendUSARTForTrace(' ');
+    if (sPrintCount > 20) {
+        sPrintCount = -1;
+        sendLineFeed();
+    }
+
+    sPrintCount++;
 }
 
+/*
+ * Not used yet
+ */
 __attribute__((optimize("-Os"))) void sendHex(uint16_t aInteger, char aName) {
     sendUSARTForTrace(aName);
     sendUSARTForTrace('=');
@@ -304,11 +318,11 @@ __attribute__((optimize("-Os"))) void sendHexNoInterrupts(uint16_t aInteger, cha
 __attribute__((optimize("-Os"))) void sendUSARTForTrace(char aChar) {
 // wait for buffer to become empty
 #  if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1284__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega644__) || defined(__AVR_ATmega644A__) || defined(__AVR_ATmega644P__) || defined(__AVR_ATmega644PA__) || defined(ARDUINO_AVR_LEONARDO) || defined(__AVR_ATmega16U4__) || defined(__AVR_ATmega32U4__)
-    // Use TX1 on MEGA and on Leonardo, which has no TX0
-    while (!((UCSR1A) & (1 << UDRE1))) {
-        ;
-    }
-    UDR1 = aChar;
+        // Use TX1 on MEGA and on Leonardo, which has no TX0
+        while (!((UCSR1A) & (1 << UDRE1))) {
+            ;
+        }
+        UDR1 = aChar;
 #  else
     while (!((UCSR0A) & (1 << UDRE0))) {
         ;
@@ -349,18 +363,18 @@ union WordUnionForPrint {
 __attribute__((optimize("-Os"))) void sendUnsignedIntegerHex(uint16_t aInteger) {
     sendUSARTForTrace('0');
     sendUSARTForTrace('x');
-#if defined(SUPPRESS_LEADING_ZERO)
-    WordUnionForPrint tInteger; // saves 6 bytes :-)
-    tInteger.UWord = aInteger;
-    // this suppresses the leading zero, but costs 36 bytes program space
-    if (tInteger.UByte.HighByte >= 0x10) {
-        sendUSARTForTrace(nibbleToHex(tInteger.UByte.HighByte >> 4));
-    }
-    sendUSARTForTrace(nibbleToHex(tInteger.UByte.HighByte));
-#else
     sendUnsignedByteHex(aInteger >> 8);
-#endif
     sendUnsignedByteHex(aInteger);
+}
+
+__attribute__((optimize("-Os"))) void sendUnsignedInteger(uint16_t aInteger) {
+    WordUnionForPrint tInteger; // saves 6 bytes
+    tInteger.UWord = aInteger;
+    if (sLastMSBytePrinted != tInteger.UByte.HighByte) {
+        sLastMSBytePrinted = tInteger.UByte.HighByte;
+        sendUnsignedByteHex(tInteger.UByte.HighByte);
+    }
+    sendUnsignedByteHex(tInteger.UByte.LowByte);
 }
 
 /*

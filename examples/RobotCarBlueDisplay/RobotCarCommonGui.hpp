@@ -191,7 +191,7 @@ void startStopRobotCar(bool aDoStart) {
             /*
              * Start car to last speed slider value
              */
-            RobotCarPWMMotorControl.setSpeedPWM(sLastSpeedSliderValue, sRobotCarDirection);
+            RobotCarPWMMotorControl.setSpeedPWMAndDirection(sLastSpeedSliderValue, sRobotCarDirection);
             tSpeedSliderValue = sLastSpeedSliderValue;
         }
     } else {
@@ -252,7 +252,7 @@ void doSpeedSlider(BDSlider *aTheTouchedSlider, uint16_t aValue) {
             // handle GUI
             startStopRobotCar(true);
         } else {
-            RobotCarPWMMotorControl.setSpeedPWM(aValue, sRobotCarDirection);
+            RobotCarPWMMotorControl.setSpeedPWMAndDirection(aValue, sRobotCarDirection);
         }
     }
 }

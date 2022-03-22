@@ -4,7 +4,7 @@
  *  Template for your RobotCar control.
  *  Currently implemented is: drive until distance too low, then stop, and turn random amount.
  *
- *  Copyright (C) 2020  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -24,7 +24,7 @@
 
 //#define USE_ADAFRUIT_MOTOR_SHIELD
 /*
- * Car configuration
+ * Car pin configuration
  */
 #include "RobotCarPinDefinitionsAndMore.h"
 
@@ -138,7 +138,7 @@ void simpleObjectAvoidance() {
          */
         RobotCarPWMMotorControl.stop();
         delay(1000);
-        RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+        RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
         delay(200);
         RobotCarPWMMotorControl.stop();
         delay(1000);
@@ -152,7 +152,7 @@ void simpleObjectAvoidance() {
         Serial.println(" degree");
         RobotCarPWMMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
-        RobotCarPWMMotorControl.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+        RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 
     delay(50); // Wait until next distance sample

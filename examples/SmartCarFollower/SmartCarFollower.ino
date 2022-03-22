@@ -36,15 +36,19 @@
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
 
+#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+#undef USE_MPU6050_IMU
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
- * Enable functionality of this program
+ * Enable VCC monitoring if possible
  */
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#define MONITOR_VIN_VOLTAGE
+#define MONITOR_VIN_VOLTAGE // Enable if by default, if available
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+#include "ADCUtils.h"
 #endif
 
 /*
@@ -60,10 +64,6 @@
 #include "CarPWMMotorControl.hpp"
 #include "HCSR04.h"
 #include "pitches.h"
-
-#if defined(MONITOR_VIN_VOLTAGE)
-#include "ADCUtils.h"
-#endif
 
 /*
  * Speed compensation to enable driving straight ahead.
@@ -87,13 +87,12 @@
 #define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER    70 // assume that target moved to side, and search
 
 #define USE_STANDARD_SERVO_LIBRARY // we have enough memory, so make it simple and do not use LightweightServo library here
-#include "Distance.h" // helps the eclipse indexer
 #include "Distance.hpp" // provides DistanceServo definition and uses FOLLOWER_DISTANCE_MINIMUM_CENTIMETER definition
 
 #if defined(USE_IR_REMOTE)
 #define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
 #include "IRCommandDispatcher.h" // for RETURN_IF_STOP
-#include "RobotCarIRCommands.hpp" // requires #include "Distance.h"
+#include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
 #define INFO
 #include "IRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
 #include "IRCommandDispatcher.hpp"
@@ -118,11 +117,10 @@ void setup() {
     RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 
     /*
-     * Set US servo to forward position and set US distance sensor pins
+     * Initialize US servo and set to forward position
      */
-    DistanceServo.attach(PIN_DISTANCE_SERVO);
-    DistanceServo.write(90);
-    initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
+    initDistance();
+    DistanceServoWriteAndDelay(90);
 
     /*
      * Tone feedback for end of boot
@@ -159,11 +157,11 @@ void setup() {
     /*
      * Servo feedback for start of loop
      */
-    DistanceServo.write(135);
+    DistanceServoWriteAndDelay(135);
     delay(500);
-    DistanceServo.write(45);
+    DistanceServoWriteAndDelay(45);
     delay(500);
-    DistanceServo.write(90);
+    DistanceServoWriteAndDelay(90);
     delay(500);
     Serial.println(F("Start loop"));
 }
@@ -183,8 +181,8 @@ void loop() {
     // we can enable / disable follower / distance (no turn) mode by IR
     if (sEnableKeepDistance || sEnableFollower) {
         doFollowerOneStep(tCentimeter);
-    } else {
-        Serial.println(); // Terminate the printed line
+    } else if(sDistanceChanged){
+        Serial.println(); // Terminate the printed distance line
     }
 #else
     doFollowerOneStep(tCentimeter);
@@ -267,7 +265,7 @@ void doFollowerOneStep(unsigned int aCentimeter) {
             RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
                 DIRECTION_BACKWARD);
 #else
-                RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_BACKWARD);
+                RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_BACKWARD);
 #endif
 
             } else if (aCentimeter <= FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
@@ -301,7 +299,7 @@ void doFollowerOneStep(unsigned int aCentimeter) {
             RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
                                     DIRECTION_FORWARD);
 #else
-                RobotCarPWMMotorControl.setSpeedPWM(tSpeedPWM, DIRECTION_FORWARD);
+                RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_FORWARD);
 #endif
             }
             Serial.println(); // Terminate the printed line

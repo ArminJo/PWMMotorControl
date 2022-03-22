@@ -26,6 +26,7 @@
 #define ROBOT_CAR_DISTANCE_HPP
 
 #include "Distance.h"
+
 #if !defined(USE_STANDARD_SERVO_LIBRARY)
 #include "LightweightServo.hpp"
 #endif
@@ -62,6 +63,9 @@ VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
  * This initializes the pins too
  */
 void initDistance() {
+#if defined(USE_STANDARD_SERVO_LIBRARY)
+    DistanceServo.attach(PIN_DISTANCE_SERVO);
+#endif
 #if defined(US_SENSOR_SUPPORTS_1_PIN_MODE)
     initUSDistancePin (PIN_TRIGGER_OUT);
 #else
@@ -699,7 +703,7 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
     /*
      * Get distance
      */
-    unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true);
+    unsigned int tCentimeter = getDistanceAsCentimeter(aDistanceTimeoutCentimeter, aWaitForCurrentMeasurementToEnd);
 #if defined(USE_BLUE_DISPLAY_GUI)
             showUSDistance();
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -713,7 +717,7 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
          */
         if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
             if (tCentimeter == 0) {
-                noTone (PIN_BUZZER);
+                noTone(PIN_BUZZER);
             } else {
                 int tFrequency;
                 if (sDistanceFeedbackMode == DISTANCE_FEEDBACK_PENTATONIC) {

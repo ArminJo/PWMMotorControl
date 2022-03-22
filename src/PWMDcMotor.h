@@ -14,7 +14,7 @@
  * With encoder: - distance is measured by Encoder.
  *
  *
- *  Copyright (C) 2019-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -51,7 +51,6 @@
  * Enabling it will overload some PWMDCMotor class functions and force the usage of the EncoderMotor class in CarPWMMotorControl.
  */
 //#define USE_ENCODER_MOTOR_CONTROL
-
 //#define USE_ADAFRUIT_MOTOR_SHIELD // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
@@ -68,6 +67,8 @@
 #define USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 #endif
 
+//#define DO_NOT_SUPPORT_RAMP // saves 320 bytes programming space
+
 //#define VIN_2_LIPO // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
 //#define VIN_1_LIPO // Or if you use a Mosfet bridge, 1 LIPO may be sufficient.
 /*
@@ -76,6 +77,18 @@
 #if !defined(STR_HELPER)
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
+#endif
+
+// Propagate debug level
+#ifdef TRACE    // Information you need to understand details of a function or if you hunt a bug.
+#  ifndef DEBUG
+#define DEBUG   // Information need to understand the operating of your program. E.g. function calls and values of control variables.
+#  endif
+#endif
+#ifdef DEBUG
+#  ifndef INFO
+#define INFO    // Information you want to see in regular operation to see what the program is doing. E.g. "START ../src/LightToTone.cpp Version 1.2 from Dec 31 2019" or "Now playing Muppets melody".
+#  endif
 #endif
 
 #define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"
@@ -148,7 +161,11 @@
  * This corresponds to 5 cm/s every 20 ms
  */
 #define RAMP_INTERVAL_MILLIS             20 // The smaller the value the steeper the ramp
-#define RAMP_VALUE_OFFSET_MILLIVOLT      2300 // Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+/*
+ * Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
+ * The value must be low enough to avoid spinning wheels
+ */
+#define RAMP_VALUE_OFFSET_MILLIVOLT      2300
 #define RAMP_VALUE_OFFSET_SPEED_PWM      ((RAMP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define RAMP_VALUE_MIN_SPEED_PWM         (DEFAULT_DRIVE_SPEED_PWM / 2) // Minimal speed, if motor is still turning
 #define RAMP_VALUE_DELTA                 (SPEED_FOR_8_VOLT / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 8V/s = 0.8 volt per 100 ms
@@ -162,16 +179,31 @@
 #define DIRECTION_MASK      1
 #define oppositeDIRECTION(aDirection) (aDirection ^ DIRECTION_BACKWARD)
 
-#define MOTOR_BRAKE         2
-#define MOTOR_RELEASE       3
-#define STOP_MODE_KEEP      0
-#define STOP_MODE_AND_MASK  0x03
-#define STOP_MODE_OR_MASK   0x02
-#define DEFAULT_STOP_MODE   MOTOR_RELEASE
-#define ForceStopMODE(aStopMode) ((aStopMode & STOP_MODE_AND_MASK) | STOP_MODE_OR_MASK)
+#define DIRECTION_STOP      2   // like MOTOR_BRAKE
+#define DIRECTION_FORWARD_BACKWARD_STOP_MASK   2
+
+#define MOTOR_BRAKE                     2
+#define MOTOR_RELEASE                   3
+#define STOP_MODE_KEEP                  0
+#define DIRECTION_AND_STOP_MODE_MASK    0x03
+#define STOP_MODE_MASK                  0x02
+#define DEFAULT_STOP_MODE               MOTOR_RELEASE
+#define ForceStopMODE(aStopMode)        ((aStopMode & DIRECTION_AND_STOP_MODE_MASK) | STOP_MODE_MASK)
 #ifdef DEBUG
 extern char sMotorModeCharArray[4];
 #endif
+
+/*
+ * Extension for mecanum wheel movements
+ * They are coded as bit positions
+ */
+#define DIRECTION_STRAIGHT          0x00
+#define DIRECTION_LEFT              0x10
+#define DIRECTION_RIGHT             0x20
+#define DIRECTION_LEFT_RIGHT_MASK   (DIRECTION_LEFT | DIRECTION_RIGHT)
+#define DIRECTION_TURN              0x40
+#define DIRECTION_TURN_MASK         DIRECTION_TURN
+#define DIRECTION_NOT_TURN          0x00
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #include <Wire.h>
@@ -234,10 +266,13 @@ public:
     /*
      * Basic motor commands
      */
+    void setDirection(uint8_t aMotorDirection); // alias for setMotorDriverMode()
+    void setSpeed(uint8_t aRequestedSpeedPWM);
+
     void setSpeedPWM(int aRequestedSpeedPWM);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
-    void setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
+    void setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
 
     void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
 
@@ -287,7 +322,7 @@ public:
     /*
      * Internal functions
      */
-    void setMotorDriverMode(uint8_t cmd);
+    void setMotorDriverMode(uint8_t aMotorDriverMode);
     bool checkAndHandleDirectionChange(uint8_t aRequestedDirection);
 
 #if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) || defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
@@ -323,6 +358,7 @@ public:
 
     bool CheckDistanceInUpdateMotor;
 
+#if !defined(DO_NOT_SUPPORT_RAMP)
     /*
      * For ramp control
      */
@@ -330,6 +366,7 @@ public:
     uint8_t RequestedDriveSpeedPWM; // DriveSpeedPWM - SpeedPWMCompensation; The DriveSpeedPWM used for current movement. Can be set for eg. turning which better performs with reduced DriveSpeedPWM
 
     unsigned long NextRampChangeMillis;
+#endif
 
 #ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
@@ -339,7 +376,7 @@ public:
 };
 
 /*
- * Version 2.0.0 - 10/2021
+ * Version 2.0.0 - 03/2022
  * - Removed all *Compensated functions, compensation now is always active.
  * - Removed StopSpeed from EepromMotorinfoStruct.
  * - Removed StartSpeed.
