@@ -40,22 +40,22 @@
 //#define MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION    // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION // Basic + encoder + 4 Wheels + IR distance
 //#define MOTOR_SHIELD_2WD_FULL_CONFIGURATION       // Basic + encoder + VL53L1X TimeOfFlight sensor + MPU6050
-//#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version with TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
-//#define CAR_HAS_4_MECANUM_WHEELS                  // Nano Breadboard version with 2 TB6612 mosfet bridges, pan servo, MPU6050
+//#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
 //#define CAR_IS_ESP32_CAM_BASED                    // Car controlled by an ESP32-CAM like https://github.com/ArminJo/ESP32-Cam-Sewer-inspection-car
 //////////////////////////////////////////////////////
 //
 /*
  * Distinct parameters for car control boards, sensors and extensions
  */
-//#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 //#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
+//#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 //#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 //#define CAR_HAS_IR_DISTANCE_SENSOR      // Use a Sharp GP2Y0A21YK / 1080 IR distance sensor
 //#define CAR_HAS_TOF_DISTANCE_SENSOR     // Use a VL53L1X TimeOfFlight distance sensor
 // Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin.
 //#define US_SENSOR_SUPPORTS_1_PIN_MODE   // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones.
 //#define CAR_HAS_4_WHEELS
+//#define CAR_HAS_4_MECANUM_WHEELS
 //
 // For pan tilt we have 2 servos in total
 //#define CAR_HAS_PAN_SERVO
@@ -63,10 +63,14 @@
 //#define CAR_HAS_CAMERA
 //#define CAR_HAS_LASER
 /*
+ *
+ */
+//#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies MOSFET_BRIDGE_USED and VIN_VOLTAGE_CORRECTION.
+/*
  * Parameters for PWMMotorControl
  */
 //#define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
-//#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+//#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 with 2xTB6612 connected by I2C instead of external TB6612 or L298 breakout board.
 //#define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 //#define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
 //#define VIN_1_LIPO                  // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
@@ -172,15 +176,15 @@
 #endif
 
 /*
- * Nano Breadboard version without shield and with pan/tilt servo and MPU camera and laser
+ * Nano Breadboard version with Arduino NANO, without shield and with pan/tilt servo and MPU camera and laser
  */
 #if defined(BREADBOARD_FULL_CONFIGURATION)
+#define CAR_IS_NANO_BASED
 #define CAR_HAS_4_WHEELS
 #define CAR_HAS_PAN_SERVO
 #define CAR_HAS_TILT_SERVO
 #define CAR_HAS_CAMERA
 #define LASER_MOUNTED
-#define MOSFET_BRIDGE_USED          // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
 #define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
 #define VIN_VOLTAGE_CORRECTION 0.81 // Correction for the series SI-diode in the VIN line of the UNO board
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
@@ -189,6 +193,17 @@
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 #define BASIC_CONFIG_NAME   "Bradboard TB6612  + 2 Li-ion + VIN divider + Servo head down + MPU6050"
 #endif
+
+/*
+ * Some rules
+ */
+#if defined(CAR_IS_NANO_BASED)
+#define MOSFET_BRIDGE_USED          // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
+#  if !defined(VIN_VOLTAGE_CORRECTION)
+#define VIN_VOLTAGE_CORRECTION 0.81 // Correction for the series SI-diode in the VIN line of the UNO board
+#  endif
+#endif
+
 
 // Default case
 #if !defined(BASIC_CONFIG_NAME) // use L298_BASIC_2WD_4AA_CONFIGURATION as default

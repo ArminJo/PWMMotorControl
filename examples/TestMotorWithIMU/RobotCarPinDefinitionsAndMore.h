@@ -62,12 +62,12 @@
  * PIN  I/O Function
  *  A0  O   US trigger (and echo in 1 pin US sensor mode) "URF 01 +" connector on the Arduino Sensor Shield
  *  A1  I   US echo / IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
- *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE
- *  A3  I   IR distance
+ *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE, camera supply control on NANO
+ *  A3  I   IR distance, Buzzer on NANO
  *  A4  SDA I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
  *  A5  SCL I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
- *  A6  O   Buzzer if pin 12 is not available for Nano boards with a 328PB chip
- *  A7  O   Camera supply control for Nano boards with a 328PB chip
+ *  A6  O   Only on NANO - IR distance
+ *  A7  O   Only on NANO - VIN/11, 1MOhm to VIN, 100kOhm to ground
  */
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
@@ -80,7 +80,7 @@
 #  endif
 #endif // defined(USE_ENCODER_MOTOR_CONTROL)
 
-#if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(ESP32)
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #define IR_INPUT_PIN                9 // on Adafruit Motor Shield marked as Servo Nr. 2
@@ -104,24 +104,16 @@
 #endif
 #if defined(CAR_HAS_TILT_SERVO)
 #define PIN_TILT_SERVO             12
-#define PIN_BUZZER                 A6
-#else
-#define PIN_BUZZER                 12
-#endif // defined(CAR_HAS_TILT_SERVO)
+#endif
 
 // For HCSR04 ultrasonic distance sensor
 #define PIN_TRIGGER_OUT            A0 // "URF 01 +" Connector on the Arduino Sensor Shield
 #if !defined(US_SENSOR_SUPPORTS_1_PIN_MODE)
 #define PIN_ECHO_IN                A1
 #endif
-#define PIN_IR_DISTANCE_SENSOR     A3 // Sharp IR distance sensor
 
 #if defined(LASER_MOUNTED)
 #define PIN_LASER_OUT               LED_BUILTIN
-#endif
-
-#if defined(CAR_HAS_CAMERA)
-#define PIN_CAMERA_SUPPLY_CONTROL  A7
 #endif
 
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
@@ -130,7 +122,7 @@
 #define VIN_11TH_IN_CHANNEL         2 // = A2
 #define PIN_VIN_11TH_IN            A2
 #endif
-#endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(ESP32)
+#endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 //2 + 3 are reserved for encoder input
@@ -147,12 +139,26 @@
 #define FRONT_LEFT_MOTOR_BACKWARD_PIN  12 // AIN2
 #define PIN_DISTANCE_SERVO             13
 
+// Temporarily definition for convenience
+#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies MOSFET_BRIDGE_USED and VIN_VOLTAGE_CORRECTION.
+#endif // defined(CAR_HAS_4_MECANUM_WHEELS)
+
+#if defined(CAR_IS_NANO_BASED)
 #define PIN_BUZZER                     A3
+#define PIN_IR_DISTANCE_SENSOR         A6 // Sharp IR distance sensor
+
 // Pin A0 for VCC monitoring - ADC channel 7
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_11TH_IN_CHANNEL             7 // = A7
 #define PIN_VIN_11TH_IN                A7
-#endif // defined(CAR_HAS_4_MECANUM_WHEELS)
+#  if defined(CAR_HAS_CAMERA)
+#define PIN_CAMERA_SUPPLY_CONTROL      A2
+#  endif
+#else
+// UNO based
+#define PIN_BUZZER                     12
+#define PIN_IR_DISTANCE_SENSOR         A3 // Sharp IR distance sensor
+#endif
 
 #if defined(CAR_IS_ESP32_CAM_BASED)
 #define RIGHT_MOTOR_FORWARD_PIN    17 // IN4 <- Label on the L298N board
