@@ -119,7 +119,7 @@ void loop() {
             /*
              * Target too far -> drive forward
              */
-            if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
+            if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_FORWARD) {
                 Serial.print(F(" -> go forward")); // print only once at direction change
             }
             RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
@@ -130,7 +130,7 @@ void loop() {
             /*
              * Target too close -> drive backwards
              */
-            if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
+            if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_BACKWARD) {
                 Serial.print(F(" -> go backward")); // print only once at direction change
             }
             RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
@@ -142,7 +142,7 @@ void loop() {
              */
             if (!RobotCarPWMMotorControl.isStopped()) {
                 Serial.print(F(" -> now stop")); // stop only once
-                RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+                RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
             }
             if (tCentimeter == 0) {
                 // distance timeout here

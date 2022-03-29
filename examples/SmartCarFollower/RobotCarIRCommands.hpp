@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef ROBOT_CAR_IR_COMMANDS_HPP
-#define ROBOT_CAR_IR_COMMANDS_HPP
+#ifndef _ROBOT_CAR_IR_COMMANDS_HPP
+#define _ROBOT_CAR_IR_COMMANDS_HPP
 
 #include <Arduino.h>
 
@@ -221,5 +221,5 @@ void testCommand() {
     }
 }
 
-#endif // #ifndef ROBOT_CAR_IR_COMMANDS_HPP
+#endif // _ROBOT_CAR_IR_COMMANDS_HPP
 #pragma once

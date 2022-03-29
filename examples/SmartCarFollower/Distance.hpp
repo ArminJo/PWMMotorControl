@@ -22,8 +22,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_DISTANCE_HPP
-#define ROBOT_CAR_DISTANCE_HPP
+#ifndef _ROBOT_CAR_DISTANCE_HPP
+#define _ROBOT_CAR_DISTANCE_HPP
 
 #include "Distance.h"
 
@@ -49,10 +49,12 @@ unsigned int sLastEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
 
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
-#if defined(USE_STANDARD_SERVO_LIBRARY)
+#if defined(CAR_HAS_DISTANCE_SERVO)
+#  if defined(USE_STANDARD_SERVO_LIBRARY)
 Servo DistanceServo;
+#  endif
+uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 #endif
-uint8_t sLastServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
@@ -63,9 +65,10 @@ VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
  * This initializes the pins too
  */
 void initDistance() {
-#if defined(USE_STANDARD_SERVO_LIBRARY)
+#if defined(CAR_HAS_DISTANCE_SERVO) && defined(USE_STANDARD_SERVO_LIBRARY)
     DistanceServo.attach(PIN_DISTANCE_SERVO);
 #endif
+
 #if defined(US_SENSOR_SUPPORTS_1_PIN_MODE)
     initUSDistancePin (PIN_TRIGGER_OUT);
 #else
@@ -93,11 +96,237 @@ void initDistance() {
 #endif
 }
 
+unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
+    /*
+     * Get distance
+     */
+    unsigned int tCentimeter = getDistanceAsCentimeter(aDistanceTimeoutCentimeter, aWaitForCurrentMeasurementToEnd);
+#if defined(USE_BLUE_DISPLAY_GUI)
+            showUSDistance();
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+            showIROrTofDistance();
+#  endif
+#endif
+    if (sLastEffectiveDistanceCentimeter != tCentimeter) {
+        sLastEffectiveDistanceCentimeter = tCentimeter;
+        /*
+         * Play tone
+         */
+        if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
+            if (tCentimeter == 0) {
+                noTone(PIN_BUZZER);
+            } else {
+                int tFrequency;
+                if (sDistanceFeedbackMode == DISTANCE_FEEDBACK_PENTATONIC) {
+                    /*
+                     * Map distance to an index in a pentatonic pitch table
+                     */
+                    uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
+                    if (tIndex > ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1) {
+                        tIndex = ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1;
+                    }
+                    tFrequency = NoteC5ToC7Pentatonic[tIndex]; // 523 to 2093 Hz for 0 to 100 cm
+                } else {
+                    /*
+                     * Play feedback tone proportional to measured distance
+                     */
+#if defined(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) && defined(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER)
+                if(tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER){
+                    tFrequency = map(tCentimeter, 0, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, 100, 200);
+                } else if(tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER){
+                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 200, 2000, 6000);
+                } else {
+                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 440, 880); // 1 octaves for gap
+                }
+#else
+                    tFrequency = map(tCentimeter, 0, 100, 110, 7040); // 6 octaves per meter
+#endif
+                }
+                tone(PIN_BUZZER, tFrequency);
+            }
+        }
+    }
+    return tCentimeter;
+}
+
+/*
+ * Print without a newline
+ * @return true if distance has changed and was printed
+ */
+bool printDistanceIfChanged(Print *aSerial) {
+    static unsigned int sLastPrintedDistanceCentimeter;
+
+    if (sLastPrintedDistanceCentimeter != sEffectiveDistanceCentimeter) {
+        sLastPrintedDistanceCentimeter = sEffectiveDistanceCentimeter;
+        if (sEffectiveDistanceCentimeter == 0) {
+            aSerial->print("Distance timeout ");
+        } else {
+            aSerial->print("Distance=");
+            aSerial->print(sEffectiveDistanceCentimeter);
+            aSerial->print("cm");
+        }
+        return true;
+    }
+    return false;
+}
+
+/*
+ * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
+ * @param doShow show distance value in the GUI
+ * @return 0 for timeout
+ */
+unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
+#if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
+    (void) aWaitForCurrentMeasurementToEnd; // suppress compiler warnings
+#endif
+#if (defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+    if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
+        sToFDistanceSensor.VL53L1X_StartRanging(); // start TOF measurement at start of function
+    }
+#endif
+
+    /*
+     * Always get US distance
+     */
+    unsigned int tCentimeterToReturn = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeoutCentimeter);
+
+    sUSDistanceCentimeter = tCentimeterToReturn;
+#if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+    sIROrTofDistanceCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
+#  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+    sIROrTofDistanceCentimeter = readToFDistanceAsCentimeter();
+#  endif
+    /*
+     * IR or TOF sensor is used, we check for distance source mode
+     * (take IR or minimum or maximum of the US and (IR or TOF) values)
+     */
+    if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_IR_OR_TOF) {
+        tCentimeterToReturn = sIROrTofDistanceCentimeter;
+    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MINIMUM) {
+        // Scan mode MINIMUM => Take the minimum of the US and IR or TOF values
+        if (tCentimeterToReturn > sIROrTofDistanceCentimeter) {
+            tCentimeterToReturn = sIROrTofDistanceCentimeter;
+        }
+    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MAXIMUM) {
+        // Scan mode MAXIMUM => Take the maximum of the US and IR or TOF values
+        if (tCentimeterToReturn < sIROrTofDistanceCentimeter) {
+            tCentimeterToReturn = sIROrTofDistanceCentimeter;
+        }
+    }
+#endif
+    sEffectiveDistanceCentimeter = tCentimeterToReturn;
+    return tCentimeterToReturn;
+}
+
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
+#define IR_SENSOR_TYPE_1080
+#  endif
+/*
+ * The Sharp 1080 takes 39 ms for each measurement cycle
+ */
+uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
+    if (aWaitForCurrentMeasurementToEnd) {
+        /*
+         * Check for a voltage change which indicates that a new measurement is started
+         */
+        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+        uint32_t tStartMillis = millis();
+        do {
+            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+            if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
+                // assume, that voltage has changed because of the end of a measurement
+                break;
+            }
+#if defined(USE_BLUE_DISPLAY_GUI)
+            loopGUI();
+#endif
+        } while (millis() - tStartMillis <= IR_SENSOR_MEASUREMENT_TIME_MILLIS);
+        // now a new measurement has started, wait for the result
+#if defined(USE_BLUE_DISPLAY_GUI)
+        delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
+#else
+        delay(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
+#endif
+    }
+
+    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
+    // tVolt * 0.004887585 = 5(V) for tVolt == 1023
+
+#  if defined(IR_SENSOR_TYPE_430) // 4 to 30 cm, 18 ms, GP2YA41SK0F
+    return (12.08 * pow(tVolt * 0.004887585, -1.058)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+
+#  elif defined(IR_SENSOR_TYPE_1080) // 10 to 80 cm, GP2Y0A21YK0F
+    return (29.988 * pow(tVolt * 0.004887585, -1.173)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+//    return 4800/(analogRead(PIN_IR_DISTANCE_SENSOR)-20);    // see https://github.com/qub1750ul/Arduino_SharpIR/blob/master/src/SharpIR.cpp
+
+#  elif defined(IR_SENSOR_TYPE_20150) // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
+    // Model 20150 - Do not forget to add at least 100uF capacitor between the Vcc and GND connections on the sensor
+    return (60.374 * pow(tVolt * 0.004887585, -1.16)) + 0.5;// see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
+
+#  elif defined(IR_SENSOR_TYPE_100550) // GP2Y0A02YK0F // 100 to 550 cm, 18 ms, GP2Y0A710K0F
+    return 1.0 / (((tVolt * 0.004887585 - 1.1250)) / 137.5);
+#  endif
+}
+#endif // CAR_HAS_IR_DISTANCE_SENSOR
+
+#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+/*
+ * No start of measurement, just read result.
+ */
+uint8_t readToFDistanceAsCentimeter() {
+    uint8_t i = 0; // for timeout
+
+    // we have set  a timing budget of 33 ms
+    while (i < 20) {
+        uint8_t tDataReady;
+//        sToFDistanceSensor.VL53L1X_CheckForDataReady(&tDataReady); // checkForDataReady needs 1.1 ms
+        sToFDistanceSensor.VL53L1_RdByte(sToFDistanceSensor.Device, GPIO__TIO_HV_STATUS, &tDataReady);
+        if (tDataReady & 1) {
+            break;
+        }
+#  if defined(USE_BLUE_DISPLAY_GUI)
+        delayAndLoopGUI(4);
+#else
+        delay(4);
+#endif
+        i++;
+    }
+
+    // Here GPIO__TIO_HV_STATUS is 0x03
+    sToFDistanceSensor.VL53L1X_ClearInterrupt(); // I2C 0086 + 0x01
+    // Now GPIO__TIO_HV_STATUS is 0x02
+    uint8_t tStatus;
+//    sToFDistanceSensor.VL53L1X_GetRangeStatus(&tStatus);
+    uint16_t tDistance;
+    sToFDistanceSensor.VL53L1X_GetDistance(&tDistance); //Get the result of the measurement from the sensor in millimeter
+    sToFDistanceSensor.VL53L1X_GetRangeStatus(&tStatus); // I2c 0x0089 -> 0x09
+    if (tStatus != 0) {
+        if (tStatus == 4) {
+            // Wrap around in mode short -> more than 130 cm
+            tDistance = 1300;
+        } else {
+            tDistance = 10;
+        }
+    }
+//    tone(SPEAKER_PIN, tDistance + 500);
+    return tDistance / 10;
+}
+
+uint8_t getToFDistanceAsCentimeter() {
+//    sToFDistanceSensor.VL53L1X_StartRanging();
+    return readToFDistanceAsCentimeter();
+}
+
+#endif // CAR_HAS_TOF_DISTANCE_SENSOR
+
+#if defined(CAR_HAS_DISTANCE_SERVO)
 //#define USE_OVERSHOOT_FOR_FAST_SERVO_MOVING
 /*
- * sets also sLastServoAngleInDegrees to enable optimized servo movement and delays
+ * sets also sLastDistanceServoAngleInDegrees to enable optimized servo movement and delays
  * SG90 Micro Servo has reached its end position if the current (200 mA) is low for more than 11 to 14 ms
- * No action if aTargetDegrees == sLastServoAngleInDegrees
+ * No action if aTargetDegrees == sLastDistanceServoAngleInDegrees
  */
 void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 
@@ -113,8 +342,8 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 #if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
     int8_t tOvershootDegrees; // Experimental
 #endif
-    uint8_t tLastServoAngleInDegrees = sLastServoAngleInDegrees;
-    sLastServoAngleInDegrees = aTargetDegrees;
+    uint8_t tLastServoAngleInDegrees = sLastDistanceServoAngleInDegrees;
+    sLastDistanceServoAngleInDegrees = aTargetDegrees;
 
     if (tLastServoAngleInDegrees == aTargetDegrees) {
         return;
@@ -178,7 +407,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 #if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
             tWaitDelayforServo = tDeltaDegrees * 5;
 #else
-#  ifdef CAR_HAS_IR_DISTANCE_SENSOR
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
             tWaitDelayforServo = tDeltaDegrees * 9; // 9 => 162 ms for 18 degrees
 #  else
             tWaitDelayforServo = tDeltaDegrees * 8; // 7 => 128 ms, 8 => 144 for 18 degrees
@@ -205,7 +434,7 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
     /*
      * Set start values according to last servo position
      */
-    if (sLastServoAngleInDegrees < 90) {
+    if (sLastDistanceServoAngleInDegrees < 90) {
         // Start searching at right
         tServoDegreeToScan = 70;
         tDeltaDegree = 20;
@@ -314,7 +543,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
     // mark ProcessedDistancesArray as invalid
     sForwardDistancesInfo.ProcessedDistancesArray[0] = 0;
 
-    if (sLastServoAngleInDegrees >= 180 - (START_DEGREES + 2)) {
+    if (sLastDistanceServoAngleInDegrees >= 180 - (START_DEGREES + 2)) {
 // values for backward scanning
         tCurrentDegrees = 180 - START_DEGREES;
         tDegreeIncrement = -(tDegreeIncrement);
@@ -698,230 +927,7 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
         }
     }
 }
+#endif // defined(CAR_HAS_DISTANCE_SERVO)
 
-unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
-    /*
-     * Get distance
-     */
-    unsigned int tCentimeter = getDistanceAsCentimeter(aDistanceTimeoutCentimeter, aWaitForCurrentMeasurementToEnd);
-#if defined(USE_BLUE_DISPLAY_GUI)
-            showUSDistance();
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
-            showIROrTofDistance();
-#  endif
-#endif
-    if (sLastEffectiveDistanceCentimeter != tCentimeter) {
-        sLastEffectiveDistanceCentimeter = tCentimeter;
-        /*
-         * Play tone
-         */
-        if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
-            if (tCentimeter == 0) {
-                noTone(PIN_BUZZER);
-            } else {
-                int tFrequency;
-                if (sDistanceFeedbackMode == DISTANCE_FEEDBACK_PENTATONIC) {
-                    /*
-                     * Map distance to an index in a pentatonic pitch table
-                     */
-                    uint8_t tIndex = map(tCentimeter, 0, 100, 0, ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1);
-                    if (tIndex > ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1) {
-                        tIndex = ARRAY_SIZE_NOTE_C5_TO_C7_PENTATONIC - 1;
-                    }
-                    tFrequency = NoteC5ToC7Pentatonic[tIndex]; // 523 to 2093 Hz for 0 to 100 cm
-                } else {
-                    /*
-                     * Play feedback tone proportional to measured distance
-                     */
-#if defined(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) && defined(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER)
-                if(tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER){
-                    tFrequency = map(tCentimeter, 0, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, 100, 200);
-                } else if(tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER){
-                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 200, 2000, 6000);
-                } else {
-                    tFrequency = map(tCentimeter, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 440, 880); // 1 octaves for gap
-                }
-#else
-                    tFrequency = map(tCentimeter, 0, 100, 110, 7040); // 6 octaves per meter
-#endif
-                }
-                tone(PIN_BUZZER, tFrequency);
-            }
-        }
-    }
-    return tCentimeter;
-}
-
-/*
- * Print without a newline
- * @return true if distance has changed and was printed
- */
-bool printDistanceIfChanged(Print *aSerial) {
-    static unsigned int sLastPrintedDistanceCentimeter;
-
-    if (sLastPrintedDistanceCentimeter != sEffectiveDistanceCentimeter) {
-        sLastPrintedDistanceCentimeter = sEffectiveDistanceCentimeter;
-        if (sEffectiveDistanceCentimeter == 0) {
-            aSerial->print("Distance timeout ");
-        } else {
-            aSerial->print("Distance=");
-            aSerial->print(sEffectiveDistanceCentimeter);
-            aSerial->print("cm");
-        }
-        return true;
-    }
-    return false;
-}
-
-/*
- * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
- * @param doShow show distance value in the GUI
- * @return 0 for timeout
- */
-unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
-#if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
-    (void) aWaitForCurrentMeasurementToEnd; // suppress compiler warnings
-#endif
-#if (defined(CAR_HAS_TOF_DISTANCE_SENSOR))
-    if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
-        sToFDistanceSensor.VL53L1X_StartRanging(); // start TOF measurement at start of function
-    }
-#endif
-
-    /*
-     * Always get US distance
-     */
-    unsigned int tCentimeterToReturn = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeoutCentimeter);
-
-    sUSDistanceCentimeter = tCentimeterToReturn;
-#if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-    sIROrTofDistanceCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
-#  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-    sIROrTofDistanceCentimeter = readToFDistanceAsCentimeter();
-#  endif
-    /*
-     * IR or TOF sensor is used, we check for distance source mode
-     * (take IR or minimum or maximum of the US and (IR or TOF) values)
-     */
-    if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_IR_OR_TOF) {
-        tCentimeterToReturn = sIROrTofDistanceCentimeter;
-    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MINIMUM) {
-        // Scan mode MINIMUM => Take the minimum of the US and IR or TOF values
-        if (tCentimeterToReturn > sIROrTofDistanceCentimeter) {
-            tCentimeterToReturn = sIROrTofDistanceCentimeter;
-        }
-    } else if (sDistanceSourceMode == DISTANCE_SOURCE_MODE_MAXIMUM) {
-        // Scan mode MAXIMUM => Take the maximum of the US and IR or TOF values
-        if (tCentimeterToReturn < sIROrTofDistanceCentimeter) {
-            tCentimeterToReturn = sIROrTofDistanceCentimeter;
-        }
-    }
-#endif
-    sEffectiveDistanceCentimeter = tCentimeterToReturn;
-    return tCentimeterToReturn;
-}
-
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
-#define IR_SENSOR_TYPE_1080
-#  endif
-/*
- * The Sharp 1080 takes 39 ms for each measurement cycle
- */
-uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
-    if (aWaitForCurrentMeasurementToEnd) {
-        /*
-         * Check for a voltage change which indicates that a new measurement is started
-         */
-        int16_t tOldValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
-        uint32_t tStartMillis = millis();
-        do {
-            int16_t tNewValue = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
-            if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
-                // assume, that voltage has changed because of the end of a measurement
-                break;
-            }
-#if defined(USE_BLUE_DISPLAY_GUI)
-            loopGUI();
-#endif
-        } while (millis() - tStartMillis <= IR_SENSOR_MEASUREMENT_TIME_MILLIS);
-        // now a new measurement has started, wait for the result
-#if defined(USE_BLUE_DISPLAY_GUI)
-        delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
-#else
-        delay(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
-#endif
-    }
-
-    float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
-    // tVolt * 0.004887585 = 5(V) for tVolt == 1023
-
-#  if defined(IR_SENSOR_TYPE_430) // 4 to 30 cm, 18 ms, GP2YA41SK0F
-    return (12.08 * pow(tVolt * 0.004887585, -1.058)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
-
-#  elif defined(IR_SENSOR_TYPE_1080) // 10 to 80 cm, GP2Y0A21YK0F
-    return (29.988 * pow(tVolt * 0.004887585, -1.173)) + 0.5; // see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
-//    return 4800/(analogRead(PIN_IR_DISTANCE_SENSOR)-20);    // see https://github.com/qub1750ul/Arduino_SharpIR/blob/master/src/SharpIR.cpp
-
-#  elif defined(IR_SENSOR_TYPE_20150) // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
-    // Model 20150 - Do not forget to add at least 100uF capacitor between the Vcc and GND connections on the sensor
-    return (60.374 * pow(tVolt * 0.004887585, -1.16)) + 0.5;// see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
-
-#  elif defined(IR_SENSOR_TYPE_100550) // GP2Y0A02YK0F // 100 to 550 cm, 18 ms, GP2Y0A710K0F
-    return 1.0 / (((tVolt * 0.004887585 - 1.1250)) / 137.5);
-#  endif
-}
-#endif // CAR_HAS_IR_DISTANCE_SENSOR
-
-#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-/*
- * No start of measurement, just read result.
- */
-uint8_t readToFDistanceAsCentimeter() {
-    uint8_t i = 0; // for timeout
-
-    // we have set  a timing budget of 33 ms
-    while (i < 20) {
-        uint8_t tDataReady;
-//        sToFDistanceSensor.VL53L1X_CheckForDataReady(&tDataReady); // checkForDataReady needs 1.1 ms
-        sToFDistanceSensor.VL53L1_RdByte(sToFDistanceSensor.Device, GPIO__TIO_HV_STATUS, &tDataReady);
-        if (tDataReady & 1) {
-            break;
-        }
-#  if defined(USE_BLUE_DISPLAY_GUI)
-        delayAndLoopGUI(4);
-#else
-        delay(4);
-#endif
-        i++;
-    }
-
-    // Here GPIO__TIO_HV_STATUS is 0x03
-    sToFDistanceSensor.VL53L1X_ClearInterrupt(); // I2C 0086 + 0x01
-    // Now GPIO__TIO_HV_STATUS is 0x02
-    uint8_t tStatus;
-//    sToFDistanceSensor.VL53L1X_GetRangeStatus(&tStatus);
-    uint16_t tDistance;
-    sToFDistanceSensor.VL53L1X_GetDistance(&tDistance); //Get the result of the measurement from the sensor in millimeter
-    sToFDistanceSensor.VL53L1X_GetRangeStatus(&tStatus); // I2c 0x0089 -> 0x09
-    if (tStatus != 0) {
-        if (tStatus == 4) {
-            // Wrap around in mode short -> more than 130 cm
-            tDistance = 1300;
-        } else {
-            tDistance = 10;
-        }
-    }
-//    tone(SPEAKER_PIN, tDistance + 500);
-    return tDistance / 10;
-}
-
-uint8_t getToFDistanceAsCentimeter() {
-//    sToFDistanceSensor.VL53L1X_StartRanging();
-    return readToFDistanceAsCentimeter();
-}
-
-#endif // CAR_HAS_TOF_DISTANCE_SENSOR
-#endif // #ifndef ROBOT_CAR_DISTANCE_HPP
+#endif // _ROBOT_CAR_DISTANCE_HPP
 #pragma once

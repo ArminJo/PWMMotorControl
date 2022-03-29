@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_UTILS_H
-#define ROBOT_CAR_UTILS_H
+#ifndef _ROBOT_CAR_UTILS_H
+#define _ROBOT_CAR_UTILS_H
 
 #include <Arduino.h>
 
@@ -27,5 +27,5 @@ void initRobotCarPWMMotorControl();
 unsigned int getDistanceAndPlayTone();
 void checkVinPeriodicallyAndPrintIfChanged();
 
-#endif //  ROBOT_CAR_UTILS_H
+#endif // _ROBOT_CAR_UTILS_H
 #pragma once

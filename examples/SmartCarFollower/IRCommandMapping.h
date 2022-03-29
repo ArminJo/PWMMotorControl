@@ -11,8 +11,8 @@
  * Select the one you have below.
  */
 
-#ifndef IR_COMMAND_MAPPING_H_
-#define IR_COMMAND_MAPPING_H_
+#ifndef _IR_COMMAND_MAPPING_H
+#define _IR_COMMAND_MAPPING_H
 
 #include <Arduino.h>
 #include "IRCommandDispatcher.h" // for IR_COMMAND_FLAG_BLOCKING etc.
@@ -266,6 +266,5 @@ const struct IRToCommandMappingStruct IRMapping[] = {
 
 };
 
-#endif /* IR_COMMAND_MAPPING_H_ */
-
+#endif // _IR_COMMAND_MAPPING_H
 #pragma once

@@ -102,7 +102,7 @@ unsigned int getUSDistance(unsigned int aTimeoutMicros) {
         pinMode(sTriggerOutPin, OUTPUT);
     }
 
-#ifdef DEBUG
+#if defined(DEBUG)
     delayMicroseconds(100); // to see it on scope
 #else
     delayMicroseconds(10);
@@ -212,7 +212,7 @@ void handlePCInterrupt(uint8_t aPortState) {
         sUSPulseMicros = micros() - sMicrosAtStartOfPulse;
         sUSValueIsValid = true;
     }
-#ifdef DEBUG
+#if defined(DEBUG)
 // for debugging purposes, echo to PIN 13 (do not forget to set it to OUTPUT!)
 // digitalWrite(13, aPortState);
 #endif
@@ -268,7 +268,7 @@ void startUSDistanceAsCentimeterWithCentimeterTimeoutNonBlocking(unsigned int aT
     sUSPulseMicros = 0;
     sMicrosAtStartOfPulse = 0;
 
-#ifdef DEBUG
+#if defined(DEBUG)
     delay(2); // to see it on scope
 #else
     delayMicroseconds(10);

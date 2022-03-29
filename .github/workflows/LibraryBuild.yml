@@ -49,6 +49,7 @@ jobs:
         include:
           - arduino-boards-fqbn: arduino:avr:uno
             build-properties: # the flags were put in compiler.cpp.extra_flags
+              SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION
               RobotCarBlueDisplay:
                 -DBREADBOARD_FULL_CONFIGURATION
 

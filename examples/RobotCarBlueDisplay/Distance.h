@@ -17,8 +17,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef DISTANCE_H
-#define DISTANCE_H
+#ifndef _ROBOT_CAR_DISTANCE_H
+#define _ROBOT_CAR_DISTANCE_H
 
 #include <Arduino.h>
 
@@ -110,8 +110,10 @@ extern ForwardDistancesInfoStruct sForwardDistancesInfo;
 extern unsigned int sUSDistanceCentimeter;
 extern unsigned int sIROrTofDistanceCentimeter;
 
+#if defined(CAR_HAS_DISTANCE_SERVO)
 extern bool sDoSlowScan;
-extern uint8_t sLastServoAngleInDegrees; // needed for optimized delay for servo repositioning
+extern uint8_t sLastDistanceServoAngleInDegrees; // needed for optimized delay for servo repositioning
+#endif
 
 extern int sLastDecisionDegreesToTurnForDisplay;
 extern int sNextDegreesToTurn;
@@ -123,16 +125,18 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
         bool aWaitForCurrentMeasurementToEnd = false);
 
+#if defined(CAR_HAS_DISTANCE_SERVO)
 #define NO_TARGET_FOUND     360
-int scanForTarget(unsigned int aMaximumTargetDistance);
 void DistanceServoWriteAndDelay(uint8_t aValue, bool doDelay = false);
+int scanForTarget(unsigned int aMaximumTargetDistance);
 bool fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan = false);
 void doWallDetection();
+void postProcessDistances(uint8_t aDistanceThreshold);
+#endif
 
 int doBuiltInCollisionDetection();
-void postProcessDistances(uint8_t aDistanceThreshold);
 
-#ifdef CAR_HAS_TOF_DISTANCE_SENSOR
+#if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #include "vl53l1x_class.h"
 extern VL53L1X sToFDistanceSensor;
 uint8_t getToFDistanceAsCentimeter();
@@ -140,11 +144,11 @@ uint8_t readToFDistanceAsCentimeter(); // no start of measurement, just read res
 #define OFFSET_MILLIMETER 10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
 #endif
 
-#ifdef CAR_HAS_IR_DISTANCE_SENSOR
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
 uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
 #define IR_SENSOR_NEW_MEASUREMENT_THRESHOLD 2 // If the output value changes by this amount, we can assume that a new measurement is started
 #define IR_SENSOR_MEASUREMENT_TIME_MILLIS   41 // the IR sensor takes 39 ms for one measurement
 #endif
 
-#endif //  DISTANCE_H
+#endif // _ROBOT_CAR_DISTANCE_H
 #pragma once

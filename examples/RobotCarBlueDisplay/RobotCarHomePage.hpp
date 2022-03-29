@@ -19,8 +19,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_HOME_PAGE_HPP
-#define ROBOT_CAR_HOME_PAGE_HPP
+#ifndef _ROBOT_CAR_HOME_PAGE_HPP
+#define _ROBOT_CAR_HOME_PAGE_HPP
 
 #include <Arduino.h>
 
@@ -33,48 +33,48 @@
 BDButton TouchButtonTestPage;
 BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
 BDButton TouchButtonMelody;
 #endif
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
 BDButton TouchButtonCameraOnOff;
 #endif
 
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
 BDSlider SliderPan;
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
 BDSlider SliderTilt;
 #endif
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 // Here we get values from 0 to 180 degrees from scaled slider
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
 void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     PanServo.write(aValue);
 }
 #endif
 
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
 void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     TiltServo.write(aValue);
 }
 #endif
 
-#ifdef LASER_MOUNTED
+#if defined(CAR_HAS_LASER)
 void doLaserOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
     digitalWrite(PIN_LASER_OUT, aValue);
 }
 #endif
 
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
 void doCameraSupplyOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
     digitalWrite(PIN_CAMERA_SUPPLY_CONTROL, aValue);
 }
 #endif
 
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
 void doPlayMelody(BDButton * aTheTouchedButton, int16_t aValue) {
     sPlayMelody = aValue;
 }
@@ -85,26 +85,32 @@ void initHomePage(void) {
     TouchButtonBTSensorDrivePage.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
             F("Sensor\nDrive"), TEXT_SIZE_18, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_BT_SENSOR_CONTROL, &GUISwitchPages);
 
+#if defined(CAR_HAS_DISTANCE_SENSOR)
+    // small "Test" and big "Automatic\nControl" button
     TouchButtonAutomaticDrivePage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
             F("Automatic\nControl"), TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_AUTOMATIC_CONTROL, &GUISwitchPages);
-
     TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_3,
     BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED,
             F("Test"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
+#else
+    // big "Test" button
+    TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
+            F("Test"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
+#endif
 
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
     TouchButtonCameraOnOff.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8,
     TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Cam"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             false, &doCameraSupplyOnOff);
 #endif
 
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
     TouchButtonMelody.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Melody"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sPlayMelody, &doPlayMelody);
 #endif
 
-#ifdef LASER_MOUNTED
+#if defined(CAR_HAS_LASER)
     TouchButtonLaser.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Laser"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doLaserOnOff);
@@ -124,7 +130,7 @@ void drawHomePage(void) {
 #else
     char tCarTypeString[] = "2WD";
 #endif
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
     BlueDisplay1.drawText(HEADER_X + (2 * TEXT_SIZE_22_WIDTH), (2 * TEXT_SIZE_22_HEIGHT) + TEXT_SIZE_11_HEIGHT - 2, tCarTypeString,
             TEXT_SIZE_11, COLOR16_RED, COLOR16_NO_BACKGROUND);
 #else
@@ -132,18 +138,20 @@ void drawHomePage(void) {
 #endif
 
     TouchButtonRobotCarStartStop.drawButton();
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
     TouchButtonCameraOnOff.drawButton();
 #endif
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
     TouchButtonMelody.drawButton();
 #endif
-#ifdef LASER_MOUNTED
+#if defined(CAR_HAS_LASER)
     TouchButtonLaser.drawButton();
 #endif
     TouchButtonBTSensorDrivePage.drawButton();
     TouchButtonTestPage.drawButton();
+#if defined(CAR_HAS_DISTANCE_SENSOR)
     TouchButtonAutomaticDrivePage.drawButton();
+#endif
 
     TouchButtonDirection.drawButton();
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
@@ -151,27 +159,27 @@ void drawHomePage(void) {
 #endif
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.drawButton();
 #endif
 
-//    SliderUSPosition.setValueAndDrawBar(sLastServoAngleInDegrees);
-    SliderUSPosition.drawSlider();
+//    SliderDistanceServoPosition.setValueAndDrawBar(sLastDistanceServoAngleInDegrees);
+    SliderDistanceServoPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
     SliderIROrTofDistance.drawSlider();
 #endif
 
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
     SliderPan.drawSlider();
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
     SliderTilt.drawSlider();
 #endif
 
     SliderSpeed.drawSlider();
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
     SliderSpeedRight.drawSlider();
     SliderSpeedLeft.drawSlider();
 #endif
@@ -202,6 +210,5 @@ void stopHomePage(void) {
 #endif
     startStopRobotCar(false);
 }
-#endif // ROBOT_CAR_HOME_PAGE_HPP
+#endif // _ROBOT_CAR_HOME_PAGE_HPP
 #pragma once
-

@@ -23,8 +23,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef CAR_IMU_DATA_H_
-#define CAR_IMU_DATA_H_
+#ifndef _IMU_CAR_DATA_H
+#define _IMU_CAR_DATA_H
 
 #include <stdint.h>
 #include "MPU6050Defines.h"
@@ -44,7 +44,7 @@
 #define ACCEL_MOVE_THRESHOLD  128
 #define GYRO_MOVE_THRESHOLD    64
 
-#ifndef SAMPLE_RATE
+#if !defined(SAMPLE_RATE)
 #define SAMPLE_RATE          1000
 //#define SAMPLE_RATE         500
 //#define SAMPLE_RATE         250
@@ -153,6 +153,5 @@ public:
     int32_t sTurnSnapshot;
 };
 
-#endif /* CAR_IMU_DATA_H_ */
-
+#endif // _IMU_CAR_DATA_H
 #pragma once

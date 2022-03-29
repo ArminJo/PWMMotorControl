@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_GUI_H
-#define ROBOT_CAR_GUI_H
+#ifndef _ROBOT_CAR_GUI_H
+#define _ROBOT_CAR_GUI_H
 
 #define USE_BLUE_DISPLAY_GUI
 
@@ -66,7 +66,7 @@ extern uint8_t sCurrentPage;
 void showUSDistance();
 void showIROrTofDistance();
 
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
 // from PathInfoPage
 void initPathInfoPage(void);
 void drawPathInfoPage(void);
@@ -121,7 +121,7 @@ void stopTestPage(void);
 
 // from HomePage
 extern BDButton TouchButtonMelody;
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
 extern bool sPlayMelody;
 #endif
 
@@ -163,7 +163,7 @@ extern BDButton TouchButtonCalibrate;
 #endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
 extern BDButton TouchButtonCompensationStore;
 #endif
 
@@ -174,16 +174,16 @@ void showSpeedSliderValue();
 extern BDSlider SliderSpeedRight;
 extern BDSlider SliderSpeedLeft;
 
-extern BDSlider SliderUSPosition;
+extern BDSlider SliderDistanceServoPosition;
 extern BDSlider SliderUSDistance;
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDSlider SliderIROrTofDistance;
 #endif
 
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
 extern BDSlider SliderPan;
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
 extern BDSlider SliderTilt;
 #endif
 
@@ -210,7 +210,7 @@ void showDistance(int aCentimeter);
 
 void printAndDisplayMotorSpeed();
 void printMotorValuesPeriodically();
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
 void printMotorDebugValues();
 void printMotorDistanceValues();
 #endif
@@ -225,11 +225,13 @@ void delayAndLoopGUI(uint16_t aDelayMillis);
 /*
  * Functions contained in RobotCarGuiOutput.cpp
  */
-void clearPrintedForwardDistancesInfos();
+#if defined(CAR_HAS_DISTANCE_SERVO)
 void drawForwardDistancesInfos();
+void clearPrintedForwardDistancesInfos();
 void drawCollisionDecision(int aDegreesToTurn, uint8_t aLengthOfVector, bool aDoClearVector);
+#endif
 
 extern uint8_t sRobotCarDirection;
 
-#endif /* SRC_ROBOTCARGUI_H_ */
+#endif // _ROBOT_CAR_GUI_H
 #pragma once

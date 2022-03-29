@@ -23,8 +23,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef CAR_PWM_MOTOR_CONTROL_H
-#define CAR_PWM_MOTOR_CONTROL_H
+#ifndef _CAR_PWM_MOTOR_CONTROL_H
+#define _CAR_PWM_MOTOR_CONTROL_H
 
 #include "EncoderMotor.h"
 
@@ -32,7 +32,7 @@
  * Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration.
  * Connectors point to the rear.
  */
-#ifdef USE_MPU6050_IMU
+#if defined(USE_MPU6050_IMU)
 #include "IMUCarData.h"
 #endif
 #include <stdint.h>
@@ -41,11 +41,14 @@
  * Values for 20 slot encoder discs. Circumference of the wheel is 22.0 cm
  * Distance between two wheels is around 14 cm -> 360 degree are 82 cm
  */
-#define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT      2.2777
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT      5.0 // estimated, with slip
+#define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT         2.2777
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT         5.0 // estimated, with slip
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT 2.2 // for turns with 4 wheels
 
 #if ! defined(FACTOR_DEGREE_TO_MILLIMETER_DEFAULT)
-#  if defined(CAR_HAS_4_WHEELS)
+#  if defined(CAR_HAS_4_MECANUM_WHEELS)
+#define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT
+#  elif defined(CAR_HAS_4_WHEELS)
 #define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT
 #  else
 #define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
@@ -69,10 +72,16 @@ public:
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init();
 #else
+#  if defined(CAR_HAS_4_MECANUM_WHEELS)
+    void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aPWMPin, uint8_t aLeftMotorForwardPin,
+            uint8_t aLeftMotorBackwardPin, uint8_t aBackRightCarMotorForwardPin, uint8_t aBackRightCarMotorBackwardPin,
+            uint8_t aBackLeftCarMotorForwardPin, uint8_t aBackLeftCarMotorBackwardPin);
+#  else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
             uint8_t aLeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aRightInterruptNumber,
             uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, uint8_t aLeftInterruptNumber);
+#  endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
@@ -90,7 +99,7 @@ public:
     uint8_t getTurnDistanceHalfDegree();
 #endif
 
-#ifdef USE_MPU6050_IMU
+#if defined(USE_MPU6050_IMU)
     void updateIMUData();
     void calculateAndPrintIMUOffsets(Print *aSerial);
 #endif
@@ -115,8 +124,8 @@ public:
     /*
      * For car direction handling
      */
-    uint8_t getCarDirectionOrBrakeMode();
-    uint8_t CarDirectionOrBrakeMode;
+    uint8_t getCarDirection();
+    uint8_t CarDirection;
 
     /*
      * Functions for moving a fixed distance
@@ -148,7 +157,7 @@ public:
             void (*aLoopCallback)(void) = NULL);
 #endif
 
-#ifdef USE_MPU6050_IMU
+#if defined(USE_MPU6050_IMU)
     IMUCarData IMUData;
     int CarRequestedRotationDegrees; // 0 -> car is moving forward / backward
     int CarTurnAngleHalfDegreesFromIMU; // Read from Gyroscope
@@ -184,12 +193,15 @@ public:
     /*
      * Functions, which directly call motor functions for both motors
      */
-    void setSpeedPWM(int aRequestedSpeedPWM);
+    void setSpeedPWM(uint8_t aRequestedSpeedPWM);
+    void setDirection(uint8_t aRequestedDirection);
+
+    void setSpeedPWMAndDirection(int aRequestedSpeedPWM);
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWMDelta);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
 
-    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
+    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
     void setStopMode(uint8_t aStopMode);
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
@@ -199,11 +211,13 @@ public:
     PWMDcMotor rightCarMotor;
     PWMDcMotor leftCarMotor;
 #endif
+#if defined(CAR_HAS_4_MECANUM_WHEELS) // back motors are always without encoders
+    PWMDcMotor backRightCarMotor;
+    PWMDcMotor backLeftCarMotor;
+#endif
 };
 
 extern CarPWMMotorControl RobotCarPWMMotorControl;
 
-#endif /* CAR_PWM_MOTOR_CONTROL_H */
-
+#endif // _CAR_PWM_MOTOR_CONTROL_H
 #pragma once
-

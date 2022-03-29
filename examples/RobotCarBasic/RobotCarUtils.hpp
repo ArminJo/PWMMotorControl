@@ -22,8 +22,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_UTILS_HPP
-#define ROBOT_CAR_UTILS_HPP
+#ifndef _ROBOT_CAR_UTILS_HPP
+#define _ROBOT_CAR_UTILS_HPP
 
 #include "RobotCarUtils.h"
 
@@ -44,7 +44,7 @@ void initRobotCarPWMMotorControl() {
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     RobotCarPWMMotorControl.init();
 #elif defined(CAR_HAS_4_MECANUM_WHEELS)
-    MecanumWheelCarMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
+    RobotCarPWMMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
     FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
     BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
 #else
@@ -53,7 +53,7 @@ void initRobotCarPWMMotorControl() {
 #endif
 }
 
-#if !defined(CAR_HAS_4_MECANUM_WHEELS)
+#if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR)
 unsigned int getDistanceAndPlayTone() {
     /*
      * Get distance
@@ -128,5 +128,5 @@ void checkVinPeriodicallyAndPrintIfChanged() {
 
 #endif // MONITOR_VIN_VOLTAGE
 
-#endif // #ifndef ROBOT_CAR_UTILS_HPP
+#endif // _ROBOT_CAR_UTILS_HPP
 #pragma once

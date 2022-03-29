@@ -35,11 +35,13 @@
 //#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-
-#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+#define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+
 #undef USE_MPU6050_IMU
+
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
@@ -48,7 +50,6 @@
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 #define MONITOR_VIN_VOLTAGE // Enable if by default, if available
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
-#include "ADCUtils.h"
 #endif
 
 /*
@@ -58,11 +59,11 @@
 //#define USE_IR_REMOTE               // Use an IR remote receiver attached for car control
 //#define USE_KEYES_REMOTE
 //#define USE_DVBT_STICK_REMOTE
-
 //#define DEBUG
 //#define INFO
 #include "CarPWMMotorControl.hpp"
 #include "HCSR04.h"
+#include "ADCUtils.h"
 #include "pitches.h"
 
 /*
@@ -213,7 +214,7 @@ void doFollowerOneStep(unsigned int aCentimeter) {
          */
         if (!RobotCarPWMMotorControl.isStopped()) {
             Serial.print(F(" -> stop"));
-            RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+            RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
         }
 
         if (sDistanceChanged) {
@@ -257,13 +258,14 @@ void doFollowerOneStep(unsigned int aCentimeter) {
                 Serial.print(F("SpeedPWM="));
                 Serial.print(tSpeedPWM);
 
-                if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
+                if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_BACKWARD) {
                     Serial.print(F(" -> go backward")); // print only once at direction change
                 }
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
-                DIRECTION_BACKWARD);
+                RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM,
+                        ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
+                        DIRECTION_BACKWARD);
 #else
                 RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_BACKWARD);
 #endif
@@ -274,7 +276,7 @@ void doFollowerOneStep(unsigned int aCentimeter) {
                  */
                 if (!RobotCarPWMMotorControl.isStopped()) {
                     Serial.print(F("stop"));
-                    RobotCarPWMMotorControl.stop(MOTOR_RELEASE); // stop only once
+                    RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE); // stop only once
                 } else {
                     Serial.print(F("ok"));
                 }
@@ -291,13 +293,14 @@ void doFollowerOneStep(unsigned int aCentimeter) {
                 Serial.print(F("SpeedPWM="));
                 Serial.print(tSpeedPWM);
 
-                if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
+                if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_FORWARD) {
                     Serial.print(F(" -> go forward")); // print only once at direction change
                 }
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM, ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
-                                    DIRECTION_FORWARD);
+                RobotCarPWMMotorControl.startGoDistanceMillimeter(tSpeedPWM,
+                        ((aCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) + FOLLOWER_DISTANCE_DELTA_CENTIMETER / 2) * 10,
+                        DIRECTION_FORWARD);
 #else
                 RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM, DIRECTION_FORWARD);
 #endif

@@ -48,15 +48,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
-#ifndef AVR_TRACING_HPP
-#define AVR_TRACING_HPP
+#ifndef _AVR_TRACING_HPP
+#define _AVR_TRACING_HPP
 
 #include <Arduino.h>
 
 #include "digitalWriteFast.h"
 #include "AvrTracing.h" // Contains function prototypes
 
-//#define DEBUG_TRACE_INIT // To see internal information at call of initTrace() costs 52 (static) / 196 (dynamic) bytes of program space
+//#define DEBUG_TRACE_INIT // To see internal information at call of initTrace() costs 52 (static) / 196 (dynamic) bytes of program memory
 
 /*
  * The amount of pushes for this ISR is compiler and compiler flag dependent
@@ -68,14 +68,14 @@
  *
  * If NUMBER_OF_PUSH is not defined, then initTrace() tries to determine the value dynamically by calling the ISR directly from a known address.
  */
-#ifndef NUMBER_OF_PUSH
+#if !defined(NUMBER_OF_PUSH)
 // static mode
 //#define NUMBER_OF_PUSH 15
 //#define NUMBER_OF_PUSH 17
 //#define NUMBER_OF_PUSH 19
 #endif
 
-#ifndef NUMBER_OF_PUSH
+#if !defined(NUMBER_OF_PUSH)
 // dynamic mode
 #define NUMBER_OF_PUSH_MIN 14 // Minimal number of pushes as start for detection current value
 #define INVALID_VALUE_OF_PUSH_ADJUST 42 // any number not equal the expected number of pushes
@@ -136,7 +136,7 @@ void INT0_vect(void) {
          * which calls us first and adjust sPushAdjust
          */
         tPushAdjust = NUMBER_OF_PUSH_MIN; // start search from this value
-#  ifdef DEBUG_TRACE_INIT
+#  if defined(DEBUG_TRACE_INIT)
         sendStringForTrace("Stack=0x");
 #  endif
         WordUnionForTracing tAddressToLookFor;
@@ -148,7 +148,7 @@ void INT0_vect(void) {
         do {
             tAddressFromStack.byte.HighByte = *(tStackPtr + tPushAdjust);
             tPushAdjust++;
-#  ifdef DEBUG_TRACE_INIT
+#  if defined(DEBUG_TRACE_INIT)
             // First stack position printed is data of push number NUMBER_OF_PUSH_MIN + 1
             sendUnsignedByteHex(*(tStackPtr + tPushAdjust));
             sendUSARTForTrace(' ');
@@ -161,7 +161,7 @@ void INT0_vect(void) {
                 && tPushAdjust < INVALID_VALUE_OF_PUSH_ADJUST);
         tPushAdjust--;
 
-#  ifdef DEBUG_TRACE_INIT
+#  if defined(DEBUG_TRACE_INIT)
         sendLineFeed();
         sendStringForTrace("Address of enableINT0InterruptOnLowLevel()>>1=");
         sendUnsignedIntegerHex(reinterpret_cast<uint16_t>(&enableINT0InterruptOnLowLevel) + 2);
@@ -212,7 +212,7 @@ void INT0_vect(void) {
 }
 
 __attribute__((optimize("-Os"))) void initTrace() {
-#ifdef DEBUG_TRACE_INIT
+#if defined(DEBUG_TRACE_INIT)
 #  if defined(NUMBER_OF_PUSH)
     sendStringForTrace("# of pushes in ISR=0x");
     sendUnsignedByteHex(NUMBER_OF_PUSH);
@@ -230,7 +230,7 @@ __attribute__((optimize("-Os"))) void initTrace() {
  */
 __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
 
-#if ! defined(NUMBER_OF_PUSH)
+#if !defined(NUMBER_OF_PUSH)
     INT0_vect(); // call ISR to compute sPushAdjust
 #endif
 
@@ -404,5 +404,5 @@ __attribute__((optimize("-Os"))) void printTextSectionAddresses() {
     Serial.flush();
 }
 
-#endif // AVR_TRACING_HPP
+#endif // _AVR_TRACING_HPP
 #pragma once

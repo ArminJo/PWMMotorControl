@@ -33,7 +33,19 @@
 
 /*
  * Car configuration
+ * For a complete list of available configurations see RobotCarConfigurations.h
+ * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
+//#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
+//#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
+//#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
+#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+
+#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+
+#undef USE_MPU6050_IMU
+
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
@@ -41,7 +53,7 @@
  */
 //#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
 //#define CAR_ENABLE_RTTTL            // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
-//#define ENABLE_PATH_INFO_PAGE       // Saves program space
+//#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 #define MONITOR_VIN_VOLTAGE
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
@@ -49,18 +61,25 @@
 
 #include "BlueDisplay.h"    // This helps the eclipse indexer
 #include "RobotCarBlueDisplay.h"
+
 #include "CarPWMMotorControl.hpp" // include source of library
+
 #if defined(USE_MPU6050_IMU)
 #include "IMUCarData.hpp"       // include source of library
 #endif
 #include "RobotCarGui.hpp"
 
+#if defined(CAR_HAS_DISTANCE_SENSOR)
 #include "Distance.h"   // This helps the eclipse indexer
 #include "Distance.hpp" // requires definitions from RobotCarGui.h
-#ifdef CAR_ENABLE_RTTTL
-//#define USE_NO_RTX_EXTENSIONS // saves program space if defined globally
+#endif
+
+#if defined(CAR_ENABLE_RTTTL)
+//#define USE_NO_RTX_EXTENSIONS // saves program memory if defined globally
 #include <PlayRtttl.h>
 #endif
+
+#include "RobotCarUtils.hpp" // for print
 
 /*
  * Timeouts for demo mode and inactivity remainder
@@ -74,7 +93,7 @@
 /****************************************************************************
  * Change this if you have reprogrammed the hc05 module for other baud rate
  ***************************************************************************/
-#ifndef BLUETOOTH_BAUD_RATE
+#if !defined(BLUETOOTH_BAUD_RATE)
 //#define BLUETOOTH_BAUD_RATE BAUD_115200
 #define BLUETOOTH_BAUD_RATE BAUD_9600
 #endif
@@ -84,7 +103,7 @@
 float sVINVoltage;
 #endif
 
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
 bool sPlayMelody = false;
 void playRandomMelody();
 #endif
@@ -172,7 +191,7 @@ void setup() {
     // initialize the digital pin as an output.
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW); // on my UNO R3 the LED is on otherwise
-#if defined(LASER_MOUNTED) && (PIN_LASER_OUT != LED_BUILTIN)
+#if defined(CAR_HAS_LASER) && (PIN_LASER_OUT != LED_BUILTIN)
     pinMode(PIN_LASER_OUT, OUTPUT);
 #endif
 
@@ -183,26 +202,18 @@ void setup() {
 //    printNumberOfPushesForISR();
 
     // initialize motors, this also stops motors
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
-    RobotCarPWMMotorControl.init();
-#else
-#  ifdef USE_ENCODER_MOTOR_CONTROL
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
-    LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
-#  else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
-    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
-#  endif
-#endif
+    initRobotCarPWMMotorControl();
 
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
     RobotCarPWMMotorControl.readMotorValuesFromEeprom();
 #endif
 
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized
 
-    sLastServoAngleInDegrees = 90; // is required before setupGUI()
+#if defined(CAR_HAS_DISTANCE_SERVO)
+    sLastDistanceServoAngleInDegrees = 90; // is required before setupGUI()
+#endif
 
     // Must be after RobotCarPWMMotorControl.init, since it tries to stop motors in connect callback
     setupGUI(); // this enables output by BlueDisplay1 and lasts around 100 milliseconds
@@ -222,20 +233,24 @@ void setup() {
         Serial.println(F("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__));
         Serial.print(F("sMCUSR=0x"));
         Serial.println(sMCUSR, HEX);
+        PWMDcMotor::printCompileOptions(&Serial);
+        printConfigInfo();
 #endif
     }
 
-#ifdef CAR_HAS_CAMERA
+#if defined(CAR_HAS_CAMERA)
     pinMode(PIN_CAMERA_SUPPLY_CONTROL, OUTPUT);
 #endif
 
     initServos(); // must be after RobotCarPWMMotorControl.init() since it uses is2WDCar set there.
 
 // reset all values
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
     resetPathData();
 #endif
+#if defined(CAR_HAS_DISTANCE_SENSOR)
     initDistance();
+#endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
     readVINVoltage();
@@ -262,12 +277,14 @@ void loop() {
      */
     loopGUI();
 
+#if defined(CAR_HAS_DISTANCE_SENSOR)
     /*
      * Handle autonomous driving
      */
     driveAutonomousOneStep();
+#endif
 
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
     /*
      * check for playing melody
      */
@@ -291,7 +308,7 @@ void loop() {
         /*
          * Timeout just reached, play melody and start autonomous drive
          */
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
         playRandomMelody();
         delayAndLoopGUI(1000);
 #else
@@ -300,12 +317,16 @@ void loop() {
         // check again, maybe we are connected now
         if (!BlueDisplay1.isConnectionEstablished()) {
             // Set right page for reconnect
+#if defined(CAR_HAS_DISTANCE_SENSOR)
             GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
             if (sBootReasonWasPowerUp) {
                 startStopAutomomousDrive(true, MODE_FOLLOWER);
             } else {
                 startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
             }
+#else
+            GUISwitchPages(NULL, PAGE_HOME);
+#endif
         }
     }
 
@@ -314,12 +335,15 @@ void loop() {
      */
     if (BlueDisplay1.isConnectionEstablished() && sMillisOfLastReceivedBDEvent + TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
         sMillisOfLastReceivedBDEvent = millis() - (TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
+#if defined(CAR_HAS_DISTANCE_SERVO)
         fillAndShowForwardDistancesInfo(true, true);
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
+#  if defined(USE_STANDARD_SERVO_LIBRARY)
         DistanceServo.write(90); // set servo back to normal
-#else
+#  else
         write10(90);
+#  endif
 #endif
+
     }
 }
 
@@ -331,7 +355,7 @@ void readVINVoltage() {
 
 // assume resistor network of 1MOhm / 100kOhm (divider by 11)
 // tVIN * 0,01182795
-#  ifdef VIN_VOLTAGE_CORRECTION
+#  if defined(VIN_VOLTAGE_CORRECTION)
     // we have a diode (requires 0.8 volt) between LIPO and VIN
     sVINVoltage = (tVIN * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
 #  else
@@ -340,7 +364,7 @@ void readVINVoltage() {
 }
 #endif // MONITOR_VIN_VOLTAGE
 
-#ifdef CAR_ENABLE_RTTTL
+#if defined(CAR_ENABLE_RTTTL)
 #include "digitalWriteFast.h"
 /*
  * Prepare for tone, use motor as loudspeaker
@@ -412,36 +436,40 @@ ISR(TIMER2_COMPB_vect) {
 /*
  * Pan tilt servo stuff
  */
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
 Servo PanServo;
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
 Servo TiltServo;
 #endif
 
 void resetServos() {
-    sLastServoAngleInDegrees = 0; // to force setting of 90 degree
+#if defined(CAR_HAS_DISTANCE_SERVO)
+    sLastDistanceServoAngleInDegrees = 0; // to force setting of 90 degree
     DistanceServoWriteAndDelay(90, false);
-#ifdef CAR_HAS_PAN_SERVO
+#endif
+#if defined(CAR_HAS_PAN_SERVO)
     PanServo.write(90);
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
     TiltServo.write(TILT_SERVO_MIN_VALUE); // my servo makes noise at 0 degree.
 #endif
 }
 
 void initServos() {
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
+#if defined(CAR_HAS_DISTANCE_SERVO)
+#  if defined(USE_STANDARD_SERVO_LIBRARY)
     DistanceServo.attach(PIN_DISTANCE_SERVO); // Use standard servo library, because we have more servos and cannot use LightweightServo library
-#else
+#  else
     initLightweightServoPin10(); // Use LightweightServo library, because we have only one servo
+#  endif
 #endif
 
-#ifdef CAR_HAS_PAN_SERVO
+#if defined(CAR_HAS_PAN_SERVO)
 // initialize and set laser pan servo
     PanServo.attach(PIN_PAN_SERVO);
 #endif
-#ifdef CAR_HAS_TILT_SERVO
+#if defined(CAR_HAS_TILT_SERVO)
     TiltServo.attach(PIN_TILT_SERVO);
 #endif
     resetServos();

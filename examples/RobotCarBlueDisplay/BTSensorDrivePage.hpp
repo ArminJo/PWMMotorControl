@@ -18,8 +18,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
-#ifndef ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
-#define ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#ifndef _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#define _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
 #include <Arduino.h>
 
 #include "RobotCarPinDefinitionsAndMore.h"
@@ -39,9 +39,8 @@ BDSlider SliderLeft;        // X positive
 
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
-#define SLIDER_SPEED_THRESHOLD      (DEFAULT_START_SPEED_PWM)
-#define SPEED_SENSOR_DEAD_BAND      20
-#define SPEED_DEAD_BAND             (DEFAULT_DRIVE_SPEED_PWM / 4)
+#define SLIDER_SPEED_THRESHOLD      (DEFAULT_DRIVE_SPEED_PWM)
+#define SPEED_DEAD_BAND             DEFAULT_STOP_SPEED_PWM
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
 #define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 4)
@@ -58,70 +57,30 @@ uint8_t sSensorChangeCallCountForZeroAdjustment;
 float sYZeroValueAdded; // The accumulator for the values of the first 8 calls.
 float sYZeroValue = 0;
 
-#if (VERSION_BLUE_DISPLAY_MAJOR <= 2) && (VERSION_BLUE_DISPLAY_MINOR <= 1)
-// positiveNegativeSlider is available since 2.2
-/*
- * To show a signed value on two sliders positioned back to back (one of it is inverse or has a negative length value)
- */
-struct positiveNegativeSlider {
-    BDSlider *positiveSliderPtr;
-    BDSlider *negativeSliderPtr;
-    int lastSliderValue;      // positive value with sensor dead band applied
-    BDSlider *lastZeroSlider; // to decide if we draw new zero slider
-};
-/*
- * @return aValue with aSliderDeadBand applied
- */
-int setPositiveNegativeSliders(struct positiveNegativeSlider *aSliderStructPtr, int aValue, uint8_t aSliderDeadBand) {
-    BDSlider *tValueSlider = aSliderStructPtr->positiveSliderPtr;
-    BDSlider *tZeroSlider = aSliderStructPtr->negativeSliderPtr;
-    if (aValue < 0) {
-        aValue = -aValue;
-        tValueSlider = tZeroSlider;
-        tZeroSlider = aSliderStructPtr->positiveSliderPtr;
-    }
-
-    /*
-     * Now we have a positive value for dead band and slider length
-     */
-    if (aValue > aSliderDeadBand) {
-        // dead band subtraction -> resulting values start at 0
-        aValue -= aSliderDeadBand;
-    } else {
-        aValue = 0;
-    }
-
-    /*
-     * Draw slider value if values changed
-     */
-    if (aSliderStructPtr->lastSliderValue != aValue) {
-        aSliderStructPtr->lastSliderValue = aValue;
-        tValueSlider->setValueAndDrawBar(aValue);
-        if (aSliderStructPtr->lastZeroSlider != tZeroSlider) {
-            aSliderStructPtr->lastZeroSlider = tZeroSlider;
-            // the sign has changed, clear old value
-            tZeroSlider->setValueAndDrawBar(0);
-        }
-    }
-
-    /*
-     * Restore sign for aValue with dead band applied
-     */
-    if (tZeroSlider == aSliderStructPtr->positiveSliderPtr) {
-        aValue = -aValue;
-    }
-    return aValue;
-}
-#endif
-
 struct positiveNegativeSlider sAccelerationLeftRightSliders;
 struct positiveNegativeSlider sAccelerationForwardBackwardSliders;
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+BDButton TouchButtonTurnMode;
+bool sTurnModeEnabled = false;
+/**
+ * Called by TouchButtonRobotCarStartStop
+ */
+void doTurnMode(BDButton *aTheTouchedButton, int16_t aTurnModeEnabled) {
+    sTurnModeEnabled = aTurnModeEnabled;
+}
+#endif
+
+/*
+ * Add dead band value, clip values too big also because off adding right/left speed, but return 0 for input of 0.
+ */
 uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeedPWM) {
-    aSpeedPWM += SPEED_DEAD_BAND;
-    // overflow handling since analogWrite only accepts byte values
-    if (aSpeedPWM > MAX_SPEED_PWM) {
-        aSpeedPWM = MAX_SPEED_PWM;
+    if (aSpeedPWM > 0) {
+        aSpeedPWM += SPEED_DEAD_BAND;
+        // overflow handling since analogWrite only accepts byte values
+        if (aSpeedPWM > MAX_SPEED_PWM) {
+            aSpeedPWM = MAX_SPEED_PWM;
+        }
     }
     return aSpeedPWM;
 }
@@ -133,19 +92,21 @@ uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeedPWM) {
  * negative -> forward  / top down
  *
  * Left / right
- * positive -> left down
- * negative -> right down
+ * positive -> go left / left down
+ * negative -> go right / right down
  */
 void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackInfo) {
     (void) aSensorType; // to avoid -Wunused-parameter
 
     if (sSensorChangeCallCountForZeroAdjustment < CALLS_FOR_ZERO_ADJUSTMENT) {
+        /*
+         * Forward backward zero adjustment
+         */
         if (sSensorChangeCallCountForZeroAdjustment == 0) {
             // init values
             sYZeroValueAdded = 0;
         }
-        // Sum for zero adjustment
-        sYZeroValueAdded += aSensorCallbackInfo->ValueY;
+        sYZeroValueAdded += aSensorCallbackInfo->ValueY; // Sum for zero adjustment
         sSensorChangeCallCountForZeroAdjustment++;
     } else if (sSensorChangeCallCountForZeroAdjustment == CALLS_FOR_ZERO_ADJUSTMENT) {
         sSensorChangeCallCountForZeroAdjustment++;
@@ -156,28 +117,55 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
     } else {
 
         /*
-         * regular operation here
-         * left right handling
+         * Regular operation here
          */
-#ifdef CAR_HAS_4_WHEELS
+#if defined(CAR_HAS_4_WHEELS)
         int tLeftRightValue = aSensorCallbackInfo->ValueX * 12.0;
 #else
         int tLeftRightValue = aSensorCallbackInfo->ValueX * 8.0; // Scale value
 #endif
-        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, LEFT_RIGHT_SENSOR_DEAD_BAND);
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, SPEED_DEAD_BAND);
+#else
+        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, LEFT_RIGHT_SENSOR_DEAD_BAND);
+#endif
         /*
          * forward backward handling
          */
         int tSpeedPWMValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED_PWM / 10)); // Scale value
-        tSpeedPWMValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedPWMValue, SPEED_SENSOR_DEAD_BAND);
+        tSpeedPWMValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedPWMValue, SPEED_DEAD_BAND);
 
         /*
-         * Print speed as value of bottom slider
+         * Print speedPWM as value of bottom slider
          */
         sprintf(sStringBuffer, "%4d", tSpeedPWMValue);
         SliderBackward.printValue(sStringBuffer);
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+        /*
+         * Get direction
+         */
+        uint8_t tDirection = DIRECTION_STOP;
+        if(tSpeedPWMValue > 0){
+            tDirection = DIRECTION_FORWARD;
+        } else if (tSpeedPWMValue < 0) {
+            tSpeedPWMValue = -tSpeedPWMValue;
+            tDirection = DIRECTION_BACKWARD;
+        }
+        if(tLeftRightValue > 0) {
+            // Left
+            tDirection |= DIRECTION_LEFT;
+        } else if(tLeftRightValue < 0) {
+            tLeftRightValue = - tLeftRightValue;
+            tDirection |= DIRECTION_RIGHT;
+        }
+        if(sTurnModeEnabled){
+            tDirection |= DIRECTION_TURN;
+        }
+        tSpeedPWMValue = max(tSpeedPWMValue, tLeftRightValue);
+        RobotCarPWMMotorControl.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
+#else
         /*
          * Get direction
          */
@@ -186,31 +174,36 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
             tSpeedPWMValue = -tSpeedPWMValue;
             tDirection = DIRECTION_BACKWARD;
         }
-
-        RobotCarPWMMotorControl.rightCarMotor.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue),
-                tDirection);
-        RobotCarPWMMotorControl.leftCarMotor.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue),
-                tDirection);
+        RobotCarPWMMotorControl.rightCarMotor.setSpeedPWMAndDirection(
+                speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue), tDirection);
+        RobotCarPWMMotorControl.leftCarMotor.setSpeedPWMAndDirection(
+                speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue), tDirection);
+#endif
     }
 }
 
 void initBTSensorDrivePage(void) {
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    TouchButtonTurnMode.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_2, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_BLUE, F("Turn"),
+            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sTurnModeEnabled, &doTurnMode);
+#endif
     /*
-     * 4 Slider
+     * 4 Sliders
      */
 // Position Slider at middle of screen
-// Top slider
-    SliderForward.init(SENSOR_SLIDER_CENTER_X, SENSOR_SLIDER_CENTER_Y - VERTICAL_SLIDER_LENTGH, SENSOR_SLIDER_WIDTH,
+// Top/forward slider
+    SliderForward.init(SENSOR_SLIDER_CENTER_X, (SENSOR_SLIDER_CENTER_Y - VERTICAL_SLIDER_LENTGH), SENSOR_SLIDER_WIDTH,
     VERTICAL_SLIDER_LENTGH, SLIDER_SPEED_THRESHOLD, 0, SLIDER_BACKGROUND_COLOR, SLIDER_BAR_COLOR, FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
 
 //    SliderForward.setBarThresholdColor(SLIDER_THRESHOLD_COLOR);
 
-    // Bottom slider
+    // Bottom/backward slider
     SliderBackward.init(SENSOR_SLIDER_CENTER_X, SENSOR_SLIDER_CENTER_Y, SENSOR_SLIDER_WIDTH, -(VERTICAL_SLIDER_LENTGH),
     SLIDER_SPEED_THRESHOLD, 0, SLIDER_BACKGROUND_COLOR, SLIDER_BAR_COLOR, FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
+
 //    SliderBackward.setBarThresholdColor(SLIDER_THRESHOLD_COLOR);
     SliderForward.setScaleFactor((float) MAX_SPEED_PWM / (float) VERTICAL_SLIDER_LENTGH);
-    SliderBackward.setScaleFactor((float) MAX_SPEED_PWM / (float) VERTICAL_SLIDER_LENTGH);
+    SliderBackward.setScaleFactor((float) MAX_SPEED_PWM / (float) VERTICAL_SLIDER_LENTGH); // second expression is optimized by compiler :-)
     sAccelerationForwardBackwardSliders.positiveSliderPtr = &SliderForward;
     sAccelerationForwardBackwardSliders.negativeSliderPtr = &SliderBackward;
 
@@ -235,6 +228,9 @@ void drawBTSensorDrivePage(void) {
     drawCommonGui();
     BlueDisplay1.drawText(HEADER_X, TEXT_SIZE_22_HEIGHT + TEXT_SIZE_22_HEIGHT, F("Sensor drive"));
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    TouchButtonTurnMode.drawButton();
+#endif
     TouchButtonBack.drawButton();
     TouchButtonRobotCarStartStop.drawButton();
     SliderForward.drawSlider();
@@ -253,5 +249,5 @@ void loopBTSensorDrivePage(void) {
 
 void stopBTSensorDrivePage(void) {
 }
-#endif // ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
+#endif // _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
 #pragma once

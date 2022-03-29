@@ -22,8 +22,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
-#define ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#define _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #include <Arduino.h>
 
 #include "RobotCarPinDefinitionsAndMore.h"
@@ -41,7 +41,7 @@ const char *const sStepModeButtonCaptionStringArray[] PROGMEM = { sStepModeButto
 BDButton TouchButtonStep;
 BDButton TouchButtonSingleScan;
 BDButton TouchButtonScanSpeed;
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
 BDButton TouchButtonPathInfoPage;
 #endif
 
@@ -49,7 +49,7 @@ BDButton TouchButtonPathInfoPage;
 BDButton TouchButtonScanMode;
 const char sDistanceSourceModeButtonStringMinMax[] PROGMEM = "Min->Max";
 const char sDistanceSourceModeButtonStringMaxUS[] PROGMEM = "Max->US";
-#  ifdef CAR_HAS_IR_DISTANCE_SENSOR
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
 const char sDistanceSourceModeButtonStringUSIr[] PROGMEM = "US->IR";
 const char sDistanceSourceModeButtonStringIrMin[] PROGMEM = "IR->Min";
 const char *const sDistanceSourceModeButtonCaptionStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax,
@@ -177,7 +177,7 @@ void initAutonomousDrivePage(void) {
     TouchButtonStep.init(0, BUTTON_HEIGHT_6_LINE_3, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Step"),
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doStep);
 
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
     TouchButtonPathInfoPage.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_RED, F("Show\nPath"), TEXT_SIZE_11,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_SHOW_PATH, &GUISwitchPages);
 #endif
@@ -237,7 +237,7 @@ void drawAutonomousDrivePage(void) {
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
     TouchButtonFollower.drawButton();
     TouchButtonBack.drawButton();
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
     TouchButtonPathInfoPage.drawButton();
 #endif
 }
@@ -301,5 +301,5 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
         }
     }
 }
-#endif // ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #pragma once

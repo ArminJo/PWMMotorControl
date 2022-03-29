@@ -112,16 +112,10 @@
 #define PIN_ECHO_IN                A1
 #endif
 
-#if defined(LASER_MOUNTED)
+#if defined(CAR_HAS_LASER)
 #define PIN_LASER_OUT               LED_BUILTIN
 #endif
 
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-// Pin A0 for VCC monitoring - ADC channel 2
-// Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
-#define VIN_11TH_IN_CHANNEL         2 // = A2
-#define PIN_VIN_11TH_IN            A2
-#endif
 #endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
@@ -147,20 +141,16 @@
 #define PIN_BUZZER                     A3
 #define PIN_IR_DISTANCE_SENSOR         A6 // Sharp IR distance sensor
 
+#  if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 // Pin A0 for VCC monitoring - ADC channel 7
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_11TH_IN_CHANNEL             7 // = A7
 #define PIN_VIN_11TH_IN                A7
+#  endif
 #  if defined(CAR_HAS_CAMERA)
 #define PIN_CAMERA_SUPPLY_CONTROL      A2
 #  endif
-#else
-// UNO based
-#define PIN_BUZZER                     12
-#define PIN_IR_DISTANCE_SENSOR         A3 // Sharp IR distance sensor
-#endif
-
-#if defined(CAR_IS_ESP32_CAM_BASED)
+#elif defined(CAR_IS_ESP32_CAM_BASED)
 #define RIGHT_MOTOR_FORWARD_PIN    17 // IN4 <- Label on the L298N board
 #define RIGHT_MOTOR_BACKWARD_PIN   18 // IN3
 #define RIGHT_MOTOR_PWM_PIN        16 // ENB - Must be PWM capable
@@ -176,14 +166,24 @@
 
 #define PIN_TRIGGER_OUT            25
 #define PIN_ECHO_IN                26
-#define PIN_DISTANCE_SERVO         27 // Servo Nr. 2 on Adafruit Motor Shield
+#define PIN_DISTANCE_SERVO         27
 #define PIN_BUZZER                 23
 
 // for ESP32 LED_BUILTIN is defined as: static const uint8_t LED_BUILTIN 2
 #  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
 #define LED_BUILTIN PB1
 #  endif
-#endif //defined(ESP32)
+#else // NANO_BASED
+// UNO based
+#  if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+// Pin A0 for VCC monitoring - ADC channel 2
+// Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
+#define VIN_11TH_IN_CHANNEL         2 // = A2
+#define PIN_VIN_11TH_IN            A2
+#  endif
+#define PIN_BUZZER                     12
+#define PIN_IR_DISTANCE_SENSOR         A3 // Sharp IR distance sensor
+#endif // CAR_IS_NANO_BASED
 
 #endif /* ROBOT_CAR_PIN_DEFINITIONS_AND_MORE_H */
 #pragma once

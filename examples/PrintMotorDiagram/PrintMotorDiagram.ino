@@ -39,7 +39,8 @@
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define MOSFET_BRIDGE_USED          // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program space.
+//#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+//#define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
 #if defined (USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
 #include "CarPWMMotorControl.hpp"
@@ -105,7 +106,7 @@ void loop() {
      * Print value after each encoder count change and increase PWM every DELAY_MILLIS_BETWEEN_CHANGE ms
      */
 //    for (uint_fast8_t tSpeed = 0; tSpeed < 250; ++tSpeed) {
-//        MotorUnderTest.setSpeed(tSpeed, sMotorDirection);
+//        MotorUnderTest.setSpeedPWM(tSpeed, sMotorDirection);
 //        uint32_t tStartMillis = millis();
 //        do {
 //            if (MotorUnderTest.SensorValuesHaveChanged) {

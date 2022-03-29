@@ -21,15 +21,15 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
-#ifndef ROBOT_CAR_PATH_INFO_PAGE_HPP
-#define ROBOT_CAR_PATH_INFO_PAGE_HPP
+#ifndef _ROBOT_CAR_PATH_INFO_PAGE_HPP
+#define _ROBOT_CAR_PATH_INFO_PAGE_HPP
 #include <Arduino.h>
 
 #include "RobotCarPinDefinitionsAndMore.h"
 #include "RobotCarGui.h"
 #include "Distance.h"
 
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
 BDButton TouchButtonResetPath;
 BDButton TouchButtonBackSmall;
 
@@ -212,5 +212,5 @@ void DrawPath() {
     }
 }
 #endif // ENABLE_PATH_INFO_PAGE
-#endif // ROBOT_CAR_PATH_INFO_PAGE_HPP
+#endif // _ROBOT_CAR_PATH_INFO_PAGE_HPP
 #pragma once

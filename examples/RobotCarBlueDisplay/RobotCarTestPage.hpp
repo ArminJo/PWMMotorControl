@@ -18,8 +18,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
-#ifndef ROBOT_CAR_TEST_PAGE_HPP
-#define ROBOT_CAR_TEST_PAGE_HPP
+#ifndef _ROBOT_CAR_TEST_PAGE_HPP
+#define _ROBOT_CAR_TEST_PAGE_HPP
 #include <Arduino.h>
 
 #include "RobotCarPinDefinitionsAndMore.h"
@@ -33,7 +33,7 @@
  */
 BDButton TouchButtonReset;
 
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
 BDButton TouchButtonGetAndStoreSpeed;
 #endif
 
@@ -79,11 +79,11 @@ void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
         }
         RobotCarPWMMotorControl.startRotate(aValue, TURN_IN_PLACE);
     } else {
-        RobotCarPWMMotorControl.startRotate(aValue, (turn_direction_t)sRobotCarDirection);
+        RobotCarPWMMotorControl.startRotate(aValue, (turn_direction_t) sRobotCarDirection);
     }
 }
 
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
 /*
  * Callback handler for user speed input
  * Store user speed input as DriveSpeed
@@ -109,41 +109,15 @@ void doGetSpeedAsNumber(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 #endif
 
+/*
+ * replacing parameter init with structure init INCREASES code size by 82 bytes
+ */
 //const struct ButtonInit ButtonReset PROGMEM { BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
 //COLOR16_BLUE, TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doReset };
-//
 //const struct ButtonInit Button5cm PROGMEM { BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
 //COLOR16_BLUE, TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 50, &doDistance };
 //const struct ButtonInit Button10cm PROGMEM { BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
 //COLOR16_BLUE, TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 100, &doDistance };
-//
-//const struct ButtonInit Button20cm PROGMEM { BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE, TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 200, &doDistance };
-//const struct ButtonInit Button40cm PROGMEM { BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE, TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 400, &doDistance };
-//const struct ButtonInit ButtonDebug PROGMEM { BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_RED, TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doShowDebug };
-//
-//const struct ButtonInit Button45DegreeLeft PROGMEM { BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE,
-//TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 45, &doRotation }; // \xB0 is degree character
-//const struct ButtonInit Button45DegreeRight PROGMEM { BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE,
-//TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -45, &doRotation }; // \xB0 is degree character
-//const struct ButtonInit Button360Degree PROGMEM { BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE,
-//TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 360, &doRotation }; // \xB0 is degree character
-//
-//const struct ButtonInit Button90DegreeLeft PROGMEM { BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE,
-//TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 90, &doRotation }; // \xB0 is degree character
-//const struct ButtonInit Button90DegreeRight PROGMEM { BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_8,
-//COLOR16_BLUE,
-//TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, -90, &doRotation }; // \xB0 is degree character
-
-/*
- * replacing parameter init with structure init INCREASES code size by 82 bytes
- */
 void initTestPage(void) {
     /*
      * Control buttons
@@ -151,7 +125,7 @@ void initTestPage(void) {
     TouchButtonReset.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
     COLOR16_BLUE, F("Reset"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doReset);
 
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
     TouchButtonGetAndStoreSpeed.init(0, BUTTON_HEIGHT_4_LINE_4 - BUTTON_HEIGHT_6 - BUTTON_DEFAULT_SPACING_QUARTER, BUTTON_WIDTH_6,
     BUTTON_HEIGHT_6, COLOR16_BLUE, F("Set\nspeed"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doGetSpeedAsNumber);
 #endif
@@ -223,7 +197,7 @@ void drawTestPage(void) {
 
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.drawButton();
 #endif
 
@@ -232,15 +206,15 @@ void drawTestPage(void) {
     TouchButtonDirection.drawButton();
 
     SliderSpeed.drawSlider();
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
     SliderSpeedRight.drawSlider();
     SliderSpeedLeft.drawSlider();
 #endif
-#ifdef ENABLE_EEPROM_STORAGE
+#if defined(ENABLE_EEPROM_STORAGE)
     TouchButtonGetAndStoreSpeed.drawButton();
 #endif
 
-    SliderUSPosition.drawSlider();
+    SliderDistanceServoPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -263,5 +237,5 @@ void loopTestPage(void) {
 
 void stopTestPage(void) {
 }
-#endif // ROBOT_CAR_TEST_PAGE_HPP
+#endif // _ROBOT_CAR_TEST_PAGE_HPP
 #pragma once

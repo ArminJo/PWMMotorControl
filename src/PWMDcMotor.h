@@ -33,8 +33,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef PWMDCMOTOR_H_
-#define PWMDCMOTOR_H_
+#ifndef _PWM_DC_MOTOR_H
+#define _PWM_DC_MOTOR_H
 
 #include <stdint.h>
 
@@ -80,13 +80,13 @@
 #endif
 
 // Propagate debug level
-#ifdef TRACE    // Information you need to understand details of a function or if you hunt a bug.
-#  ifndef DEBUG
+#if defined(TRACE)    // Information you need to understand details of a function or if you hunt a bug.
+#  if !defined(DEBUG)
 #define DEBUG   // Information need to understand the operating of your program. E.g. function calls and values of control variables.
 #  endif
 #endif
-#ifdef DEBUG
-#  ifndef INFO
+#if defined(DEBUG)
+#  if !defined(INFO)
 #define INFO    // Information you want to see in regular operation to see what the program is doing. E.g. "START ../src/LightToTone.cpp Version 1.2 from Dec 31 2019" or "Now playing Muppets melody".
 #  endif
 #endif
@@ -124,13 +124,14 @@
 #define FULL_BRIDGE_OUTPUT_MILLIVOLT        (FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)
 #endif
 
+#define DEFAULT_STOP_MILLIVOLT_MOSFET       700 // Voltage where spinning motors start to stop
 #define DEFAULT_START_MILLIVOLT_MOSFET      1000 // Voltage where motors start to turn
 #define DEFAULT_START_MILLIVOLT_L298        1700 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
 #define SPEED_PWM_FOR_1_VOLT                ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define SPEED_FOR_8_VOLT                    ((8000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 
-// Default values - used if EEPROM values are invalid or nor available
+// Default values - used if EEPROM values are invalid or not available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
 // At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt, 68 for 7.4 volt
 #define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
@@ -138,15 +139,20 @@
 
 #if !defined(DEFAULT_START_SPEED_PWM)
 #  if defined(MOSFET_BRIDGE_USED)
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT) // 24 for 7.4 volt
+#define DEFAULT_STOP_SPEED_PWM              ((DEFAULT_STOP_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
 #  else
 #define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #  endif
 #endif
 
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
+#  if defined(CAR_HAS_4_MECANUM_WHEELS)
+#define DEFAULT_MILLIMETER_PER_SECOND       200 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#  else
 // At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.5 rotation per second, 29 distance/encoder counts per second -> 32 cm / second
 #define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#endif
 #define DEFAULT_MILLIS_PER_MILLIMETER       (MILLIS_IN_ONE_SECOND / DEFAULT_MILLIMETER_PER_SECOND)
 #endif
 /*
@@ -174,23 +180,19 @@
 #define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
 
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
-#define DIRECTION_FORWARD   0
-#define DIRECTION_BACKWARD  1
-#define DIRECTION_MASK      1
-#define oppositeDIRECTION(aDirection) (aDirection ^ DIRECTION_BACKWARD)
+#define DIRECTION_STOP                  0x00
+#define STOP_MODE_BRAKE                 0x00
+#define DIRECTION_FORWARD               0x01
+#define DIRECTION_BACKWARD              0x02
+#define STOP_MODE_RELEASE               0x03
+#define DIRECTION_MASK                  (DIRECTION_FORWARD | DIRECTION_BACKWARD)
+#define oppositeDIRECTION(aDirection)   (aDirection ^ DIRECTION_MASK) // invert every bit
 
-#define DIRECTION_STOP      2   // like MOTOR_BRAKE
-#define DIRECTION_FORWARD_BACKWARD_STOP_MASK   2
+#define STOP_MODE_KEEP                  1 // just for stop()
+#define DEFAULT_STOP_MODE               STOP_MODE_BRAKE
 
-#define MOTOR_BRAKE                     2
-#define MOTOR_RELEASE                   3
-#define STOP_MODE_KEEP                  0
-#define DIRECTION_AND_STOP_MODE_MASK    0x03
-#define STOP_MODE_MASK                  0x02
-#define DEFAULT_STOP_MODE               MOTOR_RELEASE
-#define ForceStopMODE(aStopMode)        ((aStopMode & DIRECTION_AND_STOP_MODE_MASK) | STOP_MODE_MASK)
-#ifdef DEBUG
-extern char sMotorModeCharArray[4];
+#if defined(DEBUG)
+extern char sDirectionCharArray[3];
 #endif
 
 /*
@@ -201,13 +203,14 @@ extern char sMotorModeCharArray[4];
 #define DIRECTION_LEFT              0x10
 #define DIRECTION_RIGHT             0x20
 #define DIRECTION_LEFT_RIGHT_MASK   (DIRECTION_LEFT | DIRECTION_RIGHT)
+#define oppositeSIDE(aSide) (aSide ^ DIRECTION_LEFT_RIGHT_MASK)
 #define DIRECTION_TURN              0x40
 #define DIRECTION_TURN_MASK         DIRECTION_TURN
 #define DIRECTION_NOT_TURN          0x00
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #include <Wire.h>
-#  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 // some PCA9685 specific constants
 #define PCA9685_DEFAULT_ADDRESS      0x60
 #define PCA9685_GENERAL_CALL_ADDRESS 0x00
@@ -248,7 +251,7 @@ public:
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init(uint8_t aMotorNumber);
-#  ifdef USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     /*
      * Own internal functions for communicating with the PCA9685 Expander IC on the Adafruit motor shield
      */
@@ -267,18 +270,20 @@ public:
      * Basic motor commands
      */
     void setDirection(uint8_t aMotorDirection); // alias for setMotorDriverMode()
-    void setSpeed(uint8_t aRequestedSpeedPWM);
+    void setSpeedPWM(uint8_t aRequestedSpeedPWM);
 
-    void setSpeedPWM(int aRequestedSpeedPWM);
+    void setSpeedPWMAndDirection(int aRequestedSpeedPWM); // sign us used for direction
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
 
     void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
 
+    uint8_t getDirection();
+
     void start(uint8_t aRequestedDirection);
-    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or MOTOR_BRAKE or MOTOR_RELEASE
-    void setStopMode(uint8_t aStopMode); // mode for SpeedPWM==0 or STOP_MODE_KEEP: MOTOR_BRAKE or MOTOR_RELEASE
+    void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
+    void setStopMode(uint8_t aStopMode); // mode for SpeedPWM==0 or STOP_MODE_KEEP: STOP_MODE_BRAKE or STOP_MODE_RELEASE
     bool isStopped(); // checks for SpeedPWM==0
     /*
      * Fixed distance driving functions
@@ -291,7 +296,7 @@ public:
     void startRampUp(uint8_t aRequestedDirection);
     void startRampDown();
 
-#ifndef USE_ENCODER_MOTOR_CONTROL // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerMillimeter for the functions below
+#if !defined(USE_ENCODER_MOTOR_CONTROL) // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerMillimeter for the functions below
     // This function only makes sense for non encoder motors
     void setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond);
 
@@ -317,7 +322,7 @@ public:
     void writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber);
 
     void printValues(Print *aSerial);
-    static void printSettings(Print *aSerial);
+    static void printCompileOptions(Print *aSerial);
 
     /*
      * Internal functions
@@ -351,9 +356,8 @@ public:
     volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
 #endif
 
-    uint8_t CurrentSpeedPWM; // stopped if CurrentSpeedPWM == 0
-    uint8_t CurrentDirectionOrBrakeMode; // (of CurrentSpeedPWM etc.) DIRECTION_FORWARD, DIRECTION_BACKWARD, if motor stopped, then: MOTOR_BRAKE, MOTOR_RELEASE
-    uint8_t LastDirection; // Used for speed and distance. Contains  DIRECTION_FORWARD, DIRECTION_BACKWARD but not MOTOR_BRAKE, MOTOR_RELEASE.
+    uint8_t CurrentSpeedPWM;        // stopped if CurrentSpeedPWM == 0
+    uint8_t CurrentDirection;       // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
     static bool MotorPWMHasChanged;
 
     bool CheckDistanceInUpdateMotor;
@@ -368,7 +372,7 @@ public:
     unsigned long NextRampChangeMillis;
 #endif
 
-#ifndef USE_ENCODER_MOTOR_CONTROL // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
+#if !defined(USE_ENCODER_MOTOR_CONTROL) // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
     uint8_t MillisPerMillimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED_PWM. Required for non encoder motors to estimate duration for a fixed distance
 #endif
@@ -389,6 +393,5 @@ public:
  * Version 1.0.0 - 9/2020
  * - Initial version.
  */
-#endif /* PWMDCMOTOR_H_ */
-
+#endif // _PWM_DC_MOTOR_H
 #pragma once

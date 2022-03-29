@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef ROBOT_CAR_BLUE_DISPLAY_H
-#define ROBOT_CAR_BLUE_DISPLAY_H
+#ifndef _ROBOT_CAR_BLUE_DISPLAY_H
+#define _ROBOT_CAR_BLUE_DISPLAY_H
 
 #if defined(MONITOR_VIN_VOLTAGE)
 #include "ADCUtils.h"
@@ -44,5 +44,5 @@ int doUserCollisionDetection();
 
 #include "CarPWMMotorControl.h"
 
-#endif /* ROBOT_CAR_BLUE_DISPLAY_H */
+#endif // _ROBOT_CAR_BLUE_DISPLAY_H
 #pragma once

@@ -59,10 +59,10 @@ void setup() {
     // Just to know which program is running on my Arduino
     Serial.println("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
 
-#ifdef USE_ADAFRUIT_MOTOR_SHIELD
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     RobotCarPWMMotorControl.init();
 #else
-#  ifdef USE_ENCODER_MOTOR_CONTROL
+#  if defined(USE_ENCODER_MOTOR_CONTROL)
     RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
     LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
 #  else
@@ -96,7 +96,7 @@ void setup() {
     delay(500);
     DistanceServo.write(90);
     delay(1000);
-#ifdef USE_MPU6050_IMU
+#if defined(USE_MPU6050_IMU)
     /*
      * Wait after pressing the reset button, or attaching the power
      * and then take offset values for 1/2 second

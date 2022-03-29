@@ -15,8 +15,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#ifndef SRC_AUTONOMOUSDRIVE_H_
-#define SRC_AUTONOMOUSDRIVE_H_
+#ifndef _AUTONOMOUS_DRIVE_H
+#define _AUTONOMOUS_DRIVE_H
 
 #include <stdint.h>
 
@@ -56,5 +56,5 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DR
 void driveCollisonAvoidingOneStep();
 void driveFollowerModeOneStep();
 
-#endif /* SRC_AUTONOMOUSDRIVE_H_ */
+#endif // _AUTONOMOUS_DRIVE_H
 #pragma once

@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef LIGHTWEIGHT_SERVO_HPP
-#define LIGHTWEIGHT_SERVO_HPP
+#ifndef _LIGHTWEIGHT_SERVO_HPP
+#define _LIGHTWEIGHT_SERVO_HPP
 
 #include <Arduino.h>
 
@@ -134,7 +134,7 @@ int writeLightweightServo(int aDegree, bool aUsePin9, bool aUpdateFast) {
 }
 
 void writeMicrosecondsLightweightServo(int aMicroseconds, bool aUsePin9, bool aUpdateFast) {
-#ifndef DISABLE_SERVO_TIMER_AUTO_INITIALIZE
+#if !defined(DISABLE_SERVO_TIMER_AUTO_INITIALIZE)
     // auto initialize
     if ((TCCR1B != (_BV(WGM13) | _BV(WGM12) | _BV(CS11))) || (aUsePin9 && ((TCCR1A & ~_BV(COM1B1)) != (_BV(COM1A1) | _BV(WGM11))))
             || (!aUsePin9 && ((TCCR1A & ~_BV(COM1A1)) != (_BV(COM1B1) | _BV(WGM11))))) {
@@ -220,5 +220,5 @@ int MicrosecondsToDegreeLightweightServo(int aMicroseconds) {
 }
 
 #endif // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328__)
-#endif // #ifndef LIGHTWEIGHT_SERVO_HPP
+#endif // _LIGHTWEIGHT_SERVO_HPP
 #pragma once

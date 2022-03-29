@@ -21,8 +21,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
-#ifndef ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
-#define ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
+#ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
+#define _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
 #include <Arduino.h>
 
 #include "AutonomousDrive.h"
@@ -72,7 +72,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         /*
          * Start autonomous driving.
          */
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
         resetPathData();
 #endif
         clearPrintedForwardDistancesInfos();
@@ -105,7 +105,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #endif
         DistanceServoWriteAndDelay(90);
         sDriveMode = MODE_MANUAL_DRIVE;
-        RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+        RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
     }
 
     // manage on off buttons
@@ -177,7 +177,7 @@ void driveCollisonAvoidingOneStep() {
         /*
          * Here car is moving
          */
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
         uint16_t tStepStartDistanceCount = RobotCarPWMMotorControl.rightCarMotor.EncoderCount; // get count before distance scanning
 #endif
         bool tCurrentPageIsAutomaticControl = (sCurrentPage == PAGE_AUTOMATIC_CONTROL);
@@ -203,7 +203,7 @@ void driveCollisonAvoidingOneStep() {
             /*
              * No stop here => distance is valid
              */
-#ifdef USE_ENCODER_MOTOR_CONTROL
+#if defined(USE_ENCODER_MOTOR_CONTROL)
             sCentimeterPerScanTimesTwo = RobotCarPWMMotorControl.rightCarMotor.EncoderCount - tStepStartDistanceCount;
             sCentimeterPerScan = sCentimeterPerScanTimesTwo / 2;
 #endif
@@ -223,8 +223,8 @@ void driveCollisonAvoidingOneStep() {
              * Stop if rotation requested or single step
              */
             RobotCarPWMMotorControl.stopAndWaitForIt();
-#ifdef USE_ENCODER_MOTOR_CONTROL
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+#if defined(ENABLE_PATH_INFO_PAGE)
 
             /*
              * Insert / update last ride in path
@@ -240,14 +240,14 @@ void driveCollisonAvoidingOneStep() {
             /*
              * No stop, just continue => overwrite last path element with current riding distance and try to synchronize motors
              */
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
             insertToPath(RobotCarPWMMotorControl.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
 #endif
 //            RobotCarPWMMotorControl.rightCarMotor.synchronizeMotor(&RobotCarPWMMotorControl.leftCarMotor, 100);
 #endif
         }
 
-#ifdef ENABLE_PATH_INFO_PAGE
+#if defined(ENABLE_PATH_INFO_PAGE)
         if (sCurrentPage == PAGE_SHOW_PATH) {
             drawPathInfoPage();
         }
@@ -393,14 +393,14 @@ void driveFollowerModeOneStep() {
                 checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
 
             } else {
-                if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != MOTOR_RELEASE) {
+                if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_STOP) {
 //        Serial.println(F("Stop"));
-                    RobotCarPWMMotorControl.stop(MOTOR_RELEASE);
+                    RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
                 }
             }
         }
     }
     delayAndLoopGUI(100); // the IR sensor takes 39 ms for one measurement
 }
-#endif // ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
+#endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
 #pragma once

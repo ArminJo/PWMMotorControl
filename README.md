@@ -22,16 +22,16 @@ Available as Arduino library "PWMMotorControl"
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
 - `setDirection(uint8_t aMotorDirection)`.
-- `setSpeed(uint8_t aSpeedPWM)`.
-- `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWM(int Signed_RequestedSpeedPWM)`.
-- `stop()` or `setSpeedPWM(0)`.
+- `setSpeedPWM(uint8_t aSpeedPWM)`.
+- `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWMAndDirection(int Signed_RequestedSpeedPWM)`.
+- `stop()` or `setSpeedPWMAndDirection(0)`.
 - `startRampUp(uint8_t aRequestedDirection)`, `goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);`,  `startGoDistanceMillimeter(int aRequestedDistanceMillimeter)` and `updateMotor()`.
 - `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for encoder motors or MPU6050 IMU equipped cars.
 
 #### To go a specified distance use:
 Drving speed PWM is the PWM value to use for driving a fixed distance. The software generates a ramp up from start PWM to driving speed PWM at the start of the movement and a ramp down to stop.
 - `calibrate()` to automatically set start speed for encoder or IMU supported cars.
-- `startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)` or `setSpeedPWM(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` - for non encoder motors a formula, using distance and the drive speed PWM, is used to convert counts into motor driving time.
+- `startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)` or `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` - for non encoder motors a formula, using distance and the drive speed PWM, is used to convert counts into motor driving time.
 - `updateMotor()` or `updateMotors()` - call this in your loop if you use the start* functions.
 
 2 wheel car from LAVFIN with 2 LiPo batteries case, and IR receiver, with wires in original length.
@@ -55,6 +55,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, the millis() timer0 is used for analogWrite since we use pin 5 & 6. |
 | `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | Enabling requires additionally 694 bytes program memory. |
 | `DO_NOT_SUPPORT_RAMP` | disabled | Enabling saves 378 bytes program memory. |
+| `DO_NOT_SUPPORT_AVERAGE_SPEED` | disabled | Enabling disables the function getAverageSpeed() and saves 44 bytes RAM per motor and 156 bytes program memory. |
 
 ## Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
