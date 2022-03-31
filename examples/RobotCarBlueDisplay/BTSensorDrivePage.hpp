@@ -39,7 +39,7 @@ BDSlider SliderLeft;        // X positive
 
 #define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
-#define SLIDER_SPEED_THRESHOLD      (DEFAULT_DRIVE_SPEED_PWM)
+#define SLIDER_SPEED_THRESHOLD      DEFAULT_DRIVE_SPEED_PWM
 #define SPEED_DEAD_BAND             DEFAULT_STOP_SPEED_PWM
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
@@ -74,15 +74,16 @@ void doTurnMode(BDButton *aTheTouchedButton, int16_t aTurnModeEnabled) {
 /*
  * Add dead band value, clip values too big also because off adding right/left speed, but return 0 for input of 0.
  */
-uint8_t speedOverflowAndDeadBandHandling(unsigned int aSpeedPWM) {
+uint8_t speedOverflowAndDeadBandHandling(int aSpeedPWM) {
     if (aSpeedPWM > 0) {
         aSpeedPWM += SPEED_DEAD_BAND;
         // overflow handling since analogWrite only accepts byte values
         if (aSpeedPWM > MAX_SPEED_PWM) {
             aSpeedPWM = MAX_SPEED_PWM;
         }
+        return aSpeedPWM;
     }
-    return aSpeedPWM;
+    return 0; // clip negative values to 0
 }
 
 /*
@@ -167,7 +168,7 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         RobotCarPWMMotorControl.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
 #else
         /*
-         * Get direction
+         * Split into direction and speed to simplify dead band handling
          */
         uint8_t tDirection = DIRECTION_FORWARD;
         if (tSpeedPWMValue < 0) {

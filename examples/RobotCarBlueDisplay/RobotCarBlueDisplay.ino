@@ -30,6 +30,7 @@
 #include <Arduino.h>
 
 #define VERSION_EXAMPLE "3.0"
+//#define DEBUG
 
 /*
  * Car configuration

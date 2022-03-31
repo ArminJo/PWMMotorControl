@@ -341,12 +341,6 @@ public:
      *********************************/
     uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance.
 
-    /*
-     * Positive value to be subtracted from TargetPWM to get CurrentSpeedPWM to compensate for different left and right motors
-     * Currently SpeedPWMCompensation is in steps of 2 and only one motor can have a positive value, the other is set to zero.
-     * Value is computed in EncoderMotor::synchronizeMotor()
-     */
-    uint8_t SpeedPWMCompensation;
     /**********************************
      * End of EEPROM values
      *********************************/
@@ -356,7 +350,14 @@ public:
     volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
 #endif
 
-    uint8_t CurrentSpeedPWM;        // stopped if CurrentSpeedPWM == 0
+    /*
+     * Positive value to be subtracted from TargetPWM to get CompensatedSpeedPWM to compensate for different left and right motors
+     * Currently SpeedPWMCompensation is in steps of 2 and only one motor can have a positive value, the other is set to zero.
+     * Value is computed in EncoderMotor::synchronizeMotor()
+     */
+    uint8_t SpeedPWMCompensation;   // Positive value!
+    uint8_t RequestedSpeedPWM;      // Is always >= CompensatedSpeedPWM
+    uint8_t CompensatedSpeedPWM;    // RequestedSpeedPWM - SpeedPWMCompensation. Stopped if CompensatedSpeedPWM == 0
     uint8_t CurrentDirection;       // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
     static bool MotorPWMHasChanged;
 

@@ -75,7 +75,7 @@
 #define RIGHT_MOTOR_INTERRUPT       INT0 // Pin 2
 #define LEFT_MOTOR_INTERRUPT        INT1 // Pin 3
 #else
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_US_DISTANCE_SENSOR) && defined(CAR_HAS_IR_DISTANCE_SENSOR)
 #define US_DISTANCE_SENSOR_ENABLE_PIN   3 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
 #  endif
 #endif // defined(USE_ENCODER_MOTOR_CONTROL)

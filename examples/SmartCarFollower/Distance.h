@@ -50,10 +50,11 @@ extern uint8_t sDistanceFeedbackMode;
  * Different result types acquired at one scan
  */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-#define DISTANCE_SOURCE_MODE_MINIMUM   0 // Take the minimum of the US and IR or TOF values
-#define DISTANCE_SOURCE_MODE_MAXIMUM   1
-#define DISTANCE_SOURCE_MODE_US        2 // Take just US value
-#define DISTANCE_SOURCE_MODE_IR_OR_TOF 3 // Take just IR or TOF value
+#define DISTANCE_SOURCE_MODE_MINIMUM    0 // Take the minimum of the US and IR or TOF values
+#define DISTANCE_SOURCE_MODE_MAXIMUM    1
+#define DISTANCE_SOURCE_MODE_US         2 // Take just US value
+#define DISTANCE_SOURCE_MODE_IR_OR_TOF  3 // Take just IR or TOF value
+#define DISTANCE_LAST_SOURCE_MODE       DISTANCE_SOURCE_MODE_IR_OR_TOF
 #define DISTANCE_SOURCE_MODE_DEFAULT   DISTANCE_SOURCE_MODE_US
 extern uint8_t sDistanceSourceMode;
 #endif

@@ -198,7 +198,7 @@ void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) 
         }
 #else
         if (RobotCarPWMMotorControl.IMUData.printIMUCarDataDataPeriodically(&Serial, aPeriodMillis)) {
-            Serial.println(RobotCarPWMMotorControl.rightCarMotor.CurrentSpeedPWM / 2); // = PWM, scale it for plotter
+            Serial.println(RobotCarPWMMotorControl.rightCarMotor.RequestedSpeedPWM / 2); // = PWM, scale it for plotter
             i++;
         }
 #endif

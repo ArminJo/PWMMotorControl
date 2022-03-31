@@ -118,7 +118,7 @@ void setScanModeButtonCaption() {
 
 void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
     sDistanceSourceMode++;
-    if (sDistanceSourceMode > DISTANCE_SOURCE_MODE_IR) {
+    if (sDistanceSourceMode > DISTANCE_LAST_SOURCE_MODE) {
         sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
     }
     setScanModeButtonCaption();
@@ -135,7 +135,9 @@ void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sDriveMode == MODE_FOLLOWER) {
         scanForTarget(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER);
     } else {
+#if defined(CAR_HAS_DISTANCE_SERVO)
         clearPrintedForwardDistancesInfos();
+#endif
         fillAndShowForwardDistancesInfo(true, true);
         postProcessAndCollisionDetection();
     }

@@ -109,8 +109,8 @@ public:
     bool printEncoderDataPeriodically(Print *aSerial, uint16_t aPeriodMillis);
     void printEncoderData(Print *aSerial);
 
+    void resetEncoderMotorValues();
     void resetEncoderControlValues();
-    void initEncoderControlValues();
     void resetSpeedValues();
 
 #if defined(ENABLE_MOTOR_LIST_FUNCTIONS)

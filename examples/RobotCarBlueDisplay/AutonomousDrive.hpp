@@ -75,7 +75,9 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #if defined(ENABLE_PATH_INFO_PAGE)
         resetPathData();
 #endif
+#if defined(CAR_HAS_DISTANCE_SERVO)
         clearPrintedForwardDistancesInfos();
+#endif
         sDoStep = true; // enable next step
         sDriveMode = aDriveMode;
 
@@ -85,7 +87,9 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             setStepMode(MODE_SINGLE_STEP);
 
         } else if (aDriveMode == MODE_FOLLOWER) {
+#if defined(CAR_HAS_DISTANCE_SERVO)
             DistanceServoWriteAndDelay(90); // reset Servo
+#endif
             // Show distance sliders
             SliderUSDistance.drawSlider();
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -103,7 +107,9 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             insertToPath(RobotCarPWMMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
         }
 #endif
+#if defined(CAR_HAS_DISTANCE_SERVO)
         DistanceServoWriteAndDelay(90);
+#endif
         sDriveMode = MODE_MANUAL_DRIVE;
         RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
     }
@@ -114,6 +120,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 }
 
 int postProcessAndCollisionDetection() {
+#if defined(CAR_HAS_DISTANCE_SERVO)
     doWallDetection();
     postProcessDistances(sCentimeterPerScan);
     int tNextDegreesToTurn;
@@ -124,6 +131,9 @@ int postProcessAndCollisionDetection() {
     }
     drawCollisionDecision(tNextDegreesToTurn, sCentimeterPerScan, false);
     return tNextDegreesToTurn;
+#else
+    return 0;
+#endif
 }
 
 /*

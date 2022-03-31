@@ -160,6 +160,17 @@
 #endif
 
 /*
+ * Basic + 4 Wheels + IR distance + encoder
+ */
+#if defined(MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION)
+#define CAR_HAS_4_WHEELS
+#define USE_ENCODER_MOTOR_CONTROL       // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+#define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
+#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
+#define CONFIG_NAME         " + encoder + 4WD + IR distance"
+#endif
+
+/*
  * The basic layout of my smart 2wd robot car with 2 LiPo's instead of 4 AA
  * Shield + 2 LiPo's + VIN voltage divider + servo head down
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg
@@ -172,17 +183,6 @@
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 #define BASIC_CONFIG_NAME   "Motor shield,TB6612  + 2 Li-ion + VIN divider + servo head down"
-#endif
-
-/*
- * Basic + 4 Wheels + IR distance + encoder
- */
-#if defined(MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION)
-#define CAR_HAS_4_WHEELS
-#define USE_ENCODER_MOTOR_CONTROL       // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
-#define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
-#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
-#define CONFIG_NAME         " + encoder + 4WD + IR distance"
 #endif
 
 /*
@@ -249,7 +249,6 @@
 #if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #define CAR_HAS_DISTANCE_SENSOR         // At least one distance sensor mounted on a pan servo is available
 #endif
-
 
 // Default case
 #if !defined(BASIC_CONFIG_NAME)         // use L298_BASIC_2WD_4AA_CONFIGURATION as default

@@ -58,7 +58,7 @@ char sDirectionCharArray[3] = { 'S', 'F', 'B' };
 volatile bool PWMDcMotor::SensorValuesHaveChanged; // true if encoder count and derived encoder speed, or one of the TMU data have changed
 #endif
 bool PWMDcMotor::MotorControlValuesHaveChanged; // true if DefaultStopMode, DriveSpeedPWM or SpeedPWMCompensation have changed
-bool PWMDcMotor::MotorPWMHasChanged;              // true if CurrentSpeedPWM has changed
+bool PWMDcMotor::MotorPWMHasChanged;              // true if CompensatedSpeedPWM has changed
 
 PWMDcMotor::PWMDcMotor() { // @suppress("Class members should be properly initialized")
 }
@@ -240,12 +240,13 @@ uint8_t PWMDcMotor::getDirection() {
  * Sets active PWM and handles speed compensation
  */
 void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
+    RequestedSpeedPWM = aRequestedSpeedPWM;
     /*
      * Handle speed compensation
      */
     uint8_t tCompensatedSpeedPWM;
     if (aRequestedSpeedPWM > SpeedPWMCompensation) {
-        tCompensatedSpeedPWM = aRequestedSpeedPWM - SpeedPWMCompensation; // The only statement which sets CurrentSpeedPWM to a value != 0
+        tCompensatedSpeedPWM = aRequestedSpeedPWM - SpeedPWMCompensation; // The only statement which sets CompensatedSpeedPWM to a value != 0
     } else {
         tCompensatedSpeedPWM = 0; // no stop mode here
     }
@@ -256,20 +257,20 @@ void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
         Serial.print(F(" CompensatedSpeedPWM="));
         Serial.println(tCompensatedSpeedPWM);
 #endif
-    if (CurrentSpeedPWM != tCompensatedSpeedPWM) {
-        CurrentSpeedPWM = tCompensatedSpeedPWM;
+    if (CompensatedSpeedPWM != tCompensatedSpeedPWM) {
+        CompensatedSpeedPWM = tCompensatedSpeedPWM;
         MotorPWMHasChanged = true;
         /*
          * Write to hardware
          */
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
-        PCA9685SetPWM(PWMPin, 0, 16 * aRequestedSpeedPWM);
+        PCA9685SetPWM(PWMPin, 0, 16 * tCompensatedSpeedPWM);
 #  else
-        Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(aRequestedSpeedPWM);
+        Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(tCompensatedSpeedPWM);
 #  endif
 #else
-        analogWrite(PWMPin, aRequestedSpeedPWM);
+        analogWrite(PWMPin, tCompensatedSpeedPWM);
 #endif
     }
 }
@@ -350,10 +351,10 @@ void PWMDcMotor::start(uint8_t aRequestedDirection) {
 }
 
 /*
- *  CurrentSpeedPWM == 0, should be equivalent to MotorRampState == MOTOR_STATE_STOPPED
+ *  CompensatedSpeedPWM == 0, should be equivalent to MotorRampState == MOTOR_STATE_STOPPED
  */
 bool PWMDcMotor::isStopped() {
-    return (CurrentSpeedPWM == 0);
+    return (RequestedSpeedPWM == 0);
 }
 
 /*
@@ -361,7 +362,8 @@ bool PWMDcMotor::isStopped() {
  * @param aStopMode STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
  */
 void PWMDcMotor::stop(uint8_t aStopMode) {
-    CurrentSpeedPWM = 0; // The only statement which sets CurrentSpeedPWM to 0
+    RequestedSpeedPWM = 0;
+    CompensatedSpeedPWM = 0;
     MotorPWMHasChanged = true;
     CheckDistanceInUpdateMotor = false;
 #if !defined(DO_NOT_SUPPORT_RAMP)
@@ -415,8 +417,7 @@ void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
 
 void PWMDcMotor::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, uint8_t aSpeedPWMCompensation) {
     DriveSpeedPWM = aDriveSpeedPWM;
-    SpeedPWMCompensation = aSpeedPWMCompensation;
-    MotorControlValuesHaveChanged = true;
+    setSpeedPWMCompensation(aSpeedPWMCompensation);
 }
 
 void PWMDcMotor::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
@@ -424,13 +425,17 @@ void PWMDcMotor::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     MotorControlValuesHaveChanged = true;
 }
 
+/*
+ * 64 bytes program memory
+ */
 void PWMDcMotor::setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation) {
     SpeedPWMCompensation = aSpeedPWMCompensation;
+    setSpeedPWM(RequestedSpeedPWM);
     MotorControlValuesHaveChanged = true;
 }
 
 /**
- * Update DriveSpeedPWM value, i.e. if moving set new CurrentSpeedPWM and apply it to the motor
+ * Update DriveSpeedPWM value, i.e. if moving set new CompensatedSpeedPWM and apply it to the motor
  */
 void PWMDcMotor::updateDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     DriveSpeedPWM = aDriveSpeedPWM;
@@ -451,8 +456,8 @@ void PWMDcMotor::setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uin
     Serial.print(aRequestedSpeedPWM);
     Serial.print(F(" Dir="));
     Serial.print(aRequestedDirection);
-    Serial.print(F(" CurrentSpeedPWM="));
-    Serial.print(CurrentSpeedPWM);
+    Serial.print(F(" CompensatedSpeedPWM="));
+    Serial.print(CompensatedSpeedPWM);
     Serial.print(F(" MotorMode="));
     Serial.print(sDirectionCharArray[CurrentDirection]);
     Serial.println();
@@ -495,10 +500,10 @@ void PWMDcMotor::startRampDown() {
 #else
     MotorRampState = MOTOR_STATE_RAMP_DOWN;
 // set only the variables for later evaluation in updateMotor() below
-    if (CurrentSpeedPWM > (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA)) {
-        CurrentSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
+    if (CompensatedSpeedPWM > (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA)) {
+        CompensatedSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
     } else {
-        CurrentSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
+        CompensatedSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
     }
 #endif
 }
@@ -508,7 +513,7 @@ void PWMDcMotor::startRampDown() {
  * @return true if not stopped (motor expects another update)
  */
 bool PWMDcMotor::updateMotor() {
-    uint8_t tNewSpeedPWM = CurrentSpeedPWM;
+    uint8_t tNewSpeedPWM = CompensatedSpeedPWM;
 
     /*
      * Check if target milliseconds are reached
@@ -584,7 +589,7 @@ bool PWMDcMotor::updateMotor() {
             NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
             /*
              * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
-             * Only used if CurrentSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid blocking wheels
+             * Only used if CompensatedSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid blocking wheels
              */
             if (tNewSpeedPWM > (RAMP_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
                 tNewSpeedPWM -= RAMP_VALUE_DELTA;
@@ -599,7 +604,7 @@ bool PWMDcMotor::updateMotor() {
         Serial.print(F("St="));
         Serial.println(MotorRampState);
 #endif
-    if (tNewSpeedPWM != CurrentSpeedPWM) {
+    if (tNewSpeedPWM != CompensatedSpeedPWM) {
 #if defined(TRACE)
         Serial.print(F("Ns="));
         Serial.println(tNewSpeedPWM);
@@ -607,7 +612,7 @@ bool PWMDcMotor::updateMotor() {
         PWMDcMotor::setSpeedPWMAndDirection(tNewSpeedPWM, CurrentDirection); // sets MOTOR_STATE_STOPPED if speed is 0
     }
 #endif // #if defined(DO_NOT_SUPPORT_RAMP)
-    return (CurrentSpeedPWM > 0); // current speed == 0
+    return (CompensatedSpeedPWM > 0); // current speed == 0
 }
 
 /********************************************************************************************
@@ -731,8 +736,8 @@ void PWMDcMotor::writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumbe
 
 void PWMDcMotor::printValues(Print *aSerial) {
     aSerial->print(PWMPin);
-    aSerial->print(F(" CurrentSpeedPWM="));
-    aSerial->print(CurrentSpeedPWM);
+    aSerial->print(F(" CompensatedSpeedPWM="));
+    aSerial->print(CompensatedSpeedPWM);
     aSerial->print(F(" DriveSpeedPWM="));
     aSerial->print(DriveSpeedPWM);
     aSerial->print(F(" SpeedPWMCompensation="));

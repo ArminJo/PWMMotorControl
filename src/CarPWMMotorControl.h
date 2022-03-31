@@ -42,7 +42,7 @@
  * Distance between two wheels is around 14 cm -> 360 degree are 82 cm
  */
 #define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT         2.2777
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT         5.0 // estimated, with slip
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT         4.0 // estimated, with slip
 #define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT 2.2 // for turns with 4 wheels
 
 #if ! defined(FACTOR_DEGREE_TO_MILLIMETER_DEFAULT)

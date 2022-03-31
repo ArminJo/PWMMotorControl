@@ -59,7 +59,7 @@ unsigned int getDistanceAndPlayTone() {
      * Get distance
      */
 #if !defined(USE_IR_REMOTE)
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if defined(US_DISTANCE_SENSOR_ENABLE_PIN)
     // if US_DISTANCE_SENSOR_ENABLE_PIN is connected to ground we use the US distance as fallback. Useful for testing the difference between both sensors.
     if (digitalRead(US_DISTANCE_SENSOR_ENABLE_PIN) == HIGH) {
         sDistanceSourceMode = DISTANCE_SOURCE_MODE_IR_OR_TOF;
