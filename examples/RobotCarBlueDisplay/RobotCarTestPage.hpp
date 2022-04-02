@@ -37,8 +37,6 @@ BDButton TouchButtonReset;
 BDButton TouchButtonGetAndStoreSpeed;
 #endif
 
-BDButton TouchButtonDebug;
-
 BDButton TouchButton5cm;
 BDButton TouchButton10cm;
 BDButton TouchButton20cm;
@@ -50,16 +48,13 @@ BDButton TouchButton90DegreeRight;
 BDButton TouchButton90DegreeLeft;
 BDButton TouchButton360Degree;
 
-bool sShowDebug = false;
+bool sShowInfo = true;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
     RobotCarPWMMotorControl.startGoDistanceMillimeter(aValue, sRobotCarDirection);
 }
 
-void doShowDebug(BDButton *aTheTouchedButton, int16_t aValue) {
-    sShowDebug = aValue;
-}
 
 /*
  * stop and reset motors
@@ -142,8 +137,6 @@ void initTestPage(void) {
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 200, &doDistance);
     TouchButton40cm.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_BLUE, F("40cm"),
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 400, &doDistance);
-    TouchButtonDebug.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("dbg"),
-    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doShowDebug);
 
 //    TouchButtonReset.init(&ButtonReset, F("Reset"));
 //    TouchButton5cm.init(&Button5cm, F("5cm"));
@@ -151,7 +144,7 @@ void initTestPage(void) {
 //
 //    TouchButton20cm.init(&Button20cm, F("20cm"));
 //    TouchButton40cm.init(&Button40cm, F("40cm"));
-//    TouchButtonDebug.init(&ButtonDebug, F("dbg"));
+//    TouchButtonInfo.init(&ButtonDebug, F("dbg"));
 
     TouchButton45DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_BLUE,
             F("45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 45, &doRotation); // \xB0 is degree character
@@ -189,7 +182,7 @@ void drawTestPage(void) {
 
     TouchButton20cm.drawButton();
     TouchButton40cm.drawButton();
-    TouchButtonDebug.drawButton();
+    TouchButtonInfo.drawButton();
 
     TouchButton45DegreeLeft.drawButton();
     TouchButton45DegreeRight.drawButton();

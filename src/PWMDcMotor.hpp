@@ -370,9 +370,6 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
     MotorRampState = MOTOR_STATE_STOPPED;
 #endif
 
-#if !defined(USE_ENCODER_MOTOR_CONTROL)
-    CheckDistanceInUpdateMotor = false;
-#endif
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     PCA9685SetPWM(PWMPin, 0, 0);
@@ -690,7 +687,9 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
     }
 
 #if defined(DEBUG)
-    Serial.print(F("MillisForDistance="));
+    Serial.print(F("MillisForDistance "));
+    Serial.println(aRequestedDistanceMillimeter);
+    Serial.print(F(" mm ="));
     Serial.println(tComputedMillisOfMotorStopForDistance);
 #endif
     tComputedMillisOfMotorStopForDistance += millis();

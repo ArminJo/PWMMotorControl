@@ -131,10 +131,16 @@
 #define FRONT_RIGHT_MOTOR_BACKWARD_PIN 10 // BIN2
 #define FRONT_LEFT_MOTOR_FORWARD_PIN   11 // AIN1
 #define FRONT_LEFT_MOTOR_BACKWARD_PIN  12 // AIN2
-#define PIN_DISTANCE_SERVO             13
+
+#define PIN_TRIGGER_OUT                13 // can we see the trigger signal?
+#define PIN_ECHO_IN                    A0
+
+#define IR_INPUT_PIN                   A1
+
+#define PIN_DISTANCE_SERVO             A2
 
 // Temporarily definition for convenience
-#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies MOSFET_BRIDGE_USED and VIN_VOLTAGE_CORRECTION.
+#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION.
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 
 #if defined(CAR_IS_NANO_BASED)

@@ -689,7 +689,7 @@ void CarPWMMotorControl::goDistanceMillimeter(int aRequestedDistanceMillimeter, 
 }
 
 /*
- * Stop car with ramp and give DistanceCountAfterRampUp counts for braking.
+ * Stop car (with ramp)
  */
 void CarPWMMotorControl::stopAndWaitForIt(void (*aLoopCallback)(void)) {
     if (isStopped()) {
@@ -710,7 +710,6 @@ void CarPWMMotorControl::startRampDown() {
     }
     /*
      * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE to MOTOR_STATE_RAMP_DOWN
-     * Use DistanceCountAfterRampUp as ramp down count
      */
     rightCarMotor.startRampDown();
     leftCarMotor.startRampDown();

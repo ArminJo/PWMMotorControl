@@ -21,11 +21,21 @@
  */
 
 #include <Arduino.h>
-
-//#define USE_ADAFRUIT_MOTOR_SHIELD
+#define TRACE
 /*
- * Car pin configuration
+ * Car configuration
+ * For a complete list of available configurations see RobotCarConfigurations.h
+ * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
+//#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
+//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
+//#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
+//#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
+//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+
+#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
 #include "CarPWMMotorControl.hpp"
@@ -108,24 +118,21 @@ void setup() {
     tone(PIN_BUZZER, 2200, 50);
 #endif
     delay(1000);
-
+    RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+    delay(500);
+    RobotCarPWMMotorControl.stop();
+    delay(2000);
 }
 
 void loop() {
-
-    RobotCarPWMMotorControl.goDistanceMillimeter(200, DIRECTION_FORWARD);
-    delay(2000);
-    /*
-     * Try to turn by 90 degree.
-     */
-    RobotCarPWMMotorControl.rotate(90, TURN_FORWARD);
-    delay(2000);
+    simpleObjectAvoidance();
+    delay(50); // Wait until next distance sample
 
 }
 
 void simpleObjectAvoidance() {
     /*
-     * Drive until distance too low, then stop, go back, turn random amount and drive again.
+     * Drive forward until distance too low, then stop, go back, turn random amount and drive again.
      */
     unsigned int tCentimeter = getUSDistanceAsCentimeter();
     Serial.print("US distance=");
@@ -139,14 +146,14 @@ void simpleObjectAvoidance() {
         RobotCarPWMMotorControl.stop();
         delay(1000);
         RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
-        delay(200);
+        delay(1000);
         RobotCarPWMMotorControl.stop();
         delay(1000);
 
         /*
          * Turn random amount and drive again
          */
-        int tTurnValueDegree = random(20, 180);
+        int tTurnValueDegree = random(20, 90);
         Serial.print("Turn ");
         Serial.print(tTurnValueDegree);
         Serial.println(" degree");
@@ -154,7 +161,5 @@ void simpleObjectAvoidance() {
         delay(1000);
         RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
-
-    delay(50); // Wait until next distance sample
 }
 

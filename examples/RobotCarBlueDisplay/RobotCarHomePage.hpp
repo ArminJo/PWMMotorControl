@@ -33,7 +33,7 @@
 BDButton TouchButtonTestPage;
 BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 BDButton TouchButtonMelody;
 #endif
 #if defined(CAR_HAS_CAMERA)
@@ -74,7 +74,7 @@ void doCameraSupplyOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
 }
 #endif
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 void doPlayMelody(BDButton * aTheTouchedButton, int16_t aValue) {
     sPlayMelody = aValue;
 }
@@ -94,8 +94,8 @@ void initHomePage(void) {
             F("Test"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
 #else
     // big "Test" button
-    TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
-            F("Test"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
+    TouchButtonTestPage.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED, F("Test"),
+            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &GUISwitchPages);
 #endif
 
 #if defined(CAR_HAS_CAMERA)
@@ -104,7 +104,7 @@ void initHomePage(void) {
             false, &doCameraSupplyOnOff);
 #endif
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
     TouchButtonMelody.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Melody"), TEXT_SIZE_22,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sPlayMelody, &doPlayMelody);
@@ -141,7 +141,7 @@ void drawHomePage(void) {
 #if defined(CAR_HAS_CAMERA)
     TouchButtonCameraOnOff.drawButton();
 #endif
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
     TouchButtonMelody.drawButton();
 #endif
 #if defined(CAR_HAS_LASER)
@@ -154,8 +154,9 @@ void drawHomePage(void) {
 #endif
 
     TouchButtonDirection.drawButton();
+    TouchButtonInfo.drawButton();
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-    TouchButtonCalibrate.drawButton();
+//    TouchButtonCalibrate.drawButton();
 #endif
     TouchButtonCompensationLeft.drawButton();
     TouchButtonCompensationRight.drawButton();
@@ -188,8 +189,9 @@ void drawHomePage(void) {
 
 void startHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5);
+    TouchButtonInfo.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
+//    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3);
 #endif
 #if defined(CAR_HAS_TILT_SERVO) && defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5);
@@ -202,8 +204,9 @@ void loopHomePage(void) {
 
 void stopHomePage(void) {
     TouchButtonDirection.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_6);
+    TouchButtonInfo.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3);
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
+//    TouchButtonCalibrate.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2);
 #endif
 #if defined(CAR_HAS_TILT_SERVO) && defined(ENABLE_EEPROM_STORAGE)
     TouchButtonCompensationStore.setPosition(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_4);

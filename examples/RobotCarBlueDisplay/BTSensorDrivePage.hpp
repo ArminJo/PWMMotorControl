@@ -72,18 +72,23 @@ void doTurnMode(BDButton *aTheTouchedButton, int16_t aTurnModeEnabled) {
 #endif
 
 /*
- * Add dead band value, clip values too big also because off adding right/left speed, but return 0 for input of 0.
+ * Add dead band value, clip values which are too big because of adding right/left speed
  */
-uint8_t speedOverflowAndDeadBandHandling(int aSpeedPWM) {
+int speedOverflowAndDeadBandHandling(int aSpeedPWM) {
     if (aSpeedPWM > 0) {
         aSpeedPWM += SPEED_DEAD_BAND;
         // overflow handling since analogWrite only accepts byte values
         if (aSpeedPWM > MAX_SPEED_PWM) {
             aSpeedPWM = MAX_SPEED_PWM;
         }
-        return aSpeedPWM;
+    } else if (aSpeedPWM < 0) {
+        aSpeedPWM -= SPEED_DEAD_BAND;
+        // overflow handling since analogWrite only accepts byte values
+        if (aSpeedPWM < -(MAX_SPEED_PWM)) {
+            aSpeedPWM = -(MAX_SPEED_PWM);
+        }
     }
-    return 0; // clip negative values to 0
+    return aSpeedPWM;
 }
 
 /*
@@ -114,18 +119,18 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         // compute and set zero value
         // compute zero value. Only Y values makes sense.
         sYZeroValue = sYZeroValueAdded / CALLS_FOR_ZERO_ADJUSTMENT;
-        BlueDisplay1.playTone(24); // feedback for zero value acquired
+        BlueDisplay1.playTone(24);        // feedback for zero value acquired
     } else {
 
         /*
          * Regular operation here
+         * Left right handling
          */
 #if defined(CAR_HAS_4_WHEELS)
-        int tLeftRightValue = aSensorCallbackInfo->ValueX * 12.0;
+        int tLeftRightValue = aSensorCallbackInfo->ValueX * 16.0;
 #else
         int tLeftRightValue = aSensorCallbackInfo->ValueX * 8.0; // Scale value
 #endif
-
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
         tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, SPEED_DEAD_BAND);
 #else
@@ -134,7 +139,7 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         /*
          * forward backward handling
          */
-        int tSpeedPWMValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED_PWM / 10)); // Scale value
+        int tSpeedPWMValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED_PWM / 8)); // Scale value
         tSpeedPWMValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, tSpeedPWMValue, SPEED_DEAD_BAND);
 
         /*
@@ -148,7 +153,7 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
          * Get direction
          */
         uint8_t tDirection = DIRECTION_STOP;
-        if(tSpeedPWMValue > 0){
+        if(tSpeedPWMValue > 0) {
             tDirection = DIRECTION_FORWARD;
         } else if (tSpeedPWMValue < 0) {
             tSpeedPWMValue = -tSpeedPWMValue;
@@ -161,24 +166,19 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
             tLeftRightValue = - tLeftRightValue;
             tDirection |= DIRECTION_RIGHT;
         }
-        if(sTurnModeEnabled){
+        if(sTurnModeEnabled) {
             tDirection |= DIRECTION_TURN;
         }
         tSpeedPWMValue = max(tSpeedPWMValue, tLeftRightValue);
         RobotCarPWMMotorControl.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
 #else
-        /*
-         * Split into direction and speed to simplify dead band handling
-         */
-        uint8_t tDirection = DIRECTION_FORWARD;
-        if (tSpeedPWMValue < 0) {
-            tSpeedPWMValue = -tSpeedPWMValue;
-            tDirection = DIRECTION_BACKWARD;
+        if(tSpeedPWMValue < 0){
+            tLeftRightValue = -tLeftRightValue;
         }
         RobotCarPWMMotorControl.rightCarMotor.setSpeedPWMAndDirection(
-                speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue), tDirection);
+                speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue));
         RobotCarPWMMotorControl.leftCarMotor.setSpeedPWMAndDirection(
-                speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue), tDirection);
+                speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue));
 #endif
     }
 }

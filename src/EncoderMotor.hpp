@@ -98,8 +98,8 @@ void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigne
     }
     resetEncoderControlValues();
     if (RequestedSpeedPWM == 0) {
-        setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
         TargetDistanceMillimeter = aRequestedDistanceMillimeter;
+        setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
     } else {
         /*
          * Already moving

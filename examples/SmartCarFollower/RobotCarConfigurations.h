@@ -27,14 +27,16 @@
 #define _ROBOT_CAR_CONFIGURATIONS_H
 
 /*
- * This is the available set of predefined configurations
+ * This is the available set of predefined configurations of RobotCarConfigurations.h
  * All configurations include a HC-SR04 ultrasonic distance sensor mounted on a pan servo.
  */
 //////////////////////////////////////////////////////
 //#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
 //#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
+//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
 //#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 LiPo + servo head down
 //#define MOTOR_SHIELD_TOF_CONFIGURATION            // Basic_2WD + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION    // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
@@ -68,7 +70,7 @@
 /*
  *
  */
-//#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies MOSFET_BRIDGE_USED and VIN_VOLTAGE_CORRECTION.
+//#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION of 0.81.
 /*
  * Parameters for PWMMotorControl
  */
@@ -78,10 +80,10 @@
 //#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
 //#define VIN_1_LIPO                      // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT 6000// Default. For 4 x AA batteries (6 volt).
-//#define MOSFET_BRIDGE_USED              // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
-//#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage -motors default speed- is 2.0 volt
+//#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+//#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage / motors default speed. Default value is 2.0 volt.
 //#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
-//#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+//#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the encoder function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 /*
  * L298 basic + IR distance + MPU6050 + VIN monitoring
  */
@@ -106,10 +108,12 @@
 #endif
 
 /*
- * Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
+ * BASIC CONFIGURATION
+ * Lafvin 2WD model using L298 bridge. Uno board with series diode at VIN connector + 2 Li-ion's.
  * https://de.aliexpress.com/item/32816490316.html
  */
 #if defined(L298_BASIC_2WD_2LI_ION_CONFIGURATION)
+#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
@@ -118,14 +122,43 @@
 #endif
 
 /*
- * Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+ * BASIC CONFIGURATION
+ * Lafvin 2WD model using L298 bridge. Uno board with series diode at VIN connector + 4 AA batteries.
  * https://de.aliexpress.com/item/32816490316.html
  */
-#if defined(L298_BASIC_2WD_4AA_CONFIGURATION)
+#if defined(L298_BASIC_4WD_4AA_CONFIGURATION)
+#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 #define BASIC_CONFIG_NAME   "L298 + 4 AA"
+#endif
+
+/*
+ * BASIC CONFIGURATION
+ * China 4WD model using L298 bridge.
+ * Uno board with series diode at VIN connector + 4 AA batteries.
+ * https://de.aliexpress.com/item/33015596159.html (Four rounds kit / 4WD KIT1)
+ */
+#if defined(L298_4WD_BASIC_CONFIGURATION)
+#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+#define CAR_HAS_4_WHEELS
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define BASIC_CONFIG_NAME   "L298 + 4 AA"
+#endif
+
+/*
+ * BASIC CONFIGURATION
+ * China ZK-4WD model with L298 bridge replaced by TB6612 breakout board (https://de.aliexpress.com/item/32657848225.html).
+ * Uno board with series diode at VIN connector + 4 AA batteries.
+ * https://de.aliexpress.com/item/33015596159.html (Four rounds kit / 4WD KIT1)
+ */
+#if defined(TBB6612_BASIC_4WD_4AA_CONFIGURATION)
+#define CAR_HAS_4_WHEELS
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define BASIC_CONFIG_NAME   "TB6612 + 4 AA"
 #endif
 
 /*
@@ -171,6 +204,7 @@
 #endif
 
 /*
+ * BASIC CONFIGURATION
  * The basic layout of my smart 2wd robot car with 2 LiPo's instead of 4 AA
  * Shield + 2 LiPo's + VIN voltage divider + servo head down
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg
@@ -186,6 +220,7 @@
 #endif
 
 /*
+ * BASIC CONFIGURATION
  * Nano Breadboard version with Arduino NANO, without shield and with pan/tilt servo and MPU camera and laser
  */
 #if defined(BREADBOARD_FULL_CONFIGURATION)
@@ -217,6 +252,7 @@
 #endif
 
 /*
+ * BASIC CONFIGURATION
  * Nano Breadboard version with Arduino NANO, without shield and 4 mecanum wheels
  */
 #if defined(MECANUM_BASIC_CONFIGURATION)
@@ -228,7 +264,8 @@
 #endif
 
 /*
- * Nano Breadboard version with Arduino NANO, without shield and 4 mecanum wheels
+ * BASIC CONFIGURATION
+ * Car controlled by an ESP32-Cam module
  */
 #if defined(CAR_IS_ESP32_CAM_BASED)
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
@@ -240,7 +277,6 @@
  * Some rules
  */
 #if defined(CAR_IS_NANO_BASED)
-#define MOSFET_BRIDGE_USED              // Activate this, if you use a (recommended) mosfet bridge instead of a L298 bridge, which has higher losses.
 #  if !defined(VIN_VOLTAGE_CORRECTION)
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 #  endif
@@ -250,8 +286,11 @@
 #define CAR_HAS_DISTANCE_SENSOR         // At least one distance sensor mounted on a pan servo is available
 #endif
 
-// Default case
+/*
+ * Default BASIC CONFIGURATION
+ */
 #if !defined(BASIC_CONFIG_NAME)         // use L298_BASIC_2WD_4AA_CONFIGURATION as default
+#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 #define BASIC_CONFIG_NAME   "L298 + 4 AA"
 #endif

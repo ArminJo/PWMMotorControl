@@ -60,6 +60,8 @@ BDButton TouchButtonRobotCarStartStop;
 BDButton TouchButtonDirection;
 uint8_t sRobotCarDirection = DIRECTION_FORWARD; // DIRECTION_FORWARD or DIRECTION_BACKWARD
 
+BDButton TouchButtonInfo;
+
 BDSlider SliderSpeed;
 uint16_t sLastSpeedSliderValue = 0; // local storage for requested speed by speed slider
 
@@ -336,6 +338,18 @@ void startCurrentPage() {
     }
 }
 
+void doShowInfo(BDButton *aTheTouchedButton, int16_t aValue) {
+    sShowInfo = aValue;
+    if (!sShowInfo) {
+        // Clear info area
+        BlueDisplay1.fillRect(MOTOR_INFO_START_X, MOTOR_INFO_START_Y - TEXT_SIZE_11_ASCEND, BUTTON_WIDTH_8_POS_4 - 1,
+        MOTOR_INFO_START_Y - TEXT_SIZE_11_ASCEND + (5 * TEXT_SIZE_11), COLOR16_WHITE);
+    } else {
+        PWMDcMotor::MotorPWMHasChanged = true;
+        PWMDcMotor::MotorControlValuesHaveChanged = true;
+    }
+}
+
 /*
  * For Next and Back button
  * Stop old page and start new one
@@ -404,6 +418,9 @@ void initCommonGui() {
     TouchButtonCalibrate.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("CAL"),
     TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doCalibrate);
 #endif
+
+    TouchButtonInfo.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("Info"),
+    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sShowInfo, &doShowInfo);
 
 //    TouchButtonReset.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_2, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("CAL"),
 //    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doCalibrate);
@@ -644,7 +661,7 @@ void readCheckAndPrintVinPeriodically() {
         sMillisOfLastVCCInfo = tMillis;
         readAndPrintVin();
         checkForLowVoltage();
-        PWMDcMotor::MotorControlValuesHaveChanged = true; // to signal, that PWM voltages may have changed
+//        PWMDcMotor::MotorControlValuesHaveChanged = true; // to signal, that PWM voltages may have changed
     }
 }
 #endif // defined(MONITOR_VIN_VOLTAGE)
@@ -661,65 +678,89 @@ void printMotorValuesPeriodically() {
     uint32_t tMillis = millis();
     if (tMillis - sLastPrintMillis >= PRINT_MOTOR_INFO_PERIOD_MILLIS) {
         sLastPrintMillis = tMillis;
-        uint16_t tYPos = MOTOR_INFO_START_Y + TEXT_SIZE_11;
+        if (sShowInfo) {
+#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+            if (PWMDcMotor::SensorValuesHaveChanged) {
+                printMotorSpeedSensorValues();
+            }
+#endif
+            /*
+             * Print speed value
+             */
+            if (PWMDcMotor::MotorPWMHasChanged) {
+                PWMDcMotor::MotorPWMHasChanged = false;
+                // position below caption of speed slider
+                sprintf_P(sStringBuffer, PSTR("PWM  %3d %3d"), RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM,
+                        RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM);
+                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
+                COLOR16_BLACK, COLOR16_WHITE);
 
-        /*
-         * Print speed value
-         */
-        if (PWMDcMotor::MotorPWMHasChanged) {
-            PWMDcMotor::MotorPWMHasChanged = false;
-            // position below caption of speed slider
-            sprintf_P(sStringBuffer, PSTR("PWM  %3d %3d"), RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM,
-                    RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM);
-            BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
-        }
-
-        /*
-         * print voltage for left motor PWM
-         */
-        tYPos += TEXT_SIZE_11;
-        char tPWMVoltageString[6];
+                /*
+                 * print voltage for left motor PWM
+                 */
+                char tPWMVoltageString[6];
 #if defined(MONITOR_VIN_VOLTAGE)
             // use current voltage minus bridge loss instead of a constant value
             dtostrf(
-                    (((float) RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM * sVINVoltage)
-                            - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0)) / MAX_SPEED_PWM, 4, 2, tPWMVoltageString);
+                    ( ((float)RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM * (sVINVoltage
+                            - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0)))) / MAX_SPEED_PWM, 4, 2, tPWMVoltageString);
 #else
-        // we can merely use a constant value here
-        dtostrf((RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0)) / MAX_SPEED_PWM, 4,
-                2, tPWMVoltageString);
+                // we can merely use a constant value here
+                dtostrf(
+                        (RobotCarPWMMotorControl.leftCarMotor.CompensatedSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0))
+                                / MAX_SPEED_PWM, 4, 2, tPWMVoltageString);
 #endif
-        tPWMVoltageString[4] = 'V';
-        tPWMVoltageString[5] = '\0';
-        BlueDisplay1.drawText(MOTOR_INFO_START_X + (3 * TEXT_SIZE_11_WIDTH) - 1, tYPos, tPWMVoltageString, TEXT_SIZE_11,
-                COLOR16_BLACK, COLOR16_WHITE);
+                tPWMVoltageString[4] = 'V';
+                tPWMVoltageString[5] = '\0';
+                BlueDisplay1.drawText((MOTOR_INFO_START_X + TEXT_SIZE_11_WIDTH) - 1, MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11),
+                        tPWMVoltageString);
+#if defined(MONITOR_VIN_VOLTAGE)
+                dtostrf(
+                        ( ((float) RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM * (sVINVoltage
+                                - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0)))) / MAX_SPEED_PWM, 4, 2, tPWMVoltageString);
+#else
+                // we can merely use a constant value here
+                dtostrf(
+                        (RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0))
+                                / MAX_SPEED_PWM, 4, 2, tPWMVoltageString);
+#endif
+                tPWMVoltageString[4] = 'V';
+                BlueDisplay1.drawText((MOTOR_INFO_START_X + (7 * TEXT_SIZE_11_WIDTH)) - 3, MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11),
+                        tPWMVoltageString);
 
-        /*
-         * Print motor compensation values
-         */
-        if (PWMDcMotor::MotorControlValuesHaveChanged) {
-            PWMDcMotor::MotorControlValuesHaveChanged = false;
-            // position below speed values
-            tYPos += TEXT_SIZE_11;
-            sprintf_P(sStringBuffer, PSTR("comp %3d %3d"), -RobotCarPWMMotorControl.leftCarMotor.SpeedPWMCompensation,
-                    -RobotCarPWMMotorControl.rightCarMotor.SpeedPWMCompensation);
-            BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
-
-        }
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-        if (sShowDebug && sCurrentPage == PAGE_TEST) {
-            printMotorDebugValues();
-        }
+            sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCarPWMMotorControl.leftCarMotor.LastTargetDistanceMillimeter,
+                    RobotCarPWMMotorControl.rightCarMotor.LastTargetDistanceMillimeter);
+            BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (4 * TEXT_SIZE_11), sStringBuffer);
 #endif
+            }
+
+            /*
+             * Print motor compensation values
+             */
+            if (PWMDcMotor::MotorControlValuesHaveChanged) {
+                PWMDcMotor::MotorControlValuesHaveChanged = false;
+                sprintf_P(sStringBuffer, PSTR("comp %3d %3d"), -RobotCarPWMMotorControl.leftCarMotor.SpeedPWMCompensation,
+                        -RobotCarPWMMotorControl.rightCarMotor.SpeedPWMCompensation);
+                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sStringBuffer, TEXT_SIZE_11,
+                COLOR16_BLACK, COLOR16_WHITE);
+            }
+        }
+
+        // draw speed slider independent of sShowInfo
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-        printMotorSensorValues();
+        if (PWMDcMotor::SensorValuesHaveChanged) {
+            PWMDcMotor::SensorValuesHaveChanged = false;
+            displayMotorSpeedSliderValues();
+        }
 #endif
     }
 }
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 /*
- * Display speed as slider values encoder values have precedence over IMU values
+ * Display speed as slider values
+ * Encoder values have precedence over IMU values
  */
 void displayMotorSpeedSliderValues() {
 #  if defined(USE_ENCODER_MOTOR_CONTROL)
@@ -743,37 +784,33 @@ void displayMotorSpeedSliderValues() {
  *
  * Encoder speed has precedence over IMU speed
  */
-void printMotorSensorValues() {
-    if (PWMDcMotor::SensorValuesHaveChanged) {
-        PWMDcMotor::SensorValuesHaveChanged = false;
-
-        displayMotorSpeedSliderValues();
+void printMotorSpeedSensorValues() {
 
 #  if defined(USE_ENCODER_MOTOR_CONTROL)
-        /*
-         * Print encoder counts
-         */
-        uint16_t tYPos;
-        if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-            tYPos = BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND;
-        } else {
-            tYPos = MOTOR_INFO_START_Y;
-        }
-        sprintf_P(sStringBuffer, PSTR("cnt.%4d%4d"), RobotCarPWMMotorControl.leftCarMotor.EncoderCount,
-                RobotCarPWMMotorControl.rightCarMotor.EncoderCount);
-        BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
+    /*
+     * Print encoder counts
+     */
+    uint16_t tYPos;
+    if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
+        tYPos = BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND;
+    } else {
+        tYPos = MOTOR_INFO_START_Y;
+    }
+    sprintf_P(sStringBuffer, PSTR("cnt.%4d%4d"), RobotCarPWMMotorControl.leftCarMotor.EncoderCount,
+            RobotCarPWMMotorControl.rightCarMotor.EncoderCount);
+    BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
 #  endif
 
 #  if defined(USE_MPU6050_IMU)
-        /*
-         * Print distance and rotation from IMU
-         */
-        sprintf_P(sStringBuffer, PSTR("%5dcm%4d\xB0"), RobotCarPWMMotorControl.IMUData.getDistanceCm(),
-                RobotCarPWMMotorControl.CarTurnAngleHalfDegreesFromIMU / 2);
-        BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y, sStringBuffer);
+    /*
+     * Print distance and rotation from IMU
+     */
+    sprintf_P(sStringBuffer, PSTR("%5dcm%4d\xB0"), RobotCarPWMMotorControl.IMUData.getDistanceCm(),
+            RobotCarPWMMotorControl.CarTurnAngleHalfDegreesFromIMU / 2);
+    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y, sStringBuffer);
 #  endif
-    }
 }
+
 #endif // defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 
 #if defined(USE_MPU6050_IMU)
@@ -787,40 +824,6 @@ void printIMUOffsetValues() {
     }
 }
 #endif // defined(USE_MPU6050_IMU)
-
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-/*
- * Is called after printMotorValues, so we can take the Draw parameter from it
- */
-void printMotorDebugValues() {
-    /*
-     * Debug info
-     */
-#  if defined(USE_MPU6050_IMU)
-        uint16_t tYPos = MOTOR_INFO_START_Y + (6 * TEXT_SIZE_11);
-#  else
-    uint16_t tYPos = MOTOR_INFO_START_Y + (5 * TEXT_SIZE_11);
-#  endif
-
-#  if defined(SUPPORT_RAMP_UP)
-        sprintf_P(sStringBuffer, PSTR("ramp1%3d %3d"), RobotCarPWMMotorControl.leftCarMotor.DistanceCountAfterRampUp,
-                RobotCarPWMMotorControl.rightCarMotor.DistanceCountAfterRampUp);
-        BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
-
-        tYPos += TEXT_SIZE_11;
-        sprintf_P(sStringBuffer, PSTR("endSp%3d %3d"), RobotCarPWMMotorControl.leftCarMotor.DebugSpeedAtTargetCountReached,
-                RobotCarPWMMotorControl.rightCarMotor.DebugSpeedAtTargetCountReached);
-        BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
-
-        tYPos += TEXT_SIZE_11;
-#  endif
-
-    sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCarPWMMotorControl.leftCarMotor.LastTargetDistanceMillimeter,
-            RobotCarPWMMotorControl.rightCarMotor.LastTargetDistanceMillimeter);
-    BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer);
-
-}
-#endif // USE_ENCODER_MOTOR_CONTROL
 
 #if defined(CAR_HAS_US_DISTANCE_SENSOR)
 void showUSDistance() {

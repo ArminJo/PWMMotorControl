@@ -56,18 +56,17 @@ jobs:
           - arduino-boards-fqbn: arduino:avr:uno|full
             build-properties: # the flags were put in compiler.cpp.extra_flags
               Start: -DUSE_ADAFRUIT_MOTOR_SHIELD -DDO_NOT_SUPPORT_RAMP -DTRACE -DDEBUG
-              Square: -DCAR_HAS_4_WHEELS -DUSE_ADAFRUIT_MOTOR_SHIELD -DDO_NOT_SUPPORT_RAMP -DTRACE -DDEBUG
-              PrintMotorDiagram: -DUSE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR -DUSE_ADAFRUIT_MOTOR_SHIELD -DDO_NOT_SUPPORT_RAMP -DTRACE -DDEBUG
-              TestMotorWithIMU: -DENABLE_EXTRA_NON_PLOTTER_OUTPUT -DDO_NOT_SUPPORT_RAMP -DTRACE -DDEBUG
-              SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION -DUSE_MPU6050_IMU -DUSE_ENCODER_MOTOR_CONTROL -DDO_NOT_SUPPORT_RAMP -DUSE_IR_REMOTE -DTRACE -DDEBUG
+              Square: -DCAR_HAS_4_WHEELS -DUSE_ADAFRUIT_MOTOR_SHIELD -DDO_NOT_SUPPORT_RAMP -DTRACE
+              PrintMotorDiagram: -DUSE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR -DUSE_ADAFRUIT_MOTOR_SHIELD -DDO_NOT_SUPPORT_RAMP -DTRACE
+              TestMotorWithIMU: -DENABLE_EXTRA_NON_PLOTTER_OUTPUT -DDO_NOT_SUPPORT_RAMP -DTRACE
+              SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION -DUSE_MPU6050_IMU -DUSE_ENCODER_MOTOR_CONTROL -DDO_NOT_SUPPORT_RAMP -DUSE_IR_REMOTE -DTRACE
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
                 -DDO_NOT_NEED_BASIC_TOUCH_EVENTS
                 -DBREADBOARD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE
                 -DENABLE_MOTOR_LIST_FUNCTIONS
-                -DTRACE
-                -DDEBUG
+                -DENABLE_RTTTL_FOR_CAR
 
           - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
             platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json

@@ -111,7 +111,7 @@ extern uint8_t sSensorChangeCallCountForZeroAdjustment;
 void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackInfo);
 
 // from TestPage
-extern bool sShowDebug;
+extern bool sShowInfo;
 
 void initTestPage(void);
 void drawTestPage(void);
@@ -121,7 +121,7 @@ void stopTestPage(void);
 
 // from HomePage
 extern BDButton TouchButtonMelody;
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 extern bool sPlayMelody;
 #endif
 
@@ -156,6 +156,7 @@ void doStartStopRobotCar(BDButton *aTheTochedButton, int16_t aDoStart);
 void doReset(BDButton *aTheTochedButton, int16_t aValue);
 
 extern BDButton TouchButtonDirection;
+extern BDButton TouchButtonInfo;
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
@@ -189,7 +190,7 @@ extern BDSlider SliderTilt;
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 void displayMotorSpeedSliderValues();
-void printMotorSensorValues();
+void printMotorSpeedSensorValues();
 #endif
 #if defined(USE_MPU6050_IMU)
 void printIMUOffsetValues();
@@ -210,10 +211,6 @@ void showDistance(int aCentimeter);
 
 void printAndDisplayMotorSpeed();
 void printMotorValuesPeriodically();
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-void printMotorDebugValues();
-void printMotorDistanceValues();
-#endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
 void readAndPrintVin();

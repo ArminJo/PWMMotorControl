@@ -31,6 +31,7 @@
 
 #define VERSION_EXAMPLE "3.0"
 //#define DEBUG
+//#define TRACE
 
 /*
  * Car configuration
@@ -38,10 +39,12 @@
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
 //#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
 //#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 
@@ -53,7 +56,8 @@
  * Enable functionality of this program
  */
 //#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
-//#define CAR_ENABLE_RTTTL            // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+//#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+//#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 #define MONITOR_VIN_VOLTAGE
@@ -75,7 +79,7 @@
 #include "Distance.hpp" // requires definitions from RobotCarGui.h
 #endif
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 //#define USE_NO_RTX_EXTENSIONS // saves program memory if defined globally
 #include <PlayRtttl.h>
 #endif
@@ -104,7 +108,7 @@
 float sVINVoltage;
 #endif
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 bool sPlayMelody = false;
 void playRandomMelody();
 #endif
@@ -251,6 +255,9 @@ void setup() {
 #endif
 #if defined(CAR_HAS_DISTANCE_SENSOR)
     initDistance();
+#  if defined(ENABLE_RTTTL_FOR_CAR)
+    randomSeed(getUSDistance(10000));
+#  endif
 #endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
@@ -285,7 +292,7 @@ void loop() {
     driveAutonomousOneStep();
 #endif
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
     /*
      * check for playing melody
      */
@@ -309,7 +316,7 @@ void loop() {
         /*
          * Timeout just reached, play melody and start autonomous drive
          */
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
         playRandomMelody();
         delayAndLoopGUI(1000);
 #else
@@ -365,7 +372,7 @@ void readVINVoltage() {
 }
 #endif // MONITOR_VIN_VOLTAGE
 
-#if defined(CAR_ENABLE_RTTTL)
+#if defined(ENABLE_RTTTL_FOR_CAR)
 #include "digitalWriteFast.h"
 /*
  * Prepare for tone, use motor as loudspeaker
@@ -375,23 +382,26 @@ void playRandomMelody() {
     sPlayMelody = true;
 //    BlueDisplay1.debug("Play melody");
 
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesTiny, ARRAY_SIZE_MELODIES_TINY);
-//    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
-#else
+#if defined(USE_MOTOR_FOR_MELODY)
     OCR2B = 0;
     bitWrite(TIMSK2, OCIE2B, 1);            // enable interrupt for inverted pin handling
-    startPlayRandomRtttlFromArrayPGM(PIN_LEFT_MOTOR_FORWARD, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
+    startPlayRandomRtttlFromArrayPGM(LEFT_MOTOR_FORWARD_PIN, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
+#else
+#if defined(DEBUG)
+    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesTiny, ARRAY_SIZE_MELODIES_TINY);
+#else
+    startPlayRandomRtttlFromArrayPGM(PIN_BUZZER, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
+#endif
 #endif
     while (updatePlayRtttl()) {
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#if defined(USE_MOTOR_FOR_MELODY)
         // check for pause in melody (i.e. timer disabled) and disable motor for this period
         if (TIMSK2 & _BV(OCIE2A)) {
             // timer enabled
-            digitalWriteFast(PIN_LEFT_MOTOR_PWM, HIGH);            // re-enable motor
+            digitalWriteFast(LEFT_MOTOR_PWM_PIN, HIGH);            // re-enable motor
         } else {
             // timer disabled
-            digitalWriteFast(PIN_LEFT_MOTOR_PWM, LOW);            // disable motor for pause in melody
+            digitalWriteFast(LEFT_MOTOR_PWM_PIN, LOW);            // disable motor for pause in melody
         }
 #endif
         checkAndHandleEvents();
@@ -400,8 +410,8 @@ void playRandomMelody() {
             break;
         }
     }
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    digitalWriteFast(PIN_LEFT_MOTOR_PWM, LOW); // disable motor
+#if defined(USE_MOTOR_FOR_MELODY)
+    digitalWriteFast(LEFT_MOTOR_PWM_PIN, LOW); // disable motor
     bitWrite(TIMSK2, OCIE2B, 0); // disable interrupt
 #endif
     TouchButtonMelody.setValue(false, (sCurrentPage == PAGE_HOME));
@@ -409,30 +419,30 @@ void playRandomMelody() {
 }
 
 void playTone(unsigned int aFrequency, unsigned long aDuration = 0) {
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#if defined(USE_MOTOR_FOR_MELODY)
+    OCR2B = 0;
+    bitWrite(TIMSK2, OCIE2B, 1); // enable interrupt for inverted pin handling
+    tone(LEFT_MOTOR_FORWARD_PIN, aFrequency);
+    delay(aDuration);
+    noTone(LEFT_MOTOR_FORWARD_PIN);
+    digitalWriteFast(LEFT_MOTOR_PWM_PIN, LOW); // disable motor
+    bitWrite(TIMSK2, OCIE2B, 0); // disable interrupt
+#else
     tone(PIN_BUZZER, aFrequency);
     delay(aDuration);
     noTone(PIN_BUZZER);
-#else
-    OCR2B = 0;
-    bitWrite(TIMSK2, OCIE2B, 1); // enable interrupt for inverted pin handling
-    tone(PIN_LEFT_MOTOR_FORWARD, aFrequency);
-    delay(aDuration);
-    noTone(PIN_LEFT_MOTOR_FORWARD);
-    digitalWriteFast(PIN_LEFT_MOTOR_PWM, LOW); // disable motor
-    bitWrite(TIMSK2, OCIE2B, 0); // disable interrupt
 #endif
 }
 
 /*
  * set INVERTED_TONE_PIN to inverse value of TONE_PIN to avoid DC current
  */
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#if defined(USE_MOTOR_FOR_MELODY)
 ISR(TIMER2_COMPB_vect) {
-    digitalWriteFast(PIN_LEFT_MOTOR_BACKWARD, !digitalReadFast(PIN_LEFT_MOTOR_FORWARD));
+    digitalWriteFast(LEFT_MOTOR_BACKWARD_PIN, !digitalReadFast(LEFT_MOTOR_FORWARD_PIN));
 }
 #endif
-#endif // CAR_ENABLE_RTTTL
+#endif // ENABLE_RTTTL_FOR_CAR
 
 /*
  * Pan tilt servo stuff

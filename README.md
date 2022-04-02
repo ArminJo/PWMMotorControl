@@ -49,7 +49,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | Macro | Default | Description |
 |-|-|-|
 | `USE_ENCODER_MOTOR_CONTROL` | disabled | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
-| `USE_MPU6050_IMU` | disabled | CarIMUData.h | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
+| `USE_MPU6050_IMU` | disabled | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
 | `USE_ACCELERATOR_Y_FOR_SPEED` | disabled | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
 | `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | disabled | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, the millis() timer0 is used for analogWrite since we use pin 5 & 6. |
@@ -72,7 +72,7 @@ These values are used by functions and some can be overwritten by set* functions
 | `VIN_2_LIPO` | undefined | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 7400. |
 | `VIN_1_LIPO` | undefined | If defined sets `FULL_BRIDGE_INPUT_MILLIVOLT` to 3700. |
 | `FULL_BRIDGE_INPUT_`<br/>`MILLIVOLT` | 6000 or 7400 if `VIN_2_LIPO` is defined | The supply voltage used for the full bridge. |
-| `MOSFET_BRIDGE_USED` | undefined | PWMDCMotor.h | If defined sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 0. |
+| `USE_L298_BRIDGE ` | undefined | If defined, sets `FULL_BRIDGE_LOSS_MILLIVOLT` to 2.0 volt. |
 | `FULL_BRIDGE_LOSS_`<br/>`MILLIVOLT` | 2000 or 0 if `FULL_BRIDGE_LOSS_MILLIVOLT` is defined | The internal voltage loss of the full bridge used, typically 2 volt for bipolar bridges like the L298. |
 | `FULL_BRIDGE_OUTPUT_`<br/>`MILLIVOLT` | `(FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)` | The effective voltage available for the motor. |
 | `DEFAULT_START_`<br/>`MILLIVOLT` | 1100 | The DC Voltage at which the motor start to move / dead band voltage. |

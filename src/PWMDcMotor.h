@@ -54,9 +54,6 @@
 //#define USE_ADAFRUIT_MOTOR_SHIELD // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
-#  if !defined(MOSFET_BRIDGE_USED)
-#define MOSFET_BRIDGE_USED  // The Adafruit Motor Shield has a TB6612 MosFet driver
-#  endif
 #  if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
 #define FULL_BRIDGE_LOSS_MILLIVOLT             0
 #  endif
@@ -104,18 +101,19 @@
 #  elif defined(VIN_1_LIPO)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         3700 // for 1 x LIPO battery (3.7 volt).
 #  else
-#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).
+//#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).
+#define FULL_BRIDGE_INPUT_MILLIVOLT         4800  // Default. For 4 x AA rechargeable batteries (4.8 volt).
 #  endif
 #endif
 
 #if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
-#  if defined(MOSFET_BRIDGE_USED)
-// Speed is almost linear to 1/2 PWM in cm/s without any offset, only with dead band
-#define FULL_BRIDGE_LOSS_MILLIVOLT             0
-#  else
+#  if defined(USE_L298_BRIDGE)
 // Speed is not linear to PWM and has an offset
 // Effective voltage loss includes loss by switching to high impedance at inactive for bipolar full bridges like L298
 #define FULL_BRIDGE_LOSS_MILLIVOLT          2200 // Effective voltage loss
+#  else
+// Speed is almost linear to 1/2 PWM in cm/s without any offset, only with dead band
+#define FULL_BRIDGE_LOSS_MILLIVOLT             0
 #  endif
 #endif
 
@@ -126,6 +124,7 @@
 
 #define DEFAULT_STOP_MILLIVOLT_MOSFET       700 // Voltage where spinning motors start to stop
 #define DEFAULT_START_MILLIVOLT_MOSFET      1000 // Voltage where motors start to turn
+#define DEFAULT_STOP_MILLIVOLT_L298         750  // Voltage where spinning motors start to stop
 #define DEFAULT_START_MILLIVOLT_L298        1700 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
 #define SPEED_PWM_FOR_1_VOLT                ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
@@ -138,11 +137,12 @@
 #endif
 
 #if !defined(DEFAULT_START_SPEED_PWM)
-#  if defined(MOSFET_BRIDGE_USED)
+#  if defined(USE_L298_BRIDGE)
+#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_STOP_SPEED_PWM              ((DEFAULT_STOP_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
+#  else
 #define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT) // 24 for 7.4 volt
 #define DEFAULT_STOP_SPEED_PWM              ((DEFAULT_STOP_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
-#  else
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #  endif
 #endif
 
@@ -358,7 +358,7 @@ public:
     uint8_t SpeedPWMCompensation;   // Positive value!
     uint8_t RequestedSpeedPWM;      // Is always >= CompensatedSpeedPWM
     uint8_t CompensatedSpeedPWM;    // RequestedSpeedPWM - SpeedPWMCompensation. Stopped if CompensatedSpeedPWM == 0
-    uint8_t CurrentDirection;       // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
+    uint8_t CurrentDirection; // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
     static bool MotorPWMHasChanged;
 
     bool CheckDistanceInUpdateMotor;
