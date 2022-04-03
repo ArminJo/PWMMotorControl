@@ -515,6 +515,7 @@ unsigned int EncoderMotor::getAverageSpeed() {
  */
 unsigned int EncoderMotor::getAverageSpeed(uint8_t aLengthOfAverage) {
 #if defined(DO_NOT_SUPPORT_AVERAGE_SPEED)
+    (void) aLengthOfAverage;
     return getSpeed();
 #else
     if (!AverageSpeedIsValid && MillisArrayIndex < aLengthOfAverage) {

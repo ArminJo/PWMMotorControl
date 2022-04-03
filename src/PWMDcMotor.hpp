@@ -52,6 +52,7 @@
 //#define DEBUG
 
 char sDirectionCharArray[3] = { 'S', 'F', 'B' };
+const char *sDirectionStringArray[3] = { "stop", "forward", "backward" };
 
 // Flags e.g. for display update control
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
@@ -164,7 +165,7 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
     pinMode(aBackwardPin, OUTPUT);
     pinMode(aPWMPin, OUTPUT);
 
-    // Set DriveSpeedPWM, SpeedPWMCompensation and MillisPerMillimeter defaults
+    // Set DriveSpeedPWM, SpeedPWMCompensation and MillisPerCentimeter defaults
     setDefaultsForFixedDistanceDriving();
     stop(DEFAULT_STOP_MODE);
 }
@@ -234,6 +235,19 @@ void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
 
 uint8_t PWMDcMotor::getDirection() {
     return CurrentDirection;
+}
+
+float PWMDcMotor::getMotorVoltageforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt) {
+    // if aFullBridgeInputVoltageMillivolt is constant, this can be optimized well
+    return aSpeedPWM * ((aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT) / (1000.0 * MAX_SPEED_PWM));
+}
+
+float PWMDcMotor::getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage) {
+    return aSpeedPWM * ((aFullBridgeInputVoltage - FULL_BRIDGE_LOSS_MILLIVOLT) / (1000.0 * MAX_SPEED_PWM));
+}
+
+void PWMDcMotor::printDirectionString(Print *aSerial, uint8_t aDirection) {
+    aSerial->print(sDirectionStringArray[aDirection]);
 }
 
 /*
@@ -374,7 +388,7 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
 #  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     PCA9685SetPWM(PWMPin, 0, 0);
 #  else
-        Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(0);
+    Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(0);
 #  endif
 #else
     analogWrite(PWMPin, 0);
@@ -399,7 +413,7 @@ void PWMDcMotor::setStopMode(uint8_t aStopMode) {
 }
 
 /*
- * Set DriveSpeedPWM, SpeedPWMCompensation and MillisPerMillimeter defaults
+ * Set DriveSpeedPWM, SpeedPWMCompensation and MillisPerCentimeter defaults
  * setDefaultsForFixedDistanceDriving() is called at init
  * Values depend on FULL_BRIDGE_OUTPUT_MILLIVOLT
  */
@@ -407,7 +421,7 @@ void PWMDcMotor::setDefaultsForFixedDistanceDriving() {
     DriveSpeedPWM = DEFAULT_DRIVE_SPEED_PWM;
     SpeedPWMCompensation = 0;
 #if !defined(USE_ENCODER_MOTOR_CONTROL)
-    MillisPerMillimeter = DEFAULT_MILLIS_PER_MILLIMETER;
+    MillisPerCentimeter = DEFAULT_MILLIS_PER_CENTIMETER;
 #endif
     MotorControlValuesHaveChanged = true;
 }
@@ -437,7 +451,7 @@ void PWMDcMotor::setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation) {
 void PWMDcMotor::updateDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     DriveSpeedPWM = aDriveSpeedPWM;
     MotorControlValuesHaveChanged = true;
-    // DriveSpeedPWM = 0 makes no sense and just stops the car
+// DriveSpeedPWM = 0 makes no sense and just stops the car
     if (!isStopped() && aDriveSpeedPWM != 0) {
         setSpeedPWMAndDirectionWithRamp(aDriveSpeedPWM, CurrentDirection);
     }
@@ -466,16 +480,16 @@ void PWMDcMotor::setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uin
         checkAndHandleDirectionChange(aRequestedDirection);
         MotorRampState = MOTOR_STATE_START;
         /*
-         * Set target speed for ramp up
+         * Stopped -> set target speed for ramp up
          */
         RequestedDriveSpeedPWM = aRequestedSpeedPWM;
     } else if (MotorRampState == MOTOR_STATE_DRIVE) {
         /*
-         * motor is running, -> just change speed
+         * motor is running -> just change speed
          */
         setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
     }
-    // else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
+// else ramp is in mode MOTOR_STATE_RAMP_UP -> do nothing, let the ramp go on
 #  if defined(DEBUG)
     Serial.print(F("MotorRampState="));
     Serial.print(MotorRampState);
@@ -619,7 +633,7 @@ bool PWMDcMotor::updateMotor() {
  * Required for non encoder motors to estimate duration for a fixed distance
  */
 void PWMDcMotor::setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond) {
-    MillisPerMillimeter = MILLIS_IN_ONE_SECOND / aMillimeterPerSecond;
+    MillisPerCentimeter = MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER / aMillimeterPerSecond;
 }
 
 void PWMDcMotor::goDistanceMillimeter(int aRequestedDistanceMillimeter) {
@@ -664,7 +678,7 @@ void PWMDcMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
 }
 
 /*
- * If motor is already running just update speed and new time
+ * If motor is already running, just update speed and new stop time
  */
 void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
@@ -679,7 +693,7 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
      * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
      */
     uint32_t tComputedMillisOfMotorStopForDistance =
-            (((uint32_t) aRequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM) / DEFAULT_DRIVE_SPEED_PWM);
+            (((uint32_t) aRequestedDistanceMillimeter * MillisPerCentimeter * DriveSpeedPWM) / (MILLIMETER_IN_ONE_CENTIMETER * DEFAULT_DRIVE_SPEED_PWM));
 
     if (isStopped()) {
         // add startup time
@@ -687,10 +701,12 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
     }
 
 #if defined(DEBUG)
-    Serial.print(F("MillisForDistance "));
-    Serial.println(aRequestedDistanceMillimeter);
-    Serial.print(F(" mm ="));
-    Serial.println(tComputedMillisOfMotorStopForDistance);
+    Serial.print(F("Go for distance "));
+    Serial.print(aRequestedDistanceMillimeter);
+    Serial.print(F(" mm -> "));
+    Serial.print(tComputedMillisOfMotorStopForDistance);
+    Serial.println(F(" ms"));
+
 #endif
     tComputedMillisOfMotorStopForDistance += millis();
 
@@ -790,7 +806,7 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
     aSerial->println(DEFAULT_MOTOR_START_TIME_MILLIS);
 
     aSerial->print(F("DEFAULT_MILLIS_PER_MILLIMETER="));
-    aSerial->println(DEFAULT_MILLIS_PER_MILLIMETER);
+    aSerial->println(DEFAULT_MILLIS_PER_CENTIMETER);
     aSerial->println();
 }
 

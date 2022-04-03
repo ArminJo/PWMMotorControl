@@ -310,7 +310,7 @@ void CarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
 
     uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_MASK;
-#if defined(DEBUG)
+#  if defined(DEBUG)
     Serial.print(F("Speed="));
     Serial.print(aRequestedSpeedPWM);
     Serial.print(F(" forward/backward direction="));
@@ -320,7 +320,7 @@ void CarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
     Serial.print(F(" turn="));
     Serial.print(aRequestedDirection & DIRECTION_TURN);
     Serial.println();
-#endif
+#  endif
 
     uint8_t tFrontLeftMotorDirection;
     uint8_t tBackLeftMotorDirection;
@@ -722,7 +722,6 @@ void CarPWMMotorControl::waitUntilStopped(void (*aLoopCallback)(void)) {
     while (updateMotors(aLoopCallback)) {
         ;
     }
-    CarDirection = rightCarMotor.CurrentDirection;
 }
 
 bool CarPWMMotorControl::isState(uint8_t aState) {
@@ -864,8 +863,14 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
     uint8_t tTurnSpeedPWMRight = tRightMotorIfPositiveTurn->DriveSpeedPWM;
     uint8_t tTurnSpeedPWMLeft = tLeftMotorIfPositiveTurn->DriveSpeedPWM;
     if (aUseSlowSpeed) {
+#if defined(CAR_HAS_4_WHEELS)
+        // DEFAULT_START_SPEED_PWM does not really work for 4 WD cars
+        tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
+        tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
+#else
         tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM;
         tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM;
+#endif
     }
 
 #if defined(DEBUG)
@@ -896,9 +901,8 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
 /**
  * @param  aRotationDegrees positive -> turn left (counterclockwise), negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE (default)
- * @param  aUseSlowSpeed true (not default) -> use slower SpeedPWM (0.5 times DriveSpeedPWM) instead of DriveSpeedPWM for rotation to be more exact.
- *         Does not really work for 4WD cars.
- *         TODO remove? since only sensible for encoder motors.
+ * @param  aUseSlowSpeed true (not default) -> use slower SpeedPWM (for 4WD cars 3/4 times, for 2WD 0.5 times DriveSpeedPWM)
+ *                                             instead of DriveSpeedPWM for rotation to be more exact.
  * @param  aLoopCallback avoid blocking and call aLoopCallback on waiting for stop
  */
 void CarPWMMotorControl::rotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed,

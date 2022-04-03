@@ -29,7 +29,7 @@
 
 #include <Arduino.h>
 
-#define VERSION_EXAMPLE "3.0"
+#define VERSION_EXAMPLE "2.0.0"
 //#define DEBUG
 //#define TRACE
 
@@ -60,7 +60,7 @@
 //#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#define MONITOR_VIN_VOLTAGE
+//#define MONITOR_VIN_VOLTAGE
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #endif
 
@@ -153,43 +153,9 @@ int doUserCollisionDetection() {
 }
 
 /*
- * !!! THIS WORKS ONLY WITH VERSION 8.0 OF THE OPTIBOOT BOOTLOADER !!!
- First, we need a variable to hold the reset cause that can be written before
- early sketch initialization (that might change r2), and won't be reset by the
- various initialization code.
- avr-gcc provides for this via the ".noinit" section.
- */
-uint8_t sMCUSR __attribute__ ((section(".noinit")));
-
-/*
- Next, we need to put some code to save reset cause from the bootloader (in r2)
- to the variable.  Again, avr-gcc provides special code sections for this.
- If compiled with link time optimization (-flto), as done by the Arduino
- IDE version 1.6 and higher, we need the "used" attribute to prevent this
- from being omitted.
- */
-void resetFlagsInit(void) __attribute__ ((naked))
-__attribute__ ((used))
-__attribute__ ((section (".init0")));
-void resetFlagsInit(void) {
-    /*
-     save the reset flags passed from the bootloader
-     This is a "simple" matter of storing (STS) r2 in the special variable
-     that we have created. We use assembler to access the right variable.
-     */
-    __asm__ __volatile__ ("sts %0, r2\n" : "=m" (sMCUSR) :);
-}
-
-bool sBootReasonWasPowerUp = false;
-/*
  * Start of robot car control program
  */
 void setup() {
-    MCUSR = 0;
-    if (sMCUSR & (1 << PORF)) {
-        sBootReasonWasPowerUp = true; // always true for old Optiboot bootloader
-    }
-
     /*
      * Configure first set of pins
      */
@@ -235,9 +201,9 @@ void setup() {
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
         // Just to know which program is running on my Arduino
-        Serial.println(F("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__));
-        Serial.print(F("sMCUSR=0x"));
-        Serial.println(sMCUSR, HEX);
+        Serial.println(
+                F(
+                        "START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__ "\r\nUsing PWMMotorControl library version " VERSION_PWMMOTORCONTROL));
         PWMDcMotor::printCompileOptions(&Serial);
         printConfigInfo();
 #endif
@@ -266,11 +232,8 @@ void setup() {
 #endif
 
     delay(100);
-    if (sBootReasonWasPowerUp) {
-        tone(PIN_BUZZER, 1000, 50); // power up finished
-    } else {
-        tone(PIN_BUZZER, 1000, 300); // long tone, reset finished - only detectable with Optiboot 8.0
-    }
+    tone(PIN_BUZZER, 1000, 50); // power up finished
+
 }
 
 void loop() {
@@ -327,11 +290,7 @@ void loop() {
             // Set right page for reconnect
 #if defined(CAR_HAS_DISTANCE_SENSOR)
             GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
-            if (sBootReasonWasPowerUp) {
-                startStopAutomomousDrive(true, MODE_FOLLOWER);
-            } else {
-                startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
-            }
+            startStopAutomomousDrive(true, MODE_FOLLOWER);
 #else
             GUISwitchPages(NULL, PAGE_HOME);
 #endif

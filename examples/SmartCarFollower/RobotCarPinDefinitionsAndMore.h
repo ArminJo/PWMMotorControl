@@ -179,6 +179,20 @@
 #  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
 #define LED_BUILTIN PB1
 #  endif
+#define TONE_LEDC_CHANNEL        1  // Using channel 1 makes tone() independent of receiving timer -> No need to stop receiving timer.
+void tone(uint8_t _pin, unsigned int frequency){
+    ledcAttachPin(_pin, TONE_LEDC_CHANNEL);
+    ledcWriteTone(TONE_LEDC_CHANNEL, frequency);
+}
+void tone(uint8_t _pin, unsigned int frequency, unsigned long duration){
+    ledcAttachPin(_pin, TONE_LEDC_CHANNEL);
+    ledcWriteTone(TONE_LEDC_CHANNEL, frequency);
+    delay(duration);
+    ledcWriteTone(TONE_LEDC_CHANNEL, 0);
+}
+void noTone(uint8_t _pin){
+    ledcWriteTone(TONE_LEDC_CHANNEL, 0);
+}
 #else // NANO_BASED
 // UNO based
 #  if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)

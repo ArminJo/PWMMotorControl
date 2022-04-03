@@ -50,17 +50,15 @@
 /*
  * Distinct parameters for car control boards, sensors and extensions
  */
-//#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
+//#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage
 //#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
-//#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
+//#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles
 //#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
-//#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+//#define US_SENSOR_SUPPORTS_1_PIN_MODE   // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones
+//                                           Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin
 //#define CAR_HAS_IR_DISTANCE_SENSOR      // A Sharp GP2Y0A21YK / 1080 IR distance sensor is mounted
 //#define CAR_HAS_TOF_DISTANCE_SENSOR     // A VL53L1X TimeOfFlight distance sensor is mounted
-// Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin.
-//#define US_SENSOR_SUPPORTS_1_PIN_MODE   // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones.
-//#define CAR_HAS_4_WHEELS
-//#define CAR_HAS_4_MECANUM_WHEELS
+//#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 //
 // For pan tilt we have 2 servos in total
 //#define CAR_HAS_PAN_SERVO
@@ -77,13 +75,15 @@
 //#define USE_ENCODER_MOTOR_CONTROL       // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD       // Use Adafruit Motor Shield v2 with 2xTB6612 connected by I2C instead of external TB6612 or L298 breakout board.
 //#define USE_MPU6050_IMU                 // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-//#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                      // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
+//#define VIN_2_LIPO                      // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LIPO                      // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT 6000// Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage / motors default speed. Default value is 2.0 volt.
 //#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the encoder function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+//#define CAR_HAS_4_WHEELS
+//#define CAR_HAS_4_MECANUM_WHEELS
 /*
  * L298 basic + IR distance + MPU6050 + VIN monitoring
  */
@@ -116,7 +116,7 @@
 #define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
-#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+#define VIN_2_LIPO                      // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 #define BASIC_CONFIG_NAME   "L298 + 2 Li-ion"
 #endif
@@ -213,7 +213,7 @@
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define USE_ADAFRUIT_MOTOR_SHIELD       // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
-#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+#define VIN_2_LIPO                      // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 #define BASIC_CONFIG_NAME   "Motor shield,TB6612  + 2 Li-ion + VIN divider + servo head down"
@@ -232,7 +232,7 @@
 #define CAR_HAS_TILT_SERVO
 #define CAR_HAS_CAMERA
 #define CAR_HAS_LASER
-#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+#define VIN_2_LIPO                      // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define USE_ENCODER_MOTOR_CONTROL       // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
@@ -258,7 +258,7 @@
 #if defined(MECANUM_BASIC_CONFIGURATION)
 #define CAR_IS_NANO_BASED
 #define CAR_HAS_4_MECANUM_WHEELS
-#define VIN_2_LIPO                      // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
+#define VIN_2_LIPO                      // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define BASIC_CONFIG_NAME   "Breadboard TB6612  + 2 Li-ion + VIN divider + 4 mecanum wheels"
 #endif

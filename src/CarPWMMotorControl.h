@@ -146,16 +146,9 @@ public:
      * Functions for rotation
      */
     void setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter);
-#if defined(CAR_HAS_4_WHEELS)
-    // slow speed does not really work for 4 WD cars
     void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = false);
     void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
             void (*aLoopCallback)(void) = NULL);
-#else
-    void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = false);
-    void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
-            void (*aLoopCallback)(void) = NULL);
-#endif
 
 #if defined(USE_MPU6050_IMU)
     IMUCarData IMUData;

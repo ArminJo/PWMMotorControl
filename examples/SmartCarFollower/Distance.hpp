@@ -102,7 +102,9 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
      */
     unsigned int tCentimeter = getDistanceAsCentimeter(aDistanceTimeoutCentimeter, aWaitForCurrentMeasurementToEnd);
 #if defined(USE_BLUE_DISPLAY_GUI)
+#  if defined(CAR_HAS_US_DISTANCE_SENSOR)
             showUSDistance();
+#  endif
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
             showIROrTofDistance();
 #  endif

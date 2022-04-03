@@ -34,8 +34,8 @@
 #define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 //#define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-//#define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                  // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
+//#define VIN_2_LIPO                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LIPO                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
@@ -69,7 +69,7 @@ void setup() {
 #endif
 
     // Print caption
-    Serial.println(F("PWM Speed Average Encoder"));
+    Serial.println(F("PWM Speed Average EncoderCount"));
 
 #if defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
 #  if defined(USE_ADAFRUIT_MOTOR_SHIELD)
@@ -176,7 +176,7 @@ void loop() {
     /*
      * Print extended caption
      */
-    Serial.print(F("PWM Speed Average Encoder "));
+    Serial.print(F("PWM Speed Average EncoderCount "));
     Serial.print(F(" Start_PWM_Speed="));
     Serial.print(tStartPWM);
     Serial.print('_');

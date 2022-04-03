@@ -43,7 +43,8 @@
 #define VERSION_PWMMOTORCONTROL_MINOR 0
 // The change log is at the bottom of the file
 
-#define MILLIS_IN_ONE_SECOND 1000L
+#define MILLIS_IN_ONE_SECOND            1000L
+#define MILLIMETER_IN_ONE_CENTIMETER    10L
 
 /*
  * Activate this, if you have encoder interrupts attached at pin 2 and 3
@@ -66,8 +67,8 @@
 
 //#define DO_NOT_SUPPORT_RAMP // saves 320 bytes programming space
 
-//#define VIN_2_LIPO // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO // Or if you use a Mosfet bridge, 1 LIPO may be sufficient.
+//#define VIN_2_LIPO // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LIPO // If you use a mosfet bridge, 1 Li-ion cellmay be sufficient.
 /*
  * Helper macro for getting a macro definition as string
  */
@@ -133,16 +134,16 @@
 // Default values - used if EEPROM values are invalid or not available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
 // At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt, 68 for 7.4 volt
-#define DEFAULT_DRIVE_SPEED_PWM             ((DEFAULT_DRIVE_MILLIVOLT * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_DRIVE_SPEED_PWM             (((DEFAULT_DRIVE_MILLIVOLT * MAX_SPEED_PWM) + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 
 #if !defined(DEFAULT_START_SPEED_PWM)
 #  if defined(USE_L298_BRIDGE)
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define DEFAULT_STOP_SPEED_PWM              ((DEFAULT_STOP_MILLIVOLT_L298 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
+#define DEFAULT_START_SPEED_PWM             (((DEFAULT_START_MILLIVOLT_L298 * MAX_SPEED_PWM) + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define DEFAULT_STOP_SPEED_PWM              (((DEFAULT_STOP_MILLIVOLT_L298 * MAX_SPEED_PWM)  + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
 #  else
-#define DEFAULT_START_SPEED_PWM             ((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT) // 24 for 7.4 volt
-#define DEFAULT_STOP_SPEED_PWM              ((DEFAULT_STOP_MILLIVOLT_MOSFET * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
+#define DEFAULT_START_SPEED_PWM             (((DEFAULT_START_MILLIVOLT_MOSFET * MAX_SPEED_PWM)  + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT) // 24 for 7.4 volt
+#define DEFAULT_STOP_SPEED_PWM              (((DEFAULT_STOP_MILLIVOLT_MOSFET * MAX_SPEED_PWM)  + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT)  // 24 for 7.4 volt
 #  endif
 #endif
 
@@ -150,14 +151,16 @@
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
 #define DEFAULT_MILLIMETER_PER_SECOND       200 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
 #  else
-// At 2 volt (DEFAULT_DRIVE_MILLIVOLT) we have around 1.5 rotation per second, 29 distance/encoder counts per second -> 32 cm / second
-#define DEFAULT_MILLIMETER_PER_SECOND       320 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#endif
-#define DEFAULT_MILLIS_PER_MILLIMETER       (MILLIS_IN_ONE_SECOND / DEFAULT_MILLIMETER_PER_SECOND)
+#define DEFAULT_MILLIMETER_PER_SECOND       220 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#  endif
 #endif
 /*
+ * Use MILLIS_PER_CENTIMETER instead of MILLIS_PER_MILLIMETER to get a reasonable resolution
+ */
+#define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND)
+/*
  * Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
- * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerMillimeter) / DriveSpeedPWM));
+ * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
  */
 
 /*
@@ -194,6 +197,7 @@
 #if defined(DEBUG)
 extern char sDirectionCharArray[3];
 #endif
+extern const char *sDirectionStringArray[3];
 
 /*
  * Extension for mecanum wheel movements
@@ -279,7 +283,10 @@ public:
 
     void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
 
+    static float getMotorVoltageforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt);
+    static float getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage);
     uint8_t getDirection();
+    static void printDirectionString(Print *aSerial, uint8_t aDirection);
 
     void start(uint8_t aRequestedDirection);
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
@@ -296,7 +303,7 @@ public:
     void startRampUp(uint8_t aRequestedDirection);
     void startRampDown();
 
-#if !defined(USE_ENCODER_MOTOR_CONTROL) // required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerMillimeter for the functions below
+#if !defined(USE_ENCODER_MOTOR_CONTROL) // Guard required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerCentimeter for the functions below
     // This function only makes sense for non encoder motors
     void setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond);
 
@@ -375,7 +382,8 @@ public:
 
 #if !defined(USE_ENCODER_MOTOR_CONTROL) // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
     uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
-    uint8_t MillisPerMillimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED_PWM. Required for non encoder motors to estimate duration for a fixed distance
+    // MillisPerMillimeter values were in the range of 3 and 4, thus use MillisPerCentimeter for better resolution
+    uint8_t MillisPerCentimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED_PWM. Required for non encoder motors to estimate duration for a fixed distance
 #endif
 
 };

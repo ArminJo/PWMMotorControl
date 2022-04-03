@@ -1,6 +1,6 @@
 /*
  *  TestMotorWithIMU.cpp
- *  Tests Prints PWM, distance and speed diagram of an encoder motor.
+ *  Tests Prints PWM, distance and speed diagram of the right (encoder) motor of a car.
  *  Encoder and IMU data are printed simultaneously, to compare and to detect slipping
  *
  *
@@ -33,8 +33,8 @@
 #define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-//#define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                  // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
+//#define VIN_2_LIPO                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LIPO                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
@@ -52,7 +52,7 @@
 
 unsigned long LastPrintMillis;
 
-void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp);
+void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp);
 
 void setup() {
 // initialize the digital pin as an output.
@@ -111,6 +111,10 @@ void loop() {
 
     uint8_t tLoopIndex = 0;
 
+    /*
+     * Start and stop car first with and second without ramp
+     * Start with DEFAULT_DRIVE_SPEED_PWM and double speed for next turn until MAX_SPEED_PWM
+     */
     while (true) {
         bool tUseRamp = true;
         for (uint8_t i = 0; i < 2; ++i) {
@@ -121,24 +125,32 @@ void loop() {
 #endif
 
             if (tUseRamp) {
+                /*
+                 * Go distance - implies ramp
+                 */
 #if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.print(F("Go distance[mm]="));
                 Serial.println((tLoopIndex + 1) * 200); // 200, 400, 600
 #endif
                 RobotCarPWMMotorControl.startGoDistanceMillimeter(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
+#if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.print(F("Go distance[mm]="));
                 Serial.println(RobotCarPWMMotorControl.CarRequestedDistanceMillimeter);
+#endif
                 // print 20 data sets after stopping
-                printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
+                delayAndPrintData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
             } else {
+                /*
+                 * Set speed, wait and stop - no ramp :-)
+                 */
                 RobotCarPWMMotorControl.setSpeedPWMAndDirection(sSpeedPWM, sDirection);
-                printData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
+                delayAndPrintData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
 #if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.println(F("Stop motors"));
 #endif
                 RobotCarPWMMotorControl.setStopMode(STOP_MODE_BRAKE); // just to be sure
                 RobotCarPWMMotorControl.setSpeedPWMAndDirection(0);
-                printData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
+                delayAndPrintData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
             }
 
             tUseRamp = false;
@@ -177,19 +189,13 @@ void loop() {
 
 /*
  * Prints values, if a new value is available
+ * @param aDataSetsToPrint if aUseRamp is true, number of data sets AFTER stop of car
  * @return true if printed.
  */
-void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) {
+void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) {
 
     for (uint_fast8_t i = 0; i < aDataSetsToPrint;) {
-        if (aUseRamp) {
-            if (RobotCarPWMMotorControl.updateMotors()) {
-                // do not count as long as car is driving
-                i = 0;
-            }
-        }
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-
         if (RobotCarPWMMotorControl.rightCarMotor.printEncoderDataPeriodically(&Serial, aPeriodMillis)) {
             RobotCarPWMMotorControl.IMUData.readCarDataFromMPU6050Fifo();
             RobotCarPWMMotorControl.IMUData.printIMUCarData(&Serial);
@@ -202,5 +208,9 @@ void printData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) 
             i++;
         }
 #endif
+        if (aUseRamp && RobotCarPWMMotorControl.updateMotors()) {
+            // reset count as long as car is driving
+            i = 0;
+        }
     }
 }

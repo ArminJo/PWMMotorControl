@@ -1,8 +1,9 @@
 /*
- *  RobotCar.cpp
+ *  RobotCarBasic.cpp
  *
  *  Template for your RobotCar control.
- *  Currently implemented is: drive until distance too low, then stop, and turn random amount.
+ *  Currently implemented is: drive until distance too low, then stop, go backwards and turn random amount.
+ *  The measured distance range is converted to a pitch as an acoustic feedback.
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com

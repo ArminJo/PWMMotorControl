@@ -2,7 +2,8 @@
  *  SmartCarFollower.cpp
  *
  *  Enables follower mode driving of a 2 or 4 wheel smart car with an Arduino.
- *  To find the target to follow, a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo scans the area on demand. (not yet implemented)
+ *  If the target vanishes, the distance sensor scans to get the vanished (or a new) target.
+ *
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com

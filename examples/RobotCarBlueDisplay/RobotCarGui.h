@@ -63,8 +63,12 @@ extern char sStringBuffer[128];
 #define PAGE_LAST_NUMBER        PAGE_SHOW_PATH
 extern uint8_t sCurrentPage;
 
+#if defined(CAR_HAS_US_DISTANCE_SENSOR)
 void showUSDistance();
+#endif
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 void showIROrTofDistance();
+#endif
 
 #if defined(ENABLE_PATH_INFO_PAGE)
 // from PathInfoPage

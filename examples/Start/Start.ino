@@ -1,6 +1,6 @@
 /*
  *  Start.cpp
- *  Example for controlling 2 motors without using the basic PWMDcMotor class
+ *  Example for controlling 2 motors using the basic PWMDcMotor class
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -28,14 +28,13 @@
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.
  * You must specify this before the include of "PWMDcMotor.hpp"
  */
-//#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
-//#define VIN_2_LIPO                  // Activate this, if you use 2 LiPo Cells (around 7.4 volt) as Motor supply.
-//#define VIN_1_LIPO                  // Or if you use a Mosfet bridge (TB6612), 1 LIPO (around 3.7 volt) may be sufficient.
-//#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
-//#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
-//#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
-//#define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+//#define USE_L298_BRIDGE                  // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+//#define VIN_2_LIPO                       // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LIPO                       // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
+//#define FULL_BRIDGE_INPUT_MILLIVOLT 6000 // Default. For 4 x AA batteries (6 volt).
+//#define FULL_BRIDGE_INPUT_MILLIVOLT 4800 // Default. For 4 x AA NIMH rechargeable batteries (4.8 volt).
+//#define DEFAULT_MILLIMETER_PER_SECOND 220 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply.
+//#define USE_ADAFRUIT_MOTOR_SHIELD        // Use Adafruit Motor Shield v2 with 2xTB6612 connected by I2C instead of external TB6612 or L298 breakout board.
 
 #include "PWMDcMotor.hpp"
 
@@ -45,14 +44,7 @@ PWMDcMotor rightMotor;
 PWMDcMotor leftMotor;
 
 void setup() {
-// initialize the digital pin as an output.
-//    pinMode(LED_BUILTIN, OUTPUT);
-
     Serial.begin(115200);
-
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
-    delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
-#endif
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
 
@@ -65,9 +57,14 @@ void setup() {
     rightMotor.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN);
 #endif
 
-    Serial.print(F("Drive speed="));
+    Serial.print(F("Default drive speed PWM="));
     Serial.print(rightMotor.DriveSpeedPWM);
     Serial.println();
+
+    /*
+     * Tone feedback for end of boot
+     */
+    tone(PIN_BUZZER, 2200, 100);
 
     delay(2000);
 }
@@ -78,28 +75,62 @@ void loop() {
     /*
      * Try start speed (from PWMDCMotor.h), at which the motor starts to move.
      */
+    Serial.print(F("Run right motor "));
+    PWMDcMotor::printDirectionString(&Serial, sMotorDirection);
+    Serial.print(F(" with PWM="));
+    Serial.print(DEFAULT_START_SPEED_PWM);
+    Serial.print(F(" -> "));
+    Serial.print(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(DEFAULT_START_SPEED_PWM, FULL_BRIDGE_INPUT_MILLIVOLT));
+    Serial.print(F(" V at "));
+    Serial.print(FULL_BRIDGE_INPUT_MILLIVOLT / 1000.0);
+    Serial.println(F(" V power supply"));
     rightMotor.setSpeedPWMAndDirection(DEFAULT_START_SPEED_PWM, sMotorDirection);
-    delay(1000);               // wait for a second
+    delay(1000);
+    rightMotor.stop();
+    delay(1000);
+
     /*
      * Now set speed to the default drive speed (from PWMDCMotor.h), at which the motor moves for fixed distance driving.
      */
+    Serial.print(F("Run right motor "));
+    PWMDcMotor::printDirectionString(&Serial, sMotorDirection);
+    Serial.print(F(" with PWM="));
+    Serial.print(DEFAULT_DRIVE_SPEED_PWM);
+    Serial.print(F(" -> "));
+    Serial.print(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(DEFAULT_DRIVE_SPEED_PWM, FULL_BRIDGE_INPUT_MILLIVOLT));
+    Serial.print(F(" V at "));
+    Serial.print(FULL_BRIDGE_INPUT_MILLIVOLT / 1000.0);
+    Serial.println(F(" V power supply"));
     rightMotor.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
-    delay(1000);               // wait for a second
-    /*
-     * Stop motor
-     */
+    delay(1000);
     rightMotor.stop();
-    delay(1000);               // wait for a second
+    delay(1000);
+
     /*
-     * Try to go a whole turn (22.0 cm for my wheels)
+     * Try to move the wheel whole turn (22.0 cm for my wheels)
      */
+    Serial.print(F("Try to move the right wheel a full turn i.e. "));
+    Serial.print(DEFAULT_CIRCUMFERENCE_MILLIMETER);
+    Serial.print(F(" mm. Factor is "));
+    Serial.print(rightMotor.MillisPerCentimeter);
+    Serial.print(F(" milliseconds per cm or "));
+    Serial.print(MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER / rightMotor.MillisPerCentimeter);
+    Serial.print(F(" millimeter per second -> "));
+    unsigned long tMillis = millis();
     rightMotor.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, sMotorDirection);
-    delay(2000);
+    Serial.print(rightMotor.computedMillisOfMotorStopForDistance - tMillis);
+    Serial.print(F(" ms including startup time of "));
+    Serial.print(DEFAULT_MOTOR_START_TIME_MILLIS);
+    Serial.println(F(" ms."));
+    delay(4000);
 
     /*
      * Run left motor
      */
+    Serial.println(F("Now run the same with left motor"));
     leftMotor.setSpeedPWMAndDirection(DEFAULT_START_SPEED_PWM, sMotorDirection);
+    delay(1000);
+    leftMotor.stop();
     delay(1000);
     leftMotor.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, sMotorDirection);
     delay(1000);
@@ -110,6 +141,7 @@ void loop() {
     /*
      * switch direction
      */
+    Serial.println(F("Switch direction and wait"));
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
-    delay(3000);
+    delay(8000);
 }
