@@ -38,9 +38,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "2.0.0"
-#define VERSION_PWMMOTORCONTROL_MAJOR 2
-#define VERSION_PWMMOTORCONTROL_MINOR 0
+#define VERSION_PWMMOTORCONTROL "1.9.0"
+#define VERSION_PWMMOTORCONTROL_MAJOR 1
+#define VERSION_PWMMOTORCONTROL_MINOR 9
 // The change log is at the bottom of the file
 
 #define MILLIS_IN_ONE_SECOND            1000L

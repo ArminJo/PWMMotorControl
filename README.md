@@ -198,6 +198,8 @@ VIN sensing
 
 # Revision History
 ### Version 2.0.0 - work in progress
+
+### Version 1.9.0 - a 2.0.0 pre release
 - Removed all *Compensated functions, compensation now is always active.
 - Removed StopSpeed from EepromMotorinfoStruct.
 - Removed StartSpeed.
