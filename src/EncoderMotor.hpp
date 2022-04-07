@@ -5,7 +5,7 @@
  *  Works with positive (unsigned) speed and direction or signed speed.
  *
  *  Contains functions to go a specified distance.
- *  These functions generates ramps for acceleration and deceleration and tries to stop at target distance.
+ *  These functions generates ramps for acceleration and deceleration if required and tries to stop at target distance.
  *  This enables deterministic turns for 2-Wheel Cars.  For 4-Wheel cars it is impossible
  *  to get deterministic turns, therefore I use approximated thumb values.
  *
@@ -28,7 +28,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 #ifndef _ENCODER_MOTOR_CONTROL_HPP
 #define _ENCODER_MOTOR_CONTROL_HPP

@@ -18,7 +18,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
@@ -48,8 +48,11 @@ int sLastDegreesTurned = 0;
  * Used for adaptive collision detection
  */
 #define CENTIMETER_PER_RIDE 20
-uint8_t sCentimeterPerScanTimesTwo = CENTIMETER_PER_RIDE * 2; // = encoder counts per US scan in autonomous mode
-uint8_t sCentimeterPerScan = CENTIMETER_PER_RIDE;
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Encoder counts per US scan in autonomous mode
+#else
+uint8_t const sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Constant
+#endif
 
 void driveAutonomousOneStep() {
 
@@ -122,14 +125,14 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 int postProcessAndCollisionDetection() {
 #if defined(CAR_HAS_DISTANCE_SERVO)
     doWallDetection();
-    postProcessDistances(sCentimeterPerScan);
+    postProcessDistances(sCentimetersDrivenPerScan);
     int tNextDegreesToTurn;
     if (sDriveMode == MODE_COLLISION_AVOIDING_BUILTIN) {
         tNextDegreesToTurn = doBuiltInCollisionDetection();
     } else {
         tNextDegreesToTurn = doUserCollisionDetection();
     }
-    drawCollisionDecision(tNextDegreesToTurn, sCentimeterPerScan, false);
+    drawCollisionDecision(tNextDegreesToTurn, sCentimetersDrivenPerScan, false);
     return tNextDegreesToTurn;
 #else
     return 0;
@@ -174,7 +177,7 @@ void driveCollisonAvoidingOneStep() {
              */
             if (sStepMode == MODE_SINGLE_STEP) {
                 // Go fixed distance
-                RobotCarPWMMotorControl.goDistanceMillimeter(sCentimeterPerScan * 10, DIRECTION_FORWARD, &loopGUI);
+                RobotCarPWMMotorControl.goDistanceMillimeter(sCentimetersDrivenPerScan * 10, DIRECTION_FORWARD, &loopGUI);
             } else
             /*
              * Continuous mode, start car or let it run
@@ -202,7 +205,7 @@ void driveCollisonAvoidingOneStep() {
         }
 
         // Clear old decision marker by redrawing it with a white line
-        drawCollisionDecision(sNextDegreesToTurn, sCentimeterPerScan, true);
+        drawCollisionDecision(sNextDegreesToTurn, sCentimetersDrivenPerScan, true);
         sNextDegreesToTurn = postProcessAndCollisionDetection();
 
         /*
@@ -212,14 +215,14 @@ void driveCollisonAvoidingOneStep() {
         if (!RobotCarPWMMotorControl.isStopped() && sStepMode != MODE_SINGLE_STEP) {
             /*
              * No stop here => distance is valid
+             * One encoder count is 11 mm so just take the count as centimeter here :-)
              */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            sCentimeterPerScanTimesTwo = RobotCarPWMMotorControl.rightCarMotor.EncoderCount - tStepStartDistanceCount;
-            sCentimeterPerScan = sCentimeterPerScanTimesTwo / 2;
+            sCentimetersDrivenPerScan = RobotCarPWMMotorControl.rightCarMotor.EncoderCount - tStepStartDistanceCount;
 #endif
             if (tCurrentPageIsAutomaticControl) {
                 char tStringBuffer[6];
-                sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimeterPerScan, "cm");
+                sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm");
                 BlueDisplay1.drawText(0, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11,
                 COLOR16_BLACK, COLOR16_WHITE);
             }
@@ -283,8 +286,8 @@ int doBuiltInCollisionDetection() {
     /*
      * First check if free ahead
      */
-    if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_1] > sCentimeterPerScan
-            && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_2] > sCentimeterPerScan) {
+    if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_1] > sCentimetersDrivenPerScan
+            && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_2] > sCentimetersDrivenPerScan) {
         /*
          * Free ahead, currently do nothing
          */
@@ -294,13 +297,13 @@ int doBuiltInCollisionDetection() {
          */
         if (sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold < NUMBER_OF_DISTANCES) {
             /*
-             * We have at least index with distance greater than threshold of sCentimeterPerScanTimesTwo
+             * We have at least index with distance greater than threshold of sCentimetersDrivenPerScan
              */
             tDegreeToTurn = ((sForwardDistancesInfo.IndexOfDistanceGreaterThanThreshold * DEGREES_PER_STEP) + START_DEGREES) - 90;
         } else {
-            if (sForwardDistancesInfo.MaxDistance > sCentimeterPerScan) {
+            if (sForwardDistancesInfo.MaxDistance > sCentimetersDrivenPerScan) {
                 /*
-                 * Go to max distance if greater than threshold of sCentimeterPerScanTimesTwo, currently the same as above
+                 * Go to max distance if greater than threshold of sCentimetersDrivenPerScan, currently the same as above
                  */
                 tDegreeToTurn = ((sForwardDistancesInfo.IndexOfMaxDistance * DEGREES_PER_STEP) + START_DEGREES) - 90;
             } else {

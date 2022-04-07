@@ -19,7 +19,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #ifndef _ROBOT_CAR_DISTANCE_HPP
@@ -27,7 +27,7 @@
 
 #include "Distance.h"
 
-#if !defined(USE_STANDARD_SERVO_LIBRARY)
+#if defined(CAR_HAS_SERVO) && !defined(USE_STANDARD_SERVO_LIBRARY)
 #include "LightweightServo.hpp"
 #endif
 
@@ -116,7 +116,7 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
          */
         if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
             if (tCentimeter == 0) {
-                noTone(PIN_BUZZER);
+                noTone (PIN_BUZZER);
             } else {
                 int tFrequency;
                 if (sDistanceFeedbackMode == DISTANCE_FEEDBACK_PENTATONIC) {
@@ -458,7 +458,7 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
              * Determine color and draw distance line
              */
             color16_t tColor;
-            tColor = COLOR16_RED; // tCentimeter <= sCentimeterPerScan
+            tColor = COLOR16_RED; // tCentimeter <= sCentimeterDrivenPerScan
             if (tCentimeter <= FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) {
                 tColor = COLOR16_GREEN;
             } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
@@ -568,8 +568,12 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             // User sent an event -> stop and return now
             return true;
         }
-        unsigned int tCentimeter = getDistanceAsCentimeter( DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
-        if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimeterPerScanTimesTwo) {
+        unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
+        if(tCentimeter == 0){
+            // timeout here
+            tCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
+        }
+        if ((tIndex == INDEX_FORWARD_1 || tIndex == INDEX_FORWARD_2) && tCentimeter <= sCentimetersDrivenPerScan * 2) {
             /*
              * Emergency motor stop if index is forward and measured distance is less than distance driven during two scans
              */
@@ -580,12 +584,12 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             /*
              * Determine color
              */
-            tColor = COLOR16_RED; // tCentimeter <= sCentimeterPerScan
+            tColor = COLOR16_RED; // tCentimeter <= sCentimeterDrivenPerScan
             if (tCentimeter >= DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE) {
                 tColor = DISTANCE_TIMEOUT_COLOR;
-            } else if (tCentimeter > sCentimeterPerScanTimesTwo) {
+            } else if (tCentimeter > sCentimetersDrivenPerScan * 2) {
                 tColor = COLOR16_GREEN;
-            } else if (tCentimeter > sCentimeterPerScan) {
+            } else if (tCentimeter > sCentimetersDrivenPerScan) {
                 tColor = COLOR16_YELLOW;
             }
 
@@ -727,7 +731,7 @@ uint8_t computeNeigbourValue(uint8_t aDegreesPerStepValue, uint8_t a2DegreesPerS
  * The problem of the ultrasonic values is, that you can only detect a wall with the ultrasonic sensor if the angle of the wall relative to sensor axis is approximately between 70 and 110 degree.
  * For other angels the reflected ultrasonic beam can not not reach the receiver which leads to unrealistic great distances.
  *
- * Therefore I take samples every 18 degrees and if I get 2 adjacent short (< sCentimeterPerScanTimesTwo) distances, I assume a wall determined by these 2 samples.
+ * Therefore I take samples every 18 degrees and if I get 2 adjacent short (< DISTANCE_MAX_FOR_WALL_DETECTION_CM) distances, I assume a wall determined by these 2 samples.
  * The (invalid) values 18 degrees right and left of these samples are then extrapolated by computeNeigbourValue().
  */
 //#define TRACE // only used for this function

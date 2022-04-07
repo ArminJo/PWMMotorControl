@@ -19,7 +19,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
@@ -235,7 +235,7 @@ void drawAutonomousDrivePage(void) {
 #endif
     TouchButtonScanSpeed.drawButton();
 
-    // bottom line
+    // bottom buttons line
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
     TouchButtonFollower.drawButton();
     TouchButtonBack.drawButton();

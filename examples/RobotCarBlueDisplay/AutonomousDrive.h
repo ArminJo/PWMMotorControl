@@ -12,7 +12,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #ifndef _AUTONOMOUS_DRIVE_H
@@ -46,8 +46,11 @@ extern bool sDoStep;
 /*
  * Used for adaptive collision detection
  */
-extern uint8_t sCentimeterPerScanTimesTwo; // Statistics
-extern uint8_t sCentimeterPerScan; // = sCentimeterPerScanTimesTwo / 2
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+extern uint8_t sCentimetersDrivenPerScan; // Encoder counts per US scan in autonomous mode
+#else
+extern const uint8_t sCentimetersDrivenPerScan; // 20 cm
+#endif
 
 int postProcessAndCollisionDetection();
 

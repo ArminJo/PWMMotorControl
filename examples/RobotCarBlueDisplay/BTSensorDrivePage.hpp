@@ -16,7 +16,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 #ifndef _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
@@ -43,7 +43,7 @@ BDSlider SliderLeft;        // X positive
 #define SPEED_DEAD_BAND             DEFAULT_STOP_SPEED_PWM
 
 #define HORIZONTAL_SLIDER_LENTGH    (DISPLAY_HEIGHT / 4)
-#define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 4)
+#define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 2)
 #define LEFT_RIGHT_SENSOR_DEAD_BAND 10
 
 #define SENSOR_SLIDER_CENTER_X      ((DISPLAY_WIDTH - SENSOR_SLIDER_WIDTH) / 2)

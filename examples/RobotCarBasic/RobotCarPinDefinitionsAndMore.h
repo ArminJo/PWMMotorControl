@@ -21,7 +21,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
 
@@ -61,7 +61,7 @@
  *
  * PIN  I/O Function
  *  A0  O   US trigger (and echo in 1 pin US sensor mode) "URF 01 +" connector on the Arduino Sensor Shield
- *  A1  I   US echo / IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
+ *  A1  I   US echo on "URF 01 +" connector / IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
  *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE, camera supply control on NANO
  *  A3  I   IR distance, Buzzer on NANO
  *  A4  SDA I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope

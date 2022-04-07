@@ -18,7 +18,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #ifndef _ENCODER_MOTOR_CONTROL_H
@@ -47,7 +47,7 @@
  * Some factors depending on wheel diameter and encoder resolution
  */
 #if ! defined(FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT)
-// Exact value is 220 mm / 20 = 11
+// Exact value is 220 mm / 20 = 11 mm
 #define FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT  ((DEFAULT_CIRCUMFERENCE_MILLIMETER + (ENCODER_COUNTS_PER_FULL_ROTATION / 2)) / ENCODER_COUNTS_PER_FULL_ROTATION) // = 11
 #endif
 
@@ -163,7 +163,7 @@ public:
     /*
      * Distance optocoupler impulse counter. It is reset at startGoDistanceCount if motor was stopped.
      */
-    volatile unsigned int EncoderCount;
+    volatile unsigned int EncoderCount; // 11 mm for a 220 mm Wheel and 20 encoder slots
     volatile unsigned int LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
 
     // Do not move it!!! It must be the last element in structure and is required for stopMotorAndReset()

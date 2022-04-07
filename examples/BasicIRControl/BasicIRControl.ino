@@ -1,7 +1,7 @@
 /*
  *  BasicIRControl.cpp
  *
- *  Implements basic car control by an IR remote.
+ *  Implements basic car control  like move and turn by an IR remote.
  *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands can be done in IRCommandMapping.h.
  *  To support mapping, the received IR code is printed at the serial output if `INFO` is defined.
  *
@@ -21,7 +21,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
 

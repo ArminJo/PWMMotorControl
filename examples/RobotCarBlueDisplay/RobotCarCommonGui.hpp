@@ -20,7 +20,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 #ifndef _ROBOT_CAR_COMMON_GUI_HPP
 #define _ROBOT_CAR_COMMON_GUI_HPP
@@ -575,7 +575,6 @@ void initCommonGui() {
 
 void drawCommonGui(void) {
     clearDisplayAndDisableButtonsAndSliders();
-
     BlueDisplay1.drawText(HEADER_X, TEXT_SIZE_22_HEIGHT, F("Robot Car"), TEXT_SIZE_22, COLOR16_BLUE, COLOR16_NO_BACKGROUND);
 }
 

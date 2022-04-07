@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #ifndef _ROBOT_CAR_DISTANCE_H
@@ -22,20 +22,24 @@
 
 #include <Arduino.h>
 
-#if defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)  || defined(USE_STANDARD_SERVO_LIBRARY)
-#  if !defined(USE_STANDARD_SERVO_LIBRARY)
-#define USE_STANDARD_SERVO_LIBRARY // Use standard servo library, because we have more servos and cannot use LightweightServo library
-#  endif
-#  if defined(ESP32)
-#include <ESP32Servo.h>
-#  else
-#include <Servo.h>
-#  endif
-extern Servo DistanceServo;
-
-#else
-#include "LightweightServo.h"
+#if (defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)) && !defined(USE_STANDARD_SERVO_LIBRARY)
+#define USE_STANDARD_SERVO_LIBRARY // Must use standard servo library, because we have more servos and cannot use LightweightServo library
 #endif
+
+#if defined(CAR_HAS_SERVO)
+#  if defined(USE_STANDARD_SERVO_LIBRARY)
+#    if defined(ESP32)
+#include <ESP32Servo.h>
+#    else
+#include <Servo.h>
+#    endif
+#    if defined(CAR_HAS_DISTANCE_SERVO)
+extern Servo DistanceServo;
+#    endif
+#  else
+#include "LightweightServo.h" // We do not have a Servo object here
+#  endif
+#endif // defined(CAR_HAS_SERVO)
 
 /*
  * Constants for uint8_t sDistanceFeedbackMode
@@ -122,7 +126,8 @@ extern int sLastDegreesTurned;
 
 void initDistance();
 bool printDistanceIfChanged(Print *aSerial);
-unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, bool aWaitForCurrentMeasurementToEnd = false);
+unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
+        bool aWaitForCurrentMeasurementToEnd = false);
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
         bool aWaitForCurrentMeasurementToEnd = false);
 

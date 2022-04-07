@@ -2,6 +2,7 @@
  *  RobotCarBlueDisplay.cpp
  *
  *  Enables Robot car control with the BlueDisplay app.
+ *  Requires the BlueDisplay and PlayRtttl library.
  *
  *  Enables autonomous driving of a 2 or 4 wheel car with an Arduino and a Adafruit Motor Shield V2.
  *  To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the area.
@@ -24,7 +25,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/gpl.html>.
+ *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
 #include <Arduino.h>
@@ -60,11 +61,16 @@
 //#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-//#define MONITOR_VIN_VOLTAGE
+#define MONITOR_VIN_VOLTAGE
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #endif
 
-#include "BlueDisplay.h"    // This helps the eclipse indexer
+/*
+ * Settings to configure the BlueDisplay library and to reduce its size
+ */
+//#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
+#define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
+#include "BlueDisplay.hpp" // include source of library
 #include "RobotCarBlueDisplay.h"
 
 #include "CarPWMMotorControl.hpp" // include source of library
@@ -80,8 +86,8 @@
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
-//#define USE_NO_RTX_EXTENSIONS // saves program memory if defined globally
-#include <PlayRtttl.h>
+#define USE_NO_RTX_EXTENSIONS // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
+#include <PlayRtttl.hpp>
 #endif
 
 #include "RobotCarUtils.hpp" // for print
@@ -91,17 +97,6 @@
  */
 #define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
 #define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
-
-//#define DEBUG_TRACE_INIT
-//#include "AvrTracing.hpp"
-
-/****************************************************************************
- * Change this if you have reprogrammed the hc05 module for other baud rate
- ***************************************************************************/
-#if !defined(BLUETOOTH_BAUD_RATE)
-//#define BLUETOOTH_BAUD_RATE BAUD_115200
-#define BLUETOOTH_BAUD_RATE BAUD_9600
-#endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
 #include "ADCUtils.h"
@@ -168,7 +163,7 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // Booted
 
-    initSerial(BLUETOOTH_BAUD_RATE);
+    initSerial();
 //    initTrace();
 //    printNumberOfPushesForISR();
 
@@ -197,7 +192,7 @@ void setup() {
 //        BlueDisplay1.debug("sMCUSR=", sMCUSR);
     } else {
 #if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) || defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
+#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/|| defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
 #endif
         // Just to know which program is running on my Arduino
@@ -233,7 +228,6 @@ void setup() {
 
     delay(100);
     tone(PIN_BUZZER, 1000, 50); // power up finished
-
 }
 
 void loop() {
