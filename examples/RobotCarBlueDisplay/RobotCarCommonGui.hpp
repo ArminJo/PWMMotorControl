@@ -139,7 +139,10 @@ void loopGUI(void) {
 
 #if defined(CAR_HAS_DISTANCE_SENSOR)
         if (sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST
-                || (sCurrentPage == PAGE_AUTOMATIC_CONTROL && sDriveMode == MODE_FOLLOWER)) {
+#if defined(CAR_HAS_DISTANCE_SERVO)
+                || (sCurrentPage == PAGE_AUTOMATIC_CONTROL && sDriveMode == MODE_FOLLOWER)
+#endif
+        ) {
             readAndShowDistancePeriodically();
         }
 #endif
@@ -177,7 +180,7 @@ void readAndShowDistancePeriodically() {
         }
     }
 }
-#endif
+#endif // defined(CAR_HAS_DISTANCE_SENSOR)
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
 void doUSServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
@@ -217,7 +220,7 @@ void startStopRobotCar(bool aDoStart) {
         /*
          * Stop car
          */
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
         startStopAutomomousDrive(false);  // calls RobotCarPWMMotorControl.stop()
 #else
         RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
@@ -323,7 +326,7 @@ void startCurrentPage() {
     case PAGE_TEST:
         startTestPage();
         break;
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
     case PAGE_AUTOMATIC_CONTROL:
         startAutonomousDrivePage();
         break;
@@ -368,7 +371,7 @@ void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue) {
     case PAGE_TEST:
         stopTestPage();
         break;
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
     case PAGE_AUTOMATIC_CONTROL:
         stopAutonomousDrivePage();
         break;
@@ -472,17 +475,16 @@ void initCommonGui() {
      *
      * Position X values determine the RIGHT edge + 1. The width of the slider must be subtracted for SliderX parameter.
      */
-#if defined(CAR_HAS_DISTANCE_SENSOR)
 #define POS_X_DISTANCE_POSITION_SLIDER    LAYOUT_320_WIDTH // 320
-#endif
 #define POS_X_US_DISTANCE_SLIDER    ((POS_X_DISTANCE_POSITION_SLIDER - BUTTON_WIDTH_6) - 2) // - (width of US position slider + 2 for gap)
 #define POS_X_THIRD_SLIDER          (POS_X_US_DISTANCE_SLIDER - (BUTTON_WIDTH_10 / 2))  // - (width of small US distance slider + 2 for gap)
+
 #if defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)
 #define POS_X_PAN_SLIDER            (POS_X_THIRD_SLIDER)  //
 #define POS_X_TILT_SLIDER           ((POS_X_THIRD_SLIDER - BUTTON_WIDTH_12) - 4) // - width of pan slider + 4 for gap
 #else
 #define POS_X_PAN_SLIDER            ((POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10 - 2) // - width of 1 big or 2 small sliders + 2 for gap
-#endif
+#endif // defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
     SliderDistanceServoPosition.init(POS_X_DISTANCE_POSITION_SLIDER - BUTTON_WIDTH_6, SLIDER_TOP_MARGIN, BUTTON_WIDTH_6, US_SLIDER_SIZE, 90, 90,
@@ -562,7 +564,10 @@ void initCommonGui() {
     SliderTilt.setValueUnitString("\xB0"); // \xB0 is degree character
 #endif
 
+#if defined(CAR_HAS_DISTANCE_SERVO)
     initAutonomousDrivePage();
+#endif
+
 #endif // defined(CAR_HAS_DISTANCE_SENSOR)
 
     initHomePage();

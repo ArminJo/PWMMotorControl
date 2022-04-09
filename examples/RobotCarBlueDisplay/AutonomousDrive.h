@@ -15,6 +15,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #ifndef _AUTONOMOUS_DRIVE_H
 #define _AUTONOMOUS_DRIVE_H
 
@@ -53,11 +54,11 @@ extern const uint8_t sCentimetersDrivenPerScan; // 20 cm
 #endif
 
 int postProcessAndCollisionDetection();
-
 void driveAutonomousOneStep();
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
 void driveCollisonAvoidingOneStep();
 void driveFollowerModeOneStep();
 
 #endif // _AUTONOMOUS_DRIVE_H
+#endif // defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #pragma once

@@ -33,8 +33,8 @@
 #define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-//#define VIN_2_LIPO                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LIPO                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
+//#define VIN_2_LI_ION                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LI_ION                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt

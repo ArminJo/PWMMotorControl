@@ -8,10 +8,13 @@
 # This is the name of the workflow, visible on GitHub UI.
 name: LibraryBuild
 on:
+  workflow_dispatch: # To run it manually
+    description: 'manual build check'
   push: # see: https://help.github.com/en/actions/reference/events-that-trigger-workflows#pull-request-event-pull_request
     paths:
       - '**.ino'
       - '**.cpp'
+      - '**.hpp'
       - '**.h'
       - '**LibraryBuild.yml'
   pull_request:
@@ -62,11 +65,9 @@ jobs:
               SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION -DUSE_MPU6050_IMU -DUSE_ENCODER_MOTOR_CONTROL -DUSE_IR_REMOTE -DTRACE
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
-                -DDO_NOT_NEED_BASIC_TOUCH_EVENTS
                 -DBREADBOARD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE
                 -DENABLE_MOTOR_LIST_FUNCTIONS
-                -DENABLE_RTTTL_FOR_CAR
 
           - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
             platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json

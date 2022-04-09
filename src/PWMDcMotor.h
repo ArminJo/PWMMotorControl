@@ -67,8 +67,8 @@
 
 //#define DO_NOT_SUPPORT_RAMP // saves 320 bytes programming space
 
-//#define VIN_2_LIPO // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LIPO // If you use a mosfet bridge, 1 Li-ion cellmay be sufficient.
+//#define VIN_2_LI_ION // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LI_ION // If you use a mosfet bridge, 1 Li-ion cell may be sufficient.
 /*
  * Helper macro for getting a macro definition as string
  */
@@ -97,9 +97,9 @@
 #define DEFAULT_CIRCUMFERENCE_MILLIMETER     220
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
-#  if defined(VIN_2_LIPO)
+#  if defined(VIN_2_LI_ION)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         7400 // for 2 x LIPO batteries (7.4 volt).
-#  elif defined(VIN_1_LIPO)
+#  elif defined(VIN_1_LI_ION)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         3700 // for 1 x LIPO battery (3.7 volt).
 #  else
 //#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).

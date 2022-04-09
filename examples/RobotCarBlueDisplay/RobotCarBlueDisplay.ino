@@ -12,7 +12,7 @@
  *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
  *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
  *
- *  Program size of GUI is 63 percent of 32kByte. 27% vs. 90%.
+ *  Program size of GUI is 63 percent of 32kByte.
  *
  *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -39,29 +39,39 @@
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
+//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider.
 //#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
 //#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
+//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
 #define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
-
-#undef USE_MPU6050_IMU
-
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
  * Enable functionality of this program
  */
-//#define ENABLE_EEPROM_STORAGE       // Activates the GUI buttons to store compensation and drive speed
-//#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
 //#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
+/*
+ * Enabling program features dependent on car configuration
+ */
+#if defined(CAR_HAS_ENCODERS)
+#define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
+#endif
+#if defined(CAR_HAS_MPU6050_IMU)
+//#define USE_MPU6050_IMU
+#endif
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#define MONITOR_VIN_VOLTAGE
+#define MONITOR_VIN_VOLTAGE         // Enable if by default, if available
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #endif
 
@@ -227,7 +237,12 @@ void setup() {
 #endif
 
     delay(100);
-    tone(PIN_BUZZER, 1000, 50); // power up finished
+    // power up finished
+    if (BlueDisplay1.isConnectionEstablished()) {
+        tone(PIN_BUZZER, 1000, 300);
+    } else {
+        tone(PIN_BUZZER, 1000, 50);
+    }
 }
 
 void loop() {
@@ -242,7 +257,7 @@ void loop() {
      */
     loopGUI();
 
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
     /*
      * Handle autonomous driving
      */
@@ -282,7 +297,7 @@ void loop() {
         // check again, maybe we are connected now
         if (!BlueDisplay1.isConnectionEstablished()) {
             // Set right page for reconnect
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
             GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
             startStopAutomomousDrive(true, MODE_FOLLOWER);
 #else

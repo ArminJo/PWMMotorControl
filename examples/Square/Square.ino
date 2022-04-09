@@ -31,8 +31,8 @@
 //#define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 //#define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-//#define VIN_2_LIPO                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LIPO                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
+//#define VIN_2_LI_ION                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LI_ION                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
@@ -91,7 +91,7 @@ void loop() {
         /*
          * Try to go 40 cm with speed DEFAULT_DRIVE_SPEED.
          * You can adjust the speed as well as the distance to time factor above, to get better results.
-         * If you have have slot type photo interrupters assembled, you require no factor if defining USE_ENCODER_MOTOR_CONTROL in PWMDCMotor.h
+         * You require no factor, if you have have slot type photo interrupters connected and defined USE_ENCODER_MOTOR_CONTROL above.
          */
         RobotCarPWMMotorControl.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
         delay(400);
@@ -103,7 +103,7 @@ void loop() {
     }
 
     /*
-     * Turn car around and switch direction
+     * Turn car around and switch direction.
      */
     RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE, NULL);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);

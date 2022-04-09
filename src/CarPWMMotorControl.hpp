@@ -535,8 +535,11 @@ bool CarPWMMotorControl::updateMotors() {
     } else {
         if (CarRequestedDistanceMillimeter != 0) {
 #  if !defined(USE_ENCODER_MOTOR_CONTROL)
+#    if !defined(DO_NOT_SUPPORT_RAMP)
             if (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
-                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) {
+                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN)
+#    endif
+            {
                 unsigned int tBrakingDistanceMillimeter = getBrakingDistanceMillimeter();
 #if defined(DEBUG)
                 Serial.print(F("Dist="));
@@ -553,8 +556,11 @@ bool CarPWMMotorControl::updateMotors() {
                     stop(STOP_MODE_BRAKE);
                 }
                 // Transition criteria to brake/ramp down is: Target distance - braking distance reached
-                if (rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN
-                        && (CarDistanceMillimeterFromIMU + tBrakingDistanceMillimeter) >= CarRequestedDistanceMillimeter) {
+                if ((CarDistanceMillimeterFromIMU + tBrakingDistanceMillimeter) >= CarRequestedDistanceMillimeter
+#    if !defined(DO_NOT_SUPPORT_RAMP)
+                        && rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN
+#    endif
+                ) {
                     // Start braking
                     startRampDown();
                 }

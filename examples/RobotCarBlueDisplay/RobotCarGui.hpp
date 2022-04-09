@@ -29,7 +29,7 @@
 #include "RobotCarCommonGui.hpp"
 #include "RobotCarHomePage.hpp"
 #include "RobotCarTestPage.hpp"
-#if defined(CAR_HAS_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #include "AutonomousDrive.hpp"
 #include "AutonomousDrivePage.hpp"
 #endif

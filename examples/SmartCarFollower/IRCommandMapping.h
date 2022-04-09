@@ -6,8 +6,8 @@
  *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- * Mapping for controlling a mePed Robot V2 with 8 servos using an IR Remote at pin A0
- * Supported IR remote are KEYES (the original mePed remote) and WM10 and ...
+ * Mapping for controlling a smart car
+ * Supported IR remote are KEYES (the original mePed remote) and the remote from a DVBT stick
  * Select the one you have below.
  */
 
@@ -24,14 +24,66 @@
 //#define USE_KEYES_REMOTE_CLONE // With number pad above direction control, will be taken as default
 //#define USE_KEYES_REMOTE       // The mePed 2 Standard remote with number pad below direction control. Another name printed on the remote is Lafvin
 //#define USE_DVBT_STICK_REMOTE
-#if !defined(USE_KEYES_REMOTE) && !defined(USE_DVBT_STICK_REMOTE)
-#define USE_DVBT_STICK_REMOTE
+#if !defined(USE_KEYES_REMOTE) && !defined(USE_KEYES_REMOTE_CLONE) && !defined(USE_DVBT_STICK_REMOTE)
+#define USE_KEYES_REMOTE_CLONE // The one you can buy at aliexpress
 #endif
 
+#if defined(USE_KEYES_REMOTE_CLONE)
+#define IR_REMOTE_NAME "KEYES_CLONE"
+// Codes for the KEYES CLONE remote control with 17 keys with keypad above direction control
+#define IR_ADDRESS 0x00
+
+#define IR_UP    0x18
+#define IR_DOWN  0x52
+#define IR_RIGHT 0x5A
+#define IR_LEFT  0x08
+#define IR_OK    0x1C
+
+#define IR_1    0x45
+#define IR_2    0x46
+#define IR_3    0x47
+#define IR_4    0x44
+#define IR_5    0x40
+#define IR_6    0x43
+#define IR_7    0x07
+#define IR_8    0x15
+#define IR_9    0x09
+#define IR_0    0x19
+
+#define IR_STAR 0x16
+#define IR_HASH 0x0D
+/*
+ * SECOND:
+ * IR button to command mapping for better reading. IR buttons should only referenced here.
+ */
+#define COMMAND_FORWARD     IR_UP
+#define COMMAND_BACKWARD    IR_DOWN
+#define COMMAND_RIGHT       IR_RIGHT
+#define COMMAND_LEFT        IR_LEFT
+#define COMMAND_STOP        IR_OK
+
+#define COMMAND_DISTANCE_FEEDBACK   IR_STAR
+#define COMMAND_RESET               IR_0
+#define COMMAND_DISTANCE_SOURCE     IR_HASH
+
+#define COMMAND_DECREASE_SPEED  IR_1
+#define COMMAND_DEFAULT_SPEED   IR_2
+#define COMMAND_INCREASE_SPEED  IR_3
+
+#define COMMAND_DISTANCE        IR_4
+#define COMMAND_FOLLOWER        IR_5
+#define COMMAND_SCAN_SPEED      IR_6
+
+#define COMMAND_TEST_ROTATION   IR_7
+#define COMMAND_TEST_DRIVE      IR_8
+#define COMMAND_TEST            IR_9
+
+#endif // defined(USE_KEYES_REMOTE_CLONE)
+
 #if defined(USE_KEYES_REMOTE)
-#if defined(IR_REMOTE_NAME)
+#  if defined(IR_REMOTE_NAME)
 #error "Please choose only one remote for compile"
-#endif
+#  else
 #define IR_REMOTE_NAME "KEYES"
 /*
  * FIRST:
@@ -85,6 +137,8 @@
 #define COMMAND_TEST_ROTATION   IR_7
 #define COMMAND_TEST_DRIVE      IR_8
 #define COMMAND_TEST            IR_9
+
+#  endif // defined(IR_REMOTE_NAME)
 #endif
 
 #if defined(USE_DVBT_STICK_REMOTE)
@@ -175,8 +229,8 @@
 //        |  drive   | rotation
 //-----------------------------
 
-#  endif
-#endif
+#  endif // defined(IR_REMOTE_NAME)
+#endif // defined(USE_DVBT_STICK_REMOTE)
 
 /*
  * THIRD:

@@ -32,34 +32,33 @@
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
+//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider.
 //#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion's.
+//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
 #define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 #define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
-
-#undef USE_MPU6050_IMU
-
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
- * Enable VCC monitoring if possible
+ * Enabling program features dependent on car configuration
  */
+#if defined(CAR_HAS_ENCODERS)
+#define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
+#endif
+#if defined(CAR_HAS_MPU6050_IMU)
+//#define USE_MPU6050_IMU
+#endif
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#define MONITOR_VIN_VOLTAGE // Enable if by default, if available
+#define MONITOR_VIN_VOLTAGE         // Enable if by default, if available
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #endif
 
-/*
- * Choose remote
- * For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
- */
-//#define USE_IR_REMOTE               // Use an IR remote receiver attached for car control
-//#define USE_KEYES_REMOTE
-//#define USE_DVBT_STICK_REMOTE
 //#define DEBUG
 //#define INFO
 #include "CarPWMMotorControl.hpp"
@@ -92,10 +91,19 @@
 #include "Distance.hpp" // provides DistanceServo definition and uses FOLLOWER_DISTANCE_MINIMUM_CENTIMETER definition
 
 #if defined(USE_IR_REMOTE)
+/*
+ * Choose remote
+ * For available IR commands see RobotCarIRCommands.hpp and for the mapping to remote buttons see IRCommandMapping.h
+ * https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/RobotCarIRCommands.hpp
+ * https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
+ */
+//#define USE_KEYES_REMOTE_CLONE // With number pad above direction control, will be taken as default
+//#define USE_KEYES_REMOTE
+//#define USE_DVBT_STICK_REMOTE
 #define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
+#define INFO // Enable info just for IR dispatcher
 #include "IRCommandDispatcher.h" // for RETURN_IF_STOP
 #include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
-#define INFO
 #include "IRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
 #include "IRCommandDispatcher.hpp"
 #endif

@@ -22,6 +22,8 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #include <Arduino.h>
@@ -304,4 +306,5 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
     }
 }
 #endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
+#endif // defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #pragma once

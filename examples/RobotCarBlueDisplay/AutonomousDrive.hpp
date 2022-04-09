@@ -1,5 +1,5 @@
 /*
- * AutonomousDrive.cpp
+ * AutonomousDrive.hpp
  *
  * Contains:
  * fillForwardDistancesInfoPro(): Acquisition of 180 degrees distances by ultrasonic sensor and servo
@@ -7,7 +7,7 @@
  * doBuiltInCollisionDetection(): decision where to turn in dependency of the acquired distances.
  * driveAutonomousOneStep(): The loop which handles the start/stop, single step and path output functionality.
  *
- *  Copyright (C) 2016-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -21,6 +21,9 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  *
  */
+
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
 #include <Arduino.h>
@@ -78,9 +81,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #if defined(ENABLE_PATH_INFO_PAGE)
         resetPathData();
 #endif
-#if defined(CAR_HAS_DISTANCE_SERVO)
         clearPrintedForwardDistancesInfos();
-#endif
         sDoStep = true; // enable next step
         sDriveMode = aDriveMode;
 
@@ -90,9 +91,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             setStepMode(MODE_SINGLE_STEP);
 
         } else if (aDriveMode == MODE_FOLLOWER) {
-#if defined(CAR_HAS_DISTANCE_SERVO)
             DistanceServoWriteAndDelay(90); // reset Servo
-#endif
             // Show distance sliders
             SliderUSDistance.drawSlider();
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -110,9 +109,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             insertToPath(RobotCarPWMMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
         }
 #endif
-#if defined(CAR_HAS_DISTANCE_SERVO)
         DistanceServoWriteAndDelay(90);
-#endif
         sDriveMode = MODE_MANUAL_DRIVE;
         RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
     }
@@ -123,7 +120,6 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 }
 
 int postProcessAndCollisionDetection() {
-#if defined(CAR_HAS_DISTANCE_SERVO)
     doWallDetection();
     postProcessDistances(sCentimetersDrivenPerScan);
     int tNextDegreesToTurn;
@@ -134,9 +130,6 @@ int postProcessAndCollisionDetection() {
     }
     drawCollisionDecision(tNextDegreesToTurn, sCentimetersDrivenPerScan, false);
     return tNextDegreesToTurn;
-#else
-    return 0;
-#endif
 }
 
 /*
@@ -416,4 +409,5 @@ void driveFollowerModeOneStep() {
     delayAndLoopGUI(100); // the IR sensor takes 39 ms for one measurement
 }
 #endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
+#endif // defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #pragma once

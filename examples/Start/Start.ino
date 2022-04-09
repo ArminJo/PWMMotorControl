@@ -29,10 +29,10 @@
  * You must specify this before the include of "PWMDcMotor.hpp"
  */
 //#define USE_L298_BRIDGE                  // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
-//#define VIN_2_LIPO                       // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LIPO                       // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
+//#define VIN_2_LI_ION                       // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LI_ION                     // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT 6000 // Default. For 4 x AA batteries (6 volt).
-//#define FULL_BRIDGE_INPUT_MILLIVOLT 4800 // Default. For 4 x AA NIMH rechargeable batteries (4.8 volt).
+//#define FULL_BRIDGE_INPUT_MILLIVOLT 4800 // For 4 x AA NIMH rechargeable batteries (4.8 volt).
 //#define DEFAULT_MILLIMETER_PER_SECOND 220 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply.
 //#define USE_ADAFRUIT_MOTOR_SHIELD        // Use Adafruit Motor Shield v2 with 2xTB6612 connected by I2C instead of external TB6612 or L298 breakout board.
 
