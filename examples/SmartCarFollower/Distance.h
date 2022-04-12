@@ -143,6 +143,10 @@ void postProcessDistances(uint8_t aDistanceThreshold);
 int doBuiltInCollisionDetection();
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(USE_SOFT_I2C_MASTER)
+#include "SoftI2CMasterConfig.h"
+#include "SoftI2CMaster.h"
+#endif
 #include "vl53l1x_class.h"
 extern VL53L1X sToFDistanceSensor;
 uint8_t getToFDistanceAsCentimeter();

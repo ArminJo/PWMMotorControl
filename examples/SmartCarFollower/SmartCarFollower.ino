@@ -41,7 +41,7 @@
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
 #define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 #define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
-
+#define USE_SOFT_I2C_MASTER // saves up to 2400 bytes program memory and 220 bytes RAM compared with Arduino Wire
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
@@ -52,7 +52,7 @@
 #define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
 #endif
 #if defined(CAR_HAS_MPU6050_IMU)
-//#define USE_MPU6050_IMU
+#define USE_MPU6050_IMU
 #endif
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 #define MONITOR_VIN_VOLTAGE         // Enable if by default, if available

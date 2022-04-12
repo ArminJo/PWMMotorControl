@@ -57,7 +57,7 @@ CarPWMMotorControl::CarPWMMotorControl() { // @suppress("Class members should be
  * This must be done when the car is not moving, best after at least 100 ms after boot up.
  */
 void CarPWMMotorControl::calculateAndPrintIMUOffsets(Print *aSerial) {
-    IMUData.calculateSpeedAndTurnOffsets();
+    IMUData.initMPU6050CarDataAndCalculateAllOffsetsAndWait();
     IMUData.printSpeedAndTurnOffsets(aSerial);
 }
 #endif
@@ -83,7 +83,7 @@ void CarPWMMotorControl::init() {
 #  if defined(USE_MPU6050_IMU)
     CarRequestedRotationDegrees = 0;
     CarRequestedDistanceMillimeter = 0;
-    IMUData.initMPU6050FifoForCarData();
+    IMUData.initMPU6050CarDataAndCalculateAllOffsetsAndWait();
 #  else
     FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER_DEFAULT;
 #  endif
@@ -110,7 +110,7 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
 #  if defined(USE_MPU6050_IMU)
     CarRequestedRotationDegrees = 0;
     CarRequestedDistanceMillimeter = 0;
-    IMUData.initMPU6050FifoForCarData();
+    IMUData.initMPU6050CarDataAndCalculateAllOffsetsAndWait();
 
 #  else
     FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER_DEFAULT;
@@ -533,6 +533,9 @@ bool CarPWMMotorControl::updateMotors() {
             changeSpeedPWM(rightCarMotor.DriveSpeedPWM / 2);
         }
     } else {
+        /*
+         * Straight driving here
+         */
         if (CarRequestedDistanceMillimeter != 0) {
 #  if !defined(USE_ENCODER_MOTOR_CONTROL)
 #    if !defined(DO_NOT_SUPPORT_RAMP)
@@ -565,7 +568,7 @@ bool CarPWMMotorControl::updateMotors() {
                     startRampDown();
                 }
             }
-#  endif // USE_ENCODER_MOTOR_CONTROL
+#  endif // !defined(USE_ENCODER_MOTOR_CONTROL)
         }
         /*
          * In case of IMU distance driving only ramp up and down are managed by these calls
@@ -652,7 +655,7 @@ void CarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, u
         uint8_t aRequestedDirection) {
 
 #if defined(USE_MPU6050_IMU)
-    IMUData.resetCarData();
+    IMUData.resetAllIMUCarOffsetAdjustedValues();
     CarRequestedDistanceMillimeter = aRequestedDistanceMillimeter;
 #endif
 
@@ -815,7 +818,7 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
 #endif
 
 #if defined(USE_MPU6050_IMU)
-    IMUData.resetCarData();
+    IMUData.resetAllIMUCarOffsetAdjustedValues();
     CarRequestedRotationDegrees = aRotationDegrees;
 #endif
 
@@ -973,7 +976,7 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 //#  if defined(USE_ENCODER_MOTOR_CONTROL)
 //    uint8_t tMotorMovingCount = 0;
 //#  else
-//    IMUData.resetOffsetDataAndWait();
+//    IMUData.resetOffsetFifoAndCarDataDataAndWait();
 //#  endif
 //
 //    /*

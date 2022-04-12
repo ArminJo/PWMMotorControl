@@ -62,7 +62,7 @@
 
 //#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
 #if !defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
-#define USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#define _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // to avoid double negations
 #endif
 
 //#define DO_NOT_SUPPORT_RAMP // saves 320 bytes programming space
@@ -165,9 +165,6 @@
 
 /*
  * RAMP values
- * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
- * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
- * This corresponds to 5 cm/s every 20 ms
  */
 #define RAMP_INTERVAL_MILLIS             20 // The smaller the value the steeper the ramp
 /*
@@ -176,8 +173,13 @@
  */
 #define RAMP_VALUE_OFFSET_MILLIVOLT      2300
 #define RAMP_VALUE_OFFSET_SPEED_PWM      ((RAMP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_MIN_SPEED_PWM         (DEFAULT_DRIVE_SPEED_PWM / 2) // Minimal speed, if motor is still turning
+#define RAMP_VALUE_MIN_SPEED_PWM         DEFAULT_STOP_SPEED_PWM // Minimal speed, if motor is still turning
 #define RAMP_VALUE_DELTA                 (SPEED_FOR_8_VOLT / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 8V/s = 0.8 volt per 100 ms
+/*
+ * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
+ * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
+ * This corresponds to 5 cm/s every 20 ms
+ */
 #define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
 
 #define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
@@ -213,8 +215,7 @@ extern const char *sDirectionStringArray[3];
 #define DIRECTION_NOT_TURN          0x00
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#include <Wire.h>
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 // some PCA9685 specific constants
 #define PCA9685_DEFAULT_ADDRESS      0x60
 #define PCA9685_GENERAL_CALL_ADDRESS 0x00
@@ -232,7 +233,7 @@ extern const char *sDirectionStringArray[3];
 #  else
 #include <Adafruit_MotorShield.h>
 #define CONVERSION_FOR_ADAFRUIT_API 1
-#  endif // USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#  endif // _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
 struct EepromMotorInfoStruct {
@@ -255,7 +256,7 @@ public:
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init(uint8_t aMotorNumber);
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     /*
      * Own internal functions for communicating with the PCA9685 Expander IC on the Adafruit motor shield
      */
@@ -337,7 +338,7 @@ public:
     void setMotorDriverMode(uint8_t aMotorDriverMode);
     bool checkAndHandleDirectionChange(uint8_t aRequestedDirection);
 
-#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) || defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#if ! defined(USE_ADAFRUIT_MOTOR_SHIELD) || defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     uint8_t PWMPin;     // PWM output pin / PCA9685 channel of Adafruit Motor Shield
     uint8_t ForwardPin; // if high, motor runs forward
     uint8_t BackwardPin;

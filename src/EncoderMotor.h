@@ -28,7 +28,7 @@
 #include <stdint.h>
 
 #if !defined(DO_NOT_SUPPORT_AVERAGE_SPEED)
-#define SUPPORT_AVERAGE_SPEED
+#define _SUPPORT_AVERAGE_SPEED // to avoid double negations
 #define AVERAGE_SPEED_SAMPLE_SIZE 20
 #define AVERAGE_SPEED_BUFFER_SIZE 21 // one more than samples, because speed is the difference between 2 samples
 #endif
@@ -152,7 +152,7 @@ public:
     /*
      * for speed computation
      */
-#if defined(SUPPORT_AVERAGE_SPEED) // for function getAverageSpeed()
+#if defined(_SUPPORT_AVERAGE_SPEED) // for function getAverageSpeed()
     volatile unsigned int EncoderInterruptMillisArray[AVERAGE_SPEED_BUFFER_SIZE]; // store for 20 deltas
     volatile uint8_t MillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite. 0 to 20|(AVERAGE_SPEED_BUFFER_SIZE-1)
     volatile bool AverageSpeedIsValid; // true if 11 values are written since last timeout

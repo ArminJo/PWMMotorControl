@@ -1,8 +1,10 @@
 /*
- *  TestMotorWithIMU.cpp
- *  Tests Prints PWM, distance and speed diagram of the right (encoder) motor of a car.
- *  Encoder and IMU data are printed simultaneously, to compare and to detect slipping
+ *  PrintCarValuesWithIMU.cpp
  *
+ *  Start and stop car first with and second without ramp.
+ *  Start with DEFAULT_DRIVE_SPEED_PWM and double speed for next turn until MAX_SPEED_PWM.
+ *  Prints PWM, distance and speed diagram of the right (encoder) motor of a car.
+ *  Encoder and IMU data are printed simultaneously, to compare and to detect slipping.
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -21,7 +23,6 @@
 
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
- *
  */
 
 #include <Arduino.h>
@@ -36,16 +37,16 @@
 //#define VIN_2_LI_ION                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 //#define VIN_1_LI_ION                  // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
-//#define USE_L298_BRIDGE            // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+//#define USE_L298_BRIDGE               // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
-//#define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+//#define DO_NOT_SUPPORT_RAMP           // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+//#define DO_NOT_SUPPORT_AVERAGE_SPEED  // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+
+#define USE_SOFT_I2C_MASTER           // Saves 1044 bytes program memory and 99 bytes RAM compared with Arduino Wire
+//#define DISABLE_AUTO_OFFSET_RECALCULATION // saves around 580 bytes program space
+#include "RobotCarPinDefinitionsAndMore.h"
 
 #include "CarPWMMotorControl.hpp"
-
-#include "IMUCarData.hpp"
-
-#include "RobotCarPinDefinitionsAndMore.h"
 
 //#define ENABLE_EXTRA_NON_PLOTTER_OUTPUT // Generate verbose output for SerialMonitor but this not compatible with Arduino Plotter
 #define PRINTS_PER_SECOND 50
@@ -79,7 +80,7 @@ void setup() {
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 
-    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(3000);
+    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(3000);
 }
 
 void loop() {
@@ -94,9 +95,9 @@ void loop() {
 #endif
     Serial.print(
             F(
-                    STR(PRINTS_PER_SECOND) "_values/s_at_" STR(SAMPLE_RATE) "_samples/s_offset=" STR(RAMP_VALUE_OFFSET_MILLIVOLT) "_mV_delta="));
+                    STR(PRINTS_PER_SECOND) "_values/s_at_" STR(SAMPLE_RATE) "_samples/s___ramp_offset=" STR(RAMP_VALUE_OFFSET_MILLIVOLT) "_mV___delta="));
     Serial.print(RAMP_VALUE_DELTA);
-    Serial.print(F("_decel="));
+    Serial.print(F("___decel="));
     Serial.print(RAMP_DECELERATION_TIMES_2 / 2);
     Serial.println(F("mm/s^2"));
 
@@ -119,7 +120,7 @@ void loop() {
         bool tUseRamp = true;
         for (uint8_t i = 0; i < 2; ++i) {
 
-            RobotCarPWMMotorControl.IMUData.resetOffsetDataAndWait();
+            RobotCarPWMMotorControl.IMUData.resetOffsetFifoAndCarDataAndWait();
 #if defined(USE_ENCODER_MOTOR_CONTROL)
             RobotCarPWMMotorControl.rightCarMotor.resetEncoderControlValues();
 #endif
@@ -154,7 +155,7 @@ void loop() {
             }
 
             tUseRamp = false;
-            RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
+            RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(1000);
 
         }
         if (sSpeedPWM == MAX_SPEED_PWM) {
@@ -173,10 +174,10 @@ void loop() {
         Serial.print(F("Set speed to:"));
         Serial.println(sSpeedPWM);
 #endif
-        RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(1000);
+        RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(1000);
 
     }
-    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataData(5000);
+    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(5000);
     /*
      * switch direction
      */

@@ -379,7 +379,7 @@ void EncoderMotor::resetEncoderMotorValues() {
  * Reset EncoderInterruptDeltaMillis, EncoderInterruptMillisArray, MillisArrayIndex and AverageSpeedIsValid
  */
 void EncoderMotor::resetSpeedValues() {
-#if defined(SUPPORT_AVERAGE_SPEED)
+#if defined(_SUPPORT_AVERAGE_SPEED)
     memset((void*) &EncoderInterruptMillisArray, 0,
             ((uint8_t*) &EncoderInterruptDeltaMillis + sizeof(EncoderInterruptDeltaMillis)) - (uint8_t*) &EncoderInterruptDeltaMillis);
 #else
@@ -560,7 +560,7 @@ void EncoderMotor::printEncoderData(Print *aSerial) {
     aSerial->print(" ");
     aSerial->print(getSpeed());
     aSerial->print(" ");
-#if defined(SUPPORT_AVERAGE_SPEED)
+#if defined(_SUPPORT_AVERAGE_SPEED)
 //    aSerial->print(getAverageSpeed(10));
 //    aSerial->print(" ");
 #endif
@@ -579,7 +579,7 @@ void EncoderMotor::handleEncoderInterrupt() {
         // assume signal is ringing and do nothing
     } else {
         LastEncoderInterruptMillis = tMillis;
-#if defined(SUPPORT_AVERAGE_SPEED)
+#if defined(_SUPPORT_AVERAGE_SPEED)
         uint8_t tMillisArrayIndex = MillisArrayIndex;
 #endif
         if (tDeltaMillis < ENCODER_SENSOR_TIMEOUT_MILLIS) {
@@ -587,12 +587,12 @@ void EncoderMotor::handleEncoderInterrupt() {
         } else {
             // timeout
             EncoderInterruptDeltaMillis = 0;
-#if defined(SUPPORT_AVERAGE_SPEED)
+#if defined(_SUPPORT_AVERAGE_SPEED)
             tMillisArrayIndex = 0;
             AverageSpeedIsValid = false;
 #endif
         }
-#if defined(SUPPORT_AVERAGE_SPEED)
+#if defined(_SUPPORT_AVERAGE_SPEED)
         EncoderInterruptMillisArray[tMillisArrayIndex++] = tMillis;
         if (tMillisArrayIndex >= AVERAGE_SPEED_BUFFER_SIZE) {
             tMillisArrayIndex = 0;

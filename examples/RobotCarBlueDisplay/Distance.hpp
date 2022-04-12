@@ -57,8 +57,12 @@ uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 needed for optimized delay 
 #endif
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+VL53L1X sToFDistanceSensor(-1, -1); // 100 kHz
+#  else
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
 VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
+#  endif
 #endif
 
 /*

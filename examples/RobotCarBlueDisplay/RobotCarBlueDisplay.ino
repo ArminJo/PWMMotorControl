@@ -83,6 +83,7 @@
 #include "BlueDisplay.hpp" // include source of library
 #include "RobotCarBlueDisplay.h"
 
+#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
 #include "CarPWMMotorControl.hpp" // include source of library
 
 #if defined(USE_MPU6050_IMU)

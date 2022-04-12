@@ -44,6 +44,14 @@
 
 #include "PWMDcMotor.h"
 
+//#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD) && defined(USE_SOFT_I2C_MASTER)
+#include "SoftI2CMasterConfig.h"
+#include "SoftI2CMaster.h"
+#else
+#include "Wire.h"
+#endif // defined(USE_SOFT_I2C_MASTER)
+
 #if defined(ESP32)
 #include "analogWrite.h" // from e.g. ESP32Servo library
 #endif
@@ -65,15 +73,31 @@ PWMDcMotor::PWMDcMotor() { // @suppress("Class members should be properly initia
 }
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 void PWMDcMotor::PCA9685WriteByte(uint8_t aAddress, uint8_t aData) {
+#if defined(USE_SOFT_I2C_MASTER)
+    i2c_start(PCA9685_DEFAULT_ADDRESS << 1);
+    i2c_write(aAddress);
+    i2c_write(aData);
+    i2c_stop();
+#else
     Wire.beginTransmission(PCA9685_DEFAULT_ADDRESS);
     Wire.write(aAddress);
     Wire.write(aData);
     Wire.endTransmission(true);
+#endif
 }
 
 void PWMDcMotor::PCA9685SetPWM(uint8_t aPin, uint16_t aOn, uint16_t aOff) {
+#if defined(USE_SOFT_I2C_MASTER)
+    i2c_start(PCA9685_DEFAULT_ADDRESS << 1);
+    i2c_write((PCA9685_FIRST_PWM_REGISTER) + 4 * aPin);
+    i2c_write(aOn);
+    i2c_write(aOn >> 8);
+    i2c_write(aOff);
+    i2c_write(aOff >> 8);
+    i2c_stop();
+#else
     Wire.beginTransmission(PCA9685_DEFAULT_ADDRESS);
     Wire.write((PCA9685_FIRST_PWM_REGISTER) + 4 * aPin);
     Wire.write(aOn);
@@ -81,6 +105,7 @@ void PWMDcMotor::PCA9685SetPWM(uint8_t aPin, uint16_t aOn, uint16_t aOff) {
     Wire.write(aOff);
     Wire.write(aOff >> 8);
     Wire.endTransmission(true);
+#endif
 }
 
 void PWMDcMotor::PCA9685SetPin(uint8_t aPin, bool aSetToOn) {
@@ -94,14 +119,14 @@ void PWMDcMotor::PCA9685SetPin(uint8_t aPin, bool aSetToOn) {
 #  else
 // Create the motor shield object with the default I2C address
 Adafruit_MotorShield sAdafruitMotorShield = Adafruit_MotorShield();
-#  endif // USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
+#  endif // _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD
 
 /*
  * aMotorNumber from 1 to 2
  * Currently motors 3 and 4 are not required/supported by own library for Adafruit Motor Shield
  */
 void PWMDcMotor::init(uint8_t aMotorNumber) {
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     if (aMotorNumber == 1) {
         // Set PCA9685 channel numbers for Adafruit Motor Shield
         PWMPin = 8;
@@ -112,21 +137,31 @@ void PWMDcMotor::init(uint8_t aMotorNumber) {
         BackwardPin = 12;
         ForwardPin = 11;
     }
-
+#    if defined(USE_SOFT_I2C_MASTER)
+    i2c_init(); // Initialize everything and check for bus lockup
+#    else
     Wire.begin();
     Wire.setClock(400000);
-#    if defined (ARDUINO_ARCH_AVR) // Other platforms do not have this new function
+#      if defined (ARDUINO_ARCH_AVR) // Other platforms do not have this new function
     Wire.setWireTimeout(5000); // Sets timeout to 5 ms. default is 25 ms.
+#      endif
 #    endif
+
 #if defined(TRACE)
     Serial.print(PWMPin);
     Serial.print(F(" MotorNumber="));
     Serial.println(aMotorNumber);
 #endif
     // Reset PCA9685
+#if defined(USE_SOFT_I2C_MASTER)
+    i2c_start(PCA9685_GENERAL_CALL_ADDRESS << 1);
+    i2c_write(PCA9685_SOFTWARE_RESET);
+    i2c_stop();
+#else
     Wire.beginTransmission(PCA9685_GENERAL_CALL_ADDRESS);
     Wire.write(PCA9685_SOFTWARE_RESET);
     Wire.endTransmission(true);
+#endif
     // Set expander to 1600 HZ
     PCA9685WriteByte(PCA9685_MODE1_REGISTER, _BV(PCA9685_MODE_1_SLEEP)); // go to sleep
     PCA9685WriteByte(PCA9685_PRESCALE_REGISTER, PCA9685_PRESCALER_FOR_1600_HZ); // set the prescaler
@@ -188,7 +223,7 @@ void PWMDcMotor::setMotorDriverMode(uint8_t aMotorDriverMode) {
     }
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     // until here DIRECTION_FORWARD is 0 back is 1, Adafruit library starts with 1
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     switch (aMotorDriverMode) {
     case DIRECTION_FORWARD:
         PCA9685SetPin(BackwardPin, LOW); // take low first to avoid 'break'
@@ -278,10 +313,10 @@ void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
          * Write to hardware
          */
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
         PCA9685SetPWM(PWMPin, 0, 16 * tCompensatedSpeedPWM);
 #  else
-        Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(tCompensatedSpeedPWM);
+        Adafruit_MotorShield_DcMotor->setSpeedPWM(tCompensatedSpeedPWM);
 #  endif
 #else
         analogWrite(PWMPin, tCompensatedSpeedPWM);
@@ -385,10 +420,10 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
 #endif
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#  if defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     PCA9685SetPWM(PWMPin, 0, 0);
 #  else
-    Adafruit_MotorShield_DcMotor->setSpeedPWMAndDirection(0);
+    Adafruit_MotorShield_DcMotor->setSpeedPWM(0);
 #  endif
 #else
     analogWrite(PWMPin, 0);
@@ -693,7 +728,8 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
      * use 32 bit intermediate to avoid overflow (this also saves around 50 bytes of program memory by using slower functions instead of faster inline code)
      */
     uint32_t tComputedMillisOfMotorStopForDistance =
-            (((uint32_t) aRequestedDistanceMillimeter * MillisPerCentimeter * DriveSpeedPWM) / (MILLIMETER_IN_ONE_CENTIMETER * DEFAULT_DRIVE_SPEED_PWM));
+            (((uint32_t) aRequestedDistanceMillimeter * MillisPerCentimeter * DriveSpeedPWM)
+                    / (MILLIMETER_IN_ONE_CENTIMETER * DEFAULT_DRIVE_SPEED_PWM));
 
     if (isStopped()) {
         // add startup time
@@ -750,7 +786,9 @@ void PWMDcMotor::writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumbe
 #endif // defined(E2END)
 
 void PWMDcMotor::printValues(Print *aSerial) {
+#if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
     aSerial->print(PWMPin);
+#endif
     aSerial->print(F(" CompensatedSpeedPWM="));
     aSerial->print(CompensatedSpeedPWM);
     aSerial->print(F(" DriveSpeedPWM="));
@@ -782,9 +820,9 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    aSerial->print(F("USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD:"));
-#if !defined(USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
-    aSerial->print(reinterpret_cast<const __FlashStringHelper *>(StringNot));
+    aSerial->print(F("_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD:"));
+#if !defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+    aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
 #endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
 #endif

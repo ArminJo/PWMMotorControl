@@ -1,6 +1,6 @@
 /*
  *  PrintMotorDiagram.cpp
- *  Prints PWM, distance and speed diagram of an encoder motor.
+ *  Prints PWM, distance and speed diagram of an encoder motor during ramp up and ramp down for Arduino Plotter.
  *
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
