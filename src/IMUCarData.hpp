@@ -60,7 +60,7 @@
  ********************************************************************************/
 /*
  * Sets AcceleratorForward, Speed, Distance, GyroscopePan and TurnAngle
- * Sets AcceleratorForwardLowPass8 and AcceleratorForwardLowPass4
+ * Sets AcceleratorForwardLowPass8, AcceleratorForwardLowPass6 and AcceleratorForwardLowPass4
  * Read raw 14 vales. Requires 500 us.
  */
 void IMUCarData::readCarDataFromMPU6050() {
@@ -102,7 +102,7 @@ void IMUCarData::readCarDataFromMPU6050() {
 #endif
 
     AcceleratorForwardLowPass8.Long += ((((int32_t) AcceleratorForward.Word) << 16) - AcceleratorForwardLowPass8.Long) >> 8; // Fixed point 2.0 us
-    AcceleratorForwardLowPass4.Long += ((((int32_t) AcceleratorForward.Word) << 16) - AcceleratorForwardLowPass4.Long) >> 4; // Fixed point 2.0 us
+    AcceleratorForwardLowPass6.Long += ((((int32_t) AcceleratorForward.Word) << 16) - AcceleratorForwardLowPass6.Long) >> 6; // Fixed point 2.0 us
     Speed.Long += AcceleratorForward.Word;
     Distance.Long += Speed.Long >> 8;
 
@@ -151,7 +151,7 @@ void IMUCarData::delayAndReadIMUCarDataFromMPU6050FIFO(unsigned long aMillisDela
  * Sets LastFifoCheckMillis
  * Sets AcceleratorForward, Speed, Distance, GyroscopePan and TurnAngle
  * AcceleratorForward and GyroscopePan are the average of all values from current FIFO content
- * Sets AcceleratorForwardLowPass8 and AcceleratorForwardLowPass4
+ * Sets AcceleratorForwardLowPass8, AcceleratorForwardLowPass6 and AcceleratorForwardLowPass4
  * The first NUMBER_OF_OFFSET_CALIBRATION_SAMPLES values are taken to compute AcceleratorForwardOffset and GyroscopePanOffset, afterwards OffsetsHaveJustChanged is set to true
  * @return true, if data might have changed
  */
@@ -233,8 +233,8 @@ bool IMUCarData::readCarDataFromMPU6050Fifo() {
                     tAcceleratorForward += tAcceleratorValue.Word;
                     AcceleratorForwardLowPass8.Long +=
                             ((((int32_t) tAcceleratorValue.Word) << 16) - AcceleratorForwardLowPass8.Long) >> 8; // Fixed point 2.0 us
-                    AcceleratorForwardLowPass4.Long +=
-                            ((((int32_t) tAcceleratorValue.Word) << 16) - AcceleratorForwardLowPass4.Long) >> 4; // Fixed point 2.0 us
+                    AcceleratorForwardLowPass6.Long +=
+                            ((((int32_t) tAcceleratorValue.Word) << 16) - AcceleratorForwardLowPass6.Long) >> 6; // Fixed point 2.0 us
 
                     Speed.Long += tAcceleratorValue.Word;
                     Distance.Long += Speed.Long >> 8;
@@ -516,7 +516,7 @@ void IMUCarData::resetForOffsetRecalculation() {
 void IMUCarData::resetAllIMUCarOffsetAdjustedValues() {
     AcceleratorForward.Word = 0;
     AcceleratorForwardLowPass8.ULong = 0;
-    AcceleratorForwardLowPass4.ULong = 0;
+    AcceleratorForwardLowPass6.ULong = 0;
     GyroscopePanLowPass8.ULong = 0;
     Speed.ULong = 0;
     Distance.Long = 0;
@@ -631,9 +631,11 @@ int8_t IMUCarData::getAcceleratorForwardLowPass8() {
     return AcceleratorForwardLowPass8.Word.HighWord >> 6; // 256 per g
 }
 
-int8_t IMUCarData::getAcceleratorForwardLowPass4() {
-    return AcceleratorForwardLowPass4.Word.HighWord >> 6; // 256 per g
+int8_t IMUCarData::getAcceleratorForwardLowPass6() {
+//    return AcceleratorForwardLowPass8.Byte.HighByte;
+    return AcceleratorForwardLowPass6.Word.HighWord >> 6; // 256 per g
 }
+
 
 // shift 14 -> 1 (0.981) cm/s , 12 -> 2.5 mm/s, 8 -> 0.15328 mm/s
 int IMUCarData::getSpeedCmPerSecond() {
@@ -719,14 +721,20 @@ void IMUCarData::printIMUCarDataCaption(Print *aSerial) {
 #else
 //    aSerial->print(F("AccelForward[4mg/LSB] AccelForwardAverage AccelForwardLP8 Speed[cm/s] Distance[cm] AngleZ[0.5d/LSB] ")); // +/-250 | 500 degree per second for 16 bit full range
 //    aSerial->print(F("AccelAvg.[4mg/LSB] AccelLP8 Speed[cm/s] Distance[cm] AngleZ[0.5d/LSB] ")); // +/-250 | 500 degree per second for 16 bit full range
-    aSerial->print(F("AccelForward[4mg/LSB] Speed[cm/s] Distance[cm] AngleZ[0.5d/LSB] ")); // +/-250 | 500 degree per second for 16 bit full range
+    aSerial->print(F("Accel[4cm/s^2] AccelAvg6 Speed[cm/s] Distance[cm] AngleZ[0.5d] ")); // +/-250 | 500 degree per second for 16 bit full range
 #endif
 }
 
+/*
+ * Do not end with newline, to allow other data to be appended
+ */
 void IMUCarData::printIMUCarData(Print *aSerial) {
     aSerial->print(getAcceleratorForward4MilliG());
     aSerial->print(" ");
-#if defined(DEBUG)
+    aSerial->print(getAcceleratorForwardLowPass6());
+    aSerial->print(" ");
+
+    #if defined(DEBUG)
 //    aSerial->print(getAcceleratorForwardLowPass4());
 //    aSerial->print(" ");
     aSerial->print(getAcceleratorForwardLowPass8());
@@ -740,7 +748,7 @@ void IMUCarData::printIMUCarData(Print *aSerial) {
     aSerial->print(getGyroscopePan2DegreePerSecond());
     aSerial->print(" ");
 #endif
-    aSerial->println(getTurnAngleHalfDegree());
+    aSerial->print(getTurnAngleHalfDegree());
 }
 
 unsigned int IMUCarData::getMPU6050SampleRate() {

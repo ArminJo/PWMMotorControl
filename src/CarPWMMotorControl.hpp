@@ -497,6 +497,7 @@ void stopMotorAfter1Second() {
 #define TURN_OVERRUN_HALF_ANGLE     1 // 1/2 degree overrun after stop(STOP_MODE_BRAKE)
 #define RAMP_DOWN_MILLIMETER       50
 #define STOP_OVERRUN_MILLIMETER    10 // 1 cm overrun after stop(STOP_MODE_BRAKE)
+
 /*
  * If IMU data are available, rotation is always handled here.
  * For non encoder motors also distance driving is handled here.
@@ -539,8 +540,8 @@ bool CarPWMMotorControl::updateMotors() {
         if (CarRequestedDistanceMillimeter != 0) {
 #  if !defined(USE_ENCODER_MOTOR_CONTROL)
 #    if !defined(DO_NOT_SUPPORT_RAMP)
-            if (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
-                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN)
+            if (rightCarMotor.MotorRampState >= MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
+                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) // no START and STOPPED
 #    endif
             {
                 unsigned int tBrakingDistanceMillimeter = getBrakingDistanceMillimeter();
@@ -558,7 +559,10 @@ bool CarPWMMotorControl::updateMotors() {
                     CarRequestedDistanceMillimeter = 0;
                     stop(STOP_MODE_BRAKE);
                 }
-                // Transition criteria to brake/ramp down is: Target distance - braking distance reached
+
+                /*
+                 * Transition criteria to brake/ramp down is: Target distance - braking distance reached
+                 */
                 if ((CarDistanceMillimeterFromIMU + tBrakingDistanceMillimeter) >= CarRequestedDistanceMillimeter
 #    if !defined(DO_NOT_SUPPORT_RAMP)
                         && rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN
@@ -575,6 +579,7 @@ bool CarPWMMotorControl::updateMotors() {
          */
         tReturnValue = rightCarMotor.updateMotor();
         tReturnValue |= leftCarMotor.updateMotor();
+        rightCarMotor.synchronizeRampDown(&leftCarMotor);
     }
 
 #else // USE_MPU6050_IMU

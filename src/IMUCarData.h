@@ -102,7 +102,7 @@ public:
     int8_t getAcceleratorForward15MilliG();
     int8_t getAcceleratorForward4MilliG();
     int8_t getAcceleratorForwardLowPass8();
-    int8_t getAcceleratorForwardLowPass4();
+    int8_t getAcceleratorForwardLowPass6();
     int getSpeedCmPerSecond();
     int getSpeedFastWithHigherResolution();
     int getDistanceCm();
@@ -129,14 +129,14 @@ public:
 
     bool OffsetsJustHaveChanged;            // Flag that initial or auto offset has just finished
     bool DisableAutoOffsetRecalculation;    // Inverted to have 0 as the default value
-    int16_t CountOfFifoChunksForOffset;     // signed, since it is used in formulas with other signed values
+    uint16_t CountOfFifoChunksForOffset;     // signed, since it is used in formulas with other signed values
 
     /*
      * AcceleratorForwardOffset == 0 means, offsets are uninitialized
      */
     int16_t AcceleratorForwardOffset; // At 1kHz, offset 1 gives speed 4 per second / 1 per 4 second for 0.625 mm/s / 1cm/s resolution
     WordUnion AcceleratorForward; // Average of every bulk read from the fifo. 16384 LSB per g => 61 ug per LSB, ~16 mg per 256 LSB
-    LongUnion AcceleratorForwardLowPass4;
+    LongUnion AcceleratorForwardLowPass6; // Lowpass 4 is still too noisy :-(
     LongUnion AcceleratorForwardLowPass8;
     /*
      * Speed is the sum of AcceleratorForward.

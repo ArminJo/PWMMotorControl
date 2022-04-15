@@ -32,15 +32,16 @@
  */
 //////////////////////////////////////////////////////
 //#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
-//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
 //#define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
-//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider.
+//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
 //#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
 //#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
 //#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
 //#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-//#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 LiPo + servo head down
+//#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 Li-ion + servo head down
 //#define MOTOR_SHIELD_TOF_CONFIGURATION            // Basic_2WD + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION    // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION // Basic + encoder + 4 Wheels + IR distance
@@ -152,10 +153,17 @@
 #define BASIC_CONFIG_NAME   "4WD + L298 + 4 AA"
 #endif
 
-#if defined(TBB6612_FULL_4WD_4AA_CONFIGURATION)
+#if defined(TBB6612_4WD_4AA_VIN_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define TBB6612_BASIC_4WD_4AA_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider"
+#endif
+
+#if defined(TBB6612_FULL_4WD_4AA_CONFIGURATION)
+#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
+#define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
+#define TBB6612_BASIC_4WD_4AA_CONFIGURATION
+#define CONFIG_NAME         " + VIN divider + MPU6050"
 #endif
 
 /*
@@ -173,6 +181,7 @@
 
 #if defined(TBB6612_FULL_4WD_2LI_ION_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
+#define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider"
 #endif

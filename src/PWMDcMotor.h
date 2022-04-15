@@ -77,7 +77,11 @@
 #define STR(x) STR_HELPER(x)
 #endif
 
-// Propagate debug level
+#define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"
+
+/*
+ * Propagate debug level
+ */
 #if defined(TRACE)    // Information you need to understand details of a function or if you hunt a bug.
 #  if !defined(DEBUG)
 #define DEBUG   // Information need to understand the operating of your program. E.g. function calls and values of control variables.
@@ -89,11 +93,9 @@
 #  endif
 #endif
 
-#define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"
-
-/*
- * Circumference of my smart car wheel
- */
+/********************************************
+ * Car and motor driver characteristics
+ ********************************************/
 #define DEFAULT_CIRCUMFERENCE_MILLIMETER     220
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
@@ -123,13 +125,15 @@
 #define FULL_BRIDGE_OUTPUT_MILLIVOLT        (FULL_BRIDGE_INPUT_MILLIVOLT - FULL_BRIDGE_LOSS_MILLIVOLT)
 #endif
 
+/********************************************
+ * Motor speed voltages
+ ********************************************/
 #define DEFAULT_STOP_MILLIVOLT_MOSFET       700 // Voltage where spinning motors start to stop
 #define DEFAULT_START_MILLIVOLT_MOSFET      1000 // Voltage where motors start to turn
 #define DEFAULT_STOP_MILLIVOLT_L298         750  // Voltage where spinning motors start to stop
 #define DEFAULT_START_MILLIVOLT_L298        1700 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
-#define SPEED_PWM_FOR_1_VOLT                ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define SPEED_FOR_8_VOLT                    ((8000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+
 
 // Default values - used if EEPROM values are invalid or not available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
@@ -147,43 +151,59 @@
 #  endif
 #endif
 
+/********************************************
+ * PWM to voltage conversion
+ ********************************************/
+#define SPEED_PWM_FOR_1_VOLT                ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define SPEED_PWM_FOR_8_VOLT                ((8000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
 #define DEFAULT_MILLIMETER_PER_SECOND       200 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
 #  else
 #define DEFAULT_MILLIMETER_PER_SECOND       220 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define SPEED_PER_VOLT                      130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
 #  endif
 #endif
 /*
  * Use MILLIS_PER_CENTIMETER instead of MILLIS_PER_MILLIMETER to get a reasonable resolution
  */
 #define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND)
+#define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
 /*
  * Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
  * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
  */
 
-/*
- * RAMP values
- */
-#define RAMP_INTERVAL_MILLIS             20 // The smaller the value the steeper the ramp
+/*******************************************************
+ * RAMP values for an offset of 2.3V and a ramp of 10V/s
+ *******************************************************/
+#define SPEED_PWM_FOR_1_VOLT             ((1000 * MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_UP_VOLTAGE_PER_SECOND       12 // 12 * 130 mm/s = 1560 mm/s ^2
+#define RAMP_DOWN_VOLTAGE_PER_SECOND     14 // 14 * 130 mm/s = 1820 mm/s ^2
+
+#define RAMP_INTERVAL_MILLIS             20
 /*
  * Start positive or negative acceleration with this voltage offset in order to get a reasonable acceleration for ramps
  * The value must be low enough to avoid spinning wheels
+ * I measured maximum brake acceleration with blocking wheels as 320 to 350 cm/s^2 on varnished wood. 6 to 7 cm/s every 20 ms.
+ * I measured maximum positive acceleration with spinning wheels as 2000 to 2500 mm/s^2 on varnished wood. 4 to 5 cm/s every 20 ms.
+ * Measured values up:   1V -> 1600mm/s^2, 2.5V -> 2000mm/s^2, the optimum.
+ * Measured values down: 2.5V -> 2500mm/s^2
  */
-#define RAMP_VALUE_OFFSET_MILLIVOLT      2300
-#define RAMP_VALUE_OFFSET_SPEED_PWM      ((RAMP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
-#define RAMP_VALUE_MIN_SPEED_PWM         DEFAULT_STOP_SPEED_PWM // Minimal speed, if motor is still turning
-#define RAMP_VALUE_DELTA                 (SPEED_FOR_8_VOLT / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS)) // Results in a ramp up voltage of 8V/s = 0.8 volt per 100 ms
-/*
- * I measured maximum positive acceleration with spinning wheels as 250 cm/s^2 on varnished wood.
- * I measured maximum negative acceleration with blocking wheels as 350 cm/s^2 on varnished wood.
- * This corresponds to 5 cm/s every 20 ms
- */
-#define RAMP_DECELERATION_TIMES_2        3500 // Take half of the observed maximum. This depends on the type of tires and the mass of the car
+#define RAMP_UP_VALUE_OFFSET_MILLIVOLT   2000 // Experimental value, 2500 seems to be optimum. 3000 leads to spinning wheels.
+#define RAMP_UP_VALUE_OFFSET_SPEED_PWM   ((RAMP_UP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_DOWN_VALUE_OFFSET_MILLIVOLT 2500 // Experimental value. 3000 may be optimum.
+#define RAMP_DOWN_VALUE_OFFSET_SPEED_PWM ((RAMP_UP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
+#define RAMP_VALUE_MIN_SPEED_PWM         DEFAULT_DRIVE_SPEED_PWM // Maximal speed, where motor can be stopped immediately
+#define RAMP_UP_VALUE_DELTA              ((SPEED_PWM_FOR_1_VOLT * RAMP_UP_VOLTAGE_PER_SECOND) / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS))
+#define RAMP_DOWN_VALUE_DELTA            ((SPEED_PWM_FOR_1_VOLT * RAMP_DOWN_VOLTAGE_PER_SECOND) / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS))
 
-#define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
+#define RAMP_DECELERATION_TIMES_2        (2000 * 2) // 2000 was measured by IMU for 14V/s and 2500 mV offset.
 
+/********************************************
+ * Program defines
+ ********************************************/
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_STOP                  0x00
 #define STOP_MODE_BRAKE                 0x00
@@ -303,6 +323,7 @@ public:
 
     void startRampUp(uint8_t aRequestedDirection);
     void startRampDown();
+    void synchronizeRampDown(PWMDcMotor *aOtherMotorControl);
 
 #if !defined(USE_ENCODER_MOTOR_CONTROL) // Guard required here, since we cannot access the computedMillisOfMotorStopForDistance and MillisPerCentimeter for the functions below
     // This function only makes sense for non encoder motors

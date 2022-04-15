@@ -31,7 +31,7 @@
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.
  * You must specify this before the include of "RobotCarPWMMotorControl.hpp"
  */
-#define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+//#define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 //#define VIN_2_LI_ION                  // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
@@ -39,21 +39,30 @@
 //#define FULL_BRIDGE_INPUT_MILLIVOLT   6000  // Default. For 4 x AA batteries (6 volt).
 //#define USE_L298_BRIDGE               // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
-//#define DO_NOT_SUPPORT_RAMP           // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED  // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
 #define USE_SOFT_I2C_MASTER           // Saves 1044 bytes program memory and 99 bytes RAM compared with Arduino Wire
 //#define DISABLE_AUTO_OFFSET_RECALCULATION // saves around 580 bytes program space
 #include "RobotCarPinDefinitionsAndMore.h"
 
+#include "CarPWMMotorControl.h" // This helps the Eclipse indexer
 #include "CarPWMMotorControl.hpp"
 
 //#define ENABLE_EXTRA_NON_PLOTTER_OUTPUT // Generate verbose output for SerialMonitor but this not compatible with Arduino Plotter
 #define PRINTS_PER_SECOND 50
 
+#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+#include "ADCUtils.h"
+#define VIN_11TH_IN_CHANNEL         2 // = A2
+uint16_t readVINVoltageMilliVolt();
+float sVINVoltage;
+#endif
+
 unsigned long LastPrintMillis;
 
-void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp);
+void printCaption();
+void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aWaitForStop);
 
 void setup() {
 // initialize the digital pin as an output.
@@ -80,26 +89,14 @@ void setup() {
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 
-    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(3000);
+    tone(PIN_BUZZER, 2200, 200);
+
+    // wait 5 seconds before start moving
+    RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(5000);
 }
 
 void loop() {
     static uint8_t sDirection = DIRECTION_FORWARD;
-
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-    RobotCarPWMMotorControl.rightCarMotor.printEncoderDataCaption(&Serial);
-#endif
-    RobotCarPWMMotorControl.IMUData.printIMUCarDataCaption(&Serial);
-#if ! defined(USE_ENCODER_MOTOR_CONTROL)
-    Serial.print(F("PWM[2] "));
-#endif
-    Serial.print(
-            F(
-                    STR(PRINTS_PER_SECOND) "_values/s_at_" STR(SAMPLE_RATE) "_samples/s___ramp_offset=" STR(RAMP_VALUE_OFFSET_MILLIVOLT) "_mV___delta="));
-    Serial.print(RAMP_VALUE_DELTA);
-    Serial.print(F("___decel="));
-    Serial.print(RAMP_DECELERATION_TIMES_2 / 2);
-    Serial.println(F("mm/s^2"));
 
     /*
      * Set to drive speed without ramp
@@ -119,7 +116,9 @@ void loop() {
     while (true) {
         bool tUseRamp = true;
         for (uint8_t i = 0; i < 2; ++i) {
-
+            printCaption();
+            tone(PIN_BUZZER, 2200, 100);
+            delay(200);
             RobotCarPWMMotorControl.IMUData.resetOffsetFifoAndCarDataAndWait();
 #if defined(USE_ENCODER_MOTOR_CONTROL)
             RobotCarPWMMotorControl.rightCarMotor.resetEncoderControlValues();
@@ -139,7 +138,7 @@ void loop() {
                 Serial.println(RobotCarPWMMotorControl.CarRequestedDistanceMillimeter);
 #endif
                 // print 20 data sets after stopping
-                delayAndPrintData(40, 1000 / PRINTS_PER_SECOND, tUseRamp);
+                delayAndPrintData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
             } else {
                 /*
                  * Set speed, wait and stop - no ramp :-)
@@ -149,13 +148,13 @@ void loop() {
 #if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.println(F("Stop motors"));
 #endif
-                RobotCarPWMMotorControl.setStopMode(STOP_MODE_BRAKE); // just to be sure
+                RobotCarPWMMotorControl.setStopMode(STOP_MODE_BRAKE); // just to be sure to brake and not to release
                 RobotCarPWMMotorControl.setSpeedPWMAndDirection(0);
                 delayAndPrintData(20, 1000 / PRINTS_PER_SECOND, tUseRamp);
             }
 
             tUseRamp = false;
-            RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(1000);
+            RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(2000);
 
         }
         if (sSpeedPWM == MAX_SPEED_PWM) {
@@ -174,7 +173,7 @@ void loop() {
         Serial.print(F("Set speed to:"));
         Serial.println(sSpeedPWM);
 #endif
-        RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(1000);
+        RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(2000);
 
     }
     RobotCarPWMMotorControl.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(5000);
@@ -188,30 +187,88 @@ void loop() {
 #endif
 }
 
+void printCaption() {
+    Serial.print(F("PWM[2] "));
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+    Serial.print(F("MotorVoltage[0.1V] "));
+#endif
+
+    RobotCarPWMMotorControl.IMUData.printIMUCarDataCaption(&Serial);
+
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+    Serial.print(F("VIN[0.1V] Speed/V[mm/sV] "));
+#endif
+
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+    RobotCarPWMMotorControl.rightCarMotor.printEncoderDataCaption(&Serial);
+#endif
+    Serial.print(
+            F(
+                    STR(PRINTS_PER_SECOND) "_values/s__ramp_offsets_up|down=" STR(RAMP_UP_VALUE_OFFSET_MILLIVOLT) "|" STR(RAMP_DOWN_VALUE_OFFSET_MILLIVOLT) "_mV__rdelta=" STR(RAMP_UP_VOLTAGE_PER_SECOND) "|" STR(RAMP_DOWN_VOLTAGE_PER_SECOND) "_V/s__decel="));
+    Serial.print(RAMP_DECELERATION_TIMES_2 / 20);
+    Serial.println(F("cm/s^2"));
+}
+
 /*
  * Prints values, if a new value is available
- * @param aDataSetsToPrint if aUseRamp is true, number of data sets AFTER stop of car
+ * @param aDataSetsToPrint if aWaitForStop is true, number of data sets AFTER stop of car
  * @return true if printed.
  */
-void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aUseRamp) {
+void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aWaitForStop) {
+    static unsigned long sLastPrintMillis;
 
     for (uint_fast8_t i = 0; i < aDataSetsToPrint;) {
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-        if (RobotCarPWMMotorControl.rightCarMotor.printEncoderDataPeriodically(&Serial, aPeriodMillis)) {
+        if ((millis() - sLastPrintMillis) >= aPeriodMillis) { // read and print data every n ms
+            sLastPrintMillis = millis();
+
+            Serial.print(RobotCarPWMMotorControl.rightCarMotor.RequestedSpeedPWM / 2); // = PWM, scale it for plotter
+            Serial.print(" ");
+
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+            uint16_t tMillivolt = readVINVoltageMilliVolt();
+            uint8_t tMotorPWM = RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM;
+            uint16_t tMotorDezivolt = (((uint32_t) tMillivolt * tMotorPWM) + 12800) / 25600L;
+            Serial.print(tMotorDezivolt);
+            Serial.print(' ');
+#endif
             RobotCarPWMMotorControl.IMUData.readCarDataFromMPU6050Fifo();
             RobotCarPWMMotorControl.IMUData.printIMUCarData(&Serial);
-            Serial.println();
-            i++;
-        }
-#else
-        if (RobotCarPWMMotorControl.IMUData.printIMUCarDataDataPeriodically(&Serial, aPeriodMillis)) {
-            Serial.println(RobotCarPWMMotorControl.rightCarMotor.RequestedSpeedPWM / 2); // = PWM, scale it for plotter
-            i++;
-        }
+
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+            Serial.print(' ');
+            Serial.print((tMillivolt + 50) / 100); // VIN Dezivolt
+            Serial.print(' ');
+            /*
+             * Compute speed per volt
+             */
+            uint16_t tSpeedPerVolt;
+            int tSpeedPerSecond = RobotCarPWMMotorControl.IMUData.getSpeedCmPerSecond();
+            if (tMotorPWM
+                    > 0&& tSpeedPerSecond > 0 && RobotCarPWMMotorControl.rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN) {
+                tSpeedPerVolt = ((uint32_t) tSpeedPerSecond * 2550000L) / ((uint32_t) tMillivolt * tMotorPWM);
+            } else {
+                tSpeedPerVolt = 0;
+            }
+            Serial.print(tSpeedPerVolt);
 #endif
-        if (aUseRamp && RobotCarPWMMotorControl.updateMotors()) {
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+            Serial.print(' ');
+            RobotCarPWMMotorControl.rightCarMotor.printEncoderData(&Serial);
+#endif
+            Serial.println();
+
+            i++;
+        } //  if ((millis() - sLastPrintMillis) >= aPeriodMillis)
+        if (aWaitForStop && RobotCarPWMMotorControl.updateMotors()) {
             // reset count as long as car is driving
             i = 0;
         }
-    }
+    } // for (uint_fast8_t i = 0; i < aDataSetsToPrint;)
 }
+
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+uint16_t readVINVoltageMilliVolt() {
+    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
+    return ((ADC_INTERNAL_REFERENCE_MILLIVOLT * 11 * (uint32_t) tVIN) + 512) / 1023;
+}
+#endif // MONITOR_VIN_VOLTAGE

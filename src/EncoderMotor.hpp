@@ -177,9 +177,9 @@ bool EncoderMotor::updateMotor() {
         /*
          * Start motor
          */
-        if (RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+        if (RequestedDriveSpeedPWM > RAMP_UP_VALUE_OFFSET_SPEED_PWM) {
             // start with ramp to avoid spinning wheels
-            tNewSpeedPWM = RAMP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (2.3 volt)
+            tNewSpeedPWM = RAMP_UP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (2.3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
@@ -204,9 +204,9 @@ bool EncoderMotor::updateMotor() {
                 //  RequestedDriveSpeedPWM reached switch to --> DRIVE_SPEED_PWM and check immediately for next transition to RAMP_DOWN
                 MotorRampState = MOTOR_STATE_DRIVE;
             } else {
-                tNewSpeedPWM = tNewSpeedPWM + RAMP_VALUE_DELTA;
+                tNewSpeedPWM = tNewSpeedPWM + RAMP_UP_VALUE_DELTA;
                 // Clip value and check for 8 bit overflow
-                if (tNewSpeedPWM > RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_VALUE_DELTA) {
+                if (tNewSpeedPWM > RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_UP_VALUE_DELTA) {
                     // do not change state here to let motor run at RequestedDriveSpeedPWM for one interval
                     tNewSpeedPWM = RequestedDriveSpeedPWM;
                 }
@@ -226,9 +226,9 @@ bool EncoderMotor::updateMotor() {
         /*
          * Wait until target distance - braking distance reached
          */
-        if (CheckDistanceInUpdateMotor && getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter) {
-            if (CompensatedSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
-                tNewSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
+        if (CheckDistanceInUpdateMotor && (getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter)) {
+            if (CompensatedSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM) {
+                tNewSpeedPWM -= (RAMP_DOWN_VALUE_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
             } else {
                 tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }
@@ -236,13 +236,13 @@ bool EncoderMotor::updateMotor() {
             MotorRampState = MOTOR_STATE_RAMP_DOWN;
 #if defined(DEBUG)
             Serial.print(PWMPin);
-            Serial.print(F(" Dist="));
+            Serial.print(F(" Speed="));
+            Serial.print(getSpeed() * 10);
+            Serial.print(F(" mm/s Dist="));
             Serial.print(getDistanceMillimeter());
-            Serial.print(F(" Breakdist="));
+            Serial.print(F(" mm Breakdist="));
             Serial.print(getBrakingDistanceMillimeter());
-            Serial.print(F(" State="));
-            Serial.print(MotorRampState);
-            Serial.print(F(" Newspeed="));
+            Serial.print(F(" mm NewPWM="));
             Serial.println(tNewSpeedPWM);
 #endif
         }
@@ -255,8 +255,8 @@ bool EncoderMotor::updateMotor() {
             /*
              * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
              */
-            if (tNewSpeedPWM > (RAMP_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
-                tNewSpeedPWM -= RAMP_VALUE_DELTA;
+            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
+                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
             } else {
                 tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }
@@ -434,7 +434,7 @@ uint8_t EncoderMotor::getDirection() {
 }
 
 unsigned int EncoderMotor::getDistanceMillimeter() {
-    return LastRideEncoderCount * FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT;
+    return LastRideEncoderCount * FACTOR_COUNT_TO_MILLIMETER_INTEGER_DEFAULT; // * 11
 }
 
 unsigned int EncoderMotor::getDistanceCentimeter() {
@@ -540,8 +540,8 @@ unsigned int EncoderMotor::getAverageSpeed(uint8_t aLengthOfAverage) {
  * Space but NO println() at the end, to enable additional information to be printed
  */
 void EncoderMotor::printEncoderDataCaption(Print *aSerial) {
-//    aSerial->print(F("PWM[2] Speed[cm/s] SpeedAvg.Of10[cm/s] Count[22cm/20LSB] "));
-    aSerial->print(F("PWM[2] Speed[cm/s] Distance[cm] "));
+//    aSerial->print(F("Speed[cm/s] SpeedAvg.Of10[cm/s] Count[22cm/20LSB] "));
+    aSerial->print(F("Speed[cm/s] Distance[cm] "));
 }
 
 bool EncoderMotor::printEncoderDataPeriodically(Print *aSerial, uint16_t aPeriodMillis) {
@@ -556,8 +556,6 @@ bool EncoderMotor::printEncoderDataPeriodically(Print *aSerial, uint16_t aPeriod
 }
 
 void EncoderMotor::printEncoderData(Print *aSerial) {
-    aSerial->print(RequestedSpeedPWM / 2); // = PWM, scale it for plotter
-    aSerial->print(" ");
     aSerial->print(getSpeed());
     aSerial->print(" ");
 #if defined(_SUPPORT_AVERAGE_SPEED)

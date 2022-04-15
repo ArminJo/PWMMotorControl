@@ -44,13 +44,15 @@
 
 #include "PWMDcMotor.h"
 
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD) && defined(USE_SOFT_I2C_MASTER)
+#  if defined(USE_SOFT_I2C_MASTER)
 #include "SoftI2CMasterConfig.h"
 #include "SoftI2CMaster.h"
-#else
+#  else
 #include "Wire.h"
-#endif // defined(USE_SOFT_I2C_MASTER)
+#  endif // defined(USE_SOFT_I2C_MASTER)
+#endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
 #if defined(ESP32)
 #include "analogWrite.h" // from e.g. ESP32Servo library
@@ -493,7 +495,8 @@ void PWMDcMotor::updateDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
 }
 
 /*
- * Changes RequestedDriveSpeedPWM and uses ramp for transitions if it makes sense
+ * If motor was stooped or changed direction, starts ramp if enabled
+ * Else call setSpeedPWMAndDirection() directly, which sets CompensatedSpeedPWM
  */
 void PWMDcMotor::setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
 #if defined(DEBUG)
@@ -509,7 +512,7 @@ void PWMDcMotor::setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uin
     Serial.println();
 #endif
 #if defined(DO_NOT_SUPPORT_RAMP)
-    setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
+    setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection); // reduced to setSpeedPWMAndDirection()
 #else
     if (isStopped() || CurrentDirection != aRequestedDirection) {
         checkAndHandleDirectionChange(aRequestedDirection);
@@ -540,16 +543,45 @@ void PWMDcMotor::startRampUp(uint8_t aRequestedDirection) {
     setSpeedPWMAndDirectionWithRamp(DriveSpeedPWM, aRequestedDirection);
 }
 
+/*
+ * Starts ramp down immediately
+ * Its a copy of the code in updateMotor() but this is fairly good optimized :-)
+ */
 void PWMDcMotor::startRampDown() {
 #if defined(DO_NOT_SUPPORT_RAMP)
     stop(STOP_MODE_KEEP);
 #else
+    //  --> RAMP_DOWN
     MotorRampState = MOTOR_STATE_RAMP_DOWN;
-// set only the variables for later evaluation in updateMotor() below
-    if (CompensatedSpeedPWM > (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA)) {
-        CompensatedSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
+    uint8_t tNewSpeedPWM;
+    if (CompensatedSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM) {
+        tNewSpeedPWM = CompensatedSpeedPWM - RAMP_DOWN_VALUE_OFFSET_SPEED_PWM;
     } else {
-        CompensatedSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
+        tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
+    }
+
+#  if defined(TRACE)
+    Serial.print(PWMPin);
+    Serial.print(F(" St="));
+    Serial.print(MotorRampState);
+    Serial.print(F(" Ns="));
+    Serial.print(tNewSpeedPWM);
+#  endif
+    PWMDcMotor::setSpeedPWMAndDirection(tNewSpeedPWM, CurrentDirection);
+    NextRampChangeMillis = millis() + RAMP_INTERVAL_MILLIS;
+#endif
+}
+
+/*
+ * Guarantees, that both motors start ramp down at the same time
+ */
+void PWMDcMotor::synchronizeRampDown(PWMDcMotor *aOtherMotorControl) {
+#if !defined(DO_NOT_SUPPORT_RAMP)
+    if (MotorRampState == MOTOR_STATE_RAMP_DOWN && aOtherMotorControl->MotorRampState == MOTOR_STATE_DRIVE) {
+        aOtherMotorControl->startRampDown();
+    }
+    if (MotorRampState == MOTOR_STATE_DRIVE && aOtherMotorControl->MotorRampState == MOTOR_STATE_RAMP_DOWN) {
+        startRampDown();
     }
 #endif
 }
@@ -579,9 +611,9 @@ bool PWMDcMotor::updateMotor() {
         /*
          * Start motor
          */
-        if (RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+        if (RequestedDriveSpeedPWM > RAMP_UP_VALUE_OFFSET_SPEED_PWM) {
             // Start with ramp to avoid spinning wheels
-            tNewSpeedPWM = RAMP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
+            tNewSpeedPWM = RAMP_UP_VALUE_OFFSET_SPEED_PWM; // start immediately with speed offset (3 volt)
             //  --> RAMP_UP
             MotorRampState = MOTOR_STATE_RAMP_UP;
         } else {
@@ -593,17 +625,17 @@ bool PWMDcMotor::updateMotor() {
     } else if (MotorRampState == MOTOR_STATE_RAMP_UP) {
         /*
          * Increase motor speed by RAMP_VALUE_DELTA every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
-         * Only used if RequestedDriveSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid spinning wheels
+         * Only used if RequestedDriveSpeedPWM > RAMP_UP_VALUE_OFFSET_SPEED_PWM to avoid spinning wheels
          */
         if (tMillis >= NextRampChangeMillis) {
             NextRampChangeMillis += RAMP_INTERVAL_MILLIS;
-            tNewSpeedPWM = tNewSpeedPWM + RAMP_VALUE_DELTA;
+            tNewSpeedPWM = tNewSpeedPWM + RAMP_UP_VALUE_DELTA;
             /*
              * Transition criteria is: RequestedDriveSpeedPWM reached.
              * Then check immediately for timeout
              */
             // Clip value and check for 8 bit overflow
-            if (tNewSpeedPWM >= RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_VALUE_DELTA) {
+            if (tNewSpeedPWM >= RequestedDriveSpeedPWM || tNewSpeedPWM <= RAMP_UP_VALUE_DELTA) {
                 tNewSpeedPWM = RequestedDriveSpeedPWM;
                 //  --> DRIVE
                 MotorRampState = MOTOR_STATE_DRIVE;
@@ -619,9 +651,9 @@ bool PWMDcMotor::updateMotor() {
              * "Distance" reached -> stop now
              */
 
-            if (tNewSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM) {
+            if (tNewSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM) {
                 // Stop with ramp to avoid blocking wheels
-                tNewSpeedPWM -= (RAMP_VALUE_OFFSET_SPEED_PWM - RAMP_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
+                tNewSpeedPWM -= (RAMP_DOWN_VALUE_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
                 //  --> RAMP_DOWN
                 MotorRampState = MOTOR_STATE_RAMP_DOWN;
             } else {
@@ -635,10 +667,10 @@ bool PWMDcMotor::updateMotor() {
             NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
             /*
              * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
-             * Only used if CompensatedSpeedPWM > RAMP_VALUE_OFFSET_SPEED_PWM to avoid blocking wheels
+             * Only used if CompensatedSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM to avoid blocking wheels
              */
-            if (tNewSpeedPWM > (RAMP_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
-                tNewSpeedPWM -= RAMP_VALUE_DELTA;
+            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
+                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
             } else {
                 tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
             }

@@ -69,7 +69,7 @@ void setup() {
 #endif
 
     // Print caption
-    Serial.println(F("PWM Speed Average EncoderCount"));
+    Serial.println(F("PWM Speed[cm/s] Average[cm/s] EncoderCount"));
 
 #if defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
 #  if defined(USE_ADAFRUIT_MOTOR_SHIELD)
@@ -181,7 +181,7 @@ void loop() {
     Serial.print(tStartPWM);
     Serial.print('_');
     Serial.print(tStartSpeed);
-    Serial.print(F("|Max_Speed="));
+    Serial.print(F("|Max_AvgSpeed="));
     Serial.print(tMaxSpeed);
     Serial.print(F("|Stop="));
     Serial.print(tStopPWM);
