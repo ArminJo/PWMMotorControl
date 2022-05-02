@@ -151,7 +151,6 @@ void startCurrentPage();
  * Common GUI elements
  */
 extern BDButton TouchButtonReset;
-extern BDButton TouchButtonRes;
 
 extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
@@ -162,10 +161,12 @@ void doReset(BDButton *aTheTochedButton, int16_t aValue);
 extern BDButton TouchButtonDirection;
 extern BDButton TouchButtonInfo;
 
-#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+//#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
-//void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
-#endif
+extern bool isCalibrated;
+void calibrateDriveSpeedPWM();
+void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
+//#endif
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
 #if defined(ENABLE_EEPROM_STORAGE)

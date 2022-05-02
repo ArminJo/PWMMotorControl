@@ -19,15 +19,10 @@
 #define _ROBOT_CAR_BLUE_DISPLAY_H
 
 #if defined(MONITOR_VIN_VOLTAGE)
-#include "ADCUtils.h"
-
-extern float sVINVoltage;
 #define VOLTAGE_LIPO_LOW_THRESHOLD  6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
 #define VOLTAGE_USB_THRESHOLD       5.5
 #define VOLTAGE_TOO_LOW_DELAY_ONLINE 3000 // display VIN every 500 ms for 4 seconds
 #define VOLTAGE_TOO_LOW_DELAY_OFFLINE 1000 // wait for 1 seconds after double beep
-
-void readVINVoltage();
 #endif
 
 #if defined(CAR_HAS_PAN_SERVO)

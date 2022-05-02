@@ -87,7 +87,7 @@ It starts with `DEFAULT_DRIVE_SPEED_PWM` and doubles speed for next turn until `
 
 | Diagram for car controlled by an MosFet bridge | Diagram for car controlled by an L298 bridge |
 | :-: | :-: |
-| ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/2WD_Test.png) | ![Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/Lafvin_Test.png) |
+| ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.4V_PrintCarValuesWithIMU_Encoder.png) | ![Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/Lafvin_Test.png) |
 
 
 ## RobotCarBasic

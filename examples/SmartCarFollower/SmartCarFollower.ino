@@ -65,7 +65,6 @@
 //#define INFO
 #include "CarPWMMotorControl.hpp"
 #include "HCSR04.h"
-#include "ADCUtils.h"
 #include "pitches.h"
 
 /*
@@ -90,7 +89,8 @@
 #define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER    70 // assume that target moved to side, and search
 
 #define USE_STANDARD_SERVO_LIBRARY // we have enough memory, so make it simple and do not use LightweightServo library here
-#include "Distance.hpp" // provides DistanceServo definition and uses FOLLOWER_DISTANCE_MINIMUM_CENTIMETER definition
+#include "Distance.h"    // This helps the Eclipse indexer
+#include "Distance.hpp"  // provides DistanceServo definition and uses FOLLOWER_DISTANCE_MINIMUM_CENTIMETER definition
 
 #if defined(USE_IR_REMOTE)
 /*
@@ -110,6 +110,7 @@
 #include "IRCommandDispatcher.hpp"
 #endif
 
+#include "RobotCarUtils.h"   // This helps the Eclipse indexer
 #include "RobotCarUtils.hpp"
 
 bool sDistanceChanged;

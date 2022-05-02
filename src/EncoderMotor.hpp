@@ -169,9 +169,7 @@ bool EncoderMotor::updateMotor() {
     }
 #if defined(DO_NOT_SUPPORT_RAMP)
     return false; // PWM is already 0, need no more calls to updateMotor()
-#endif
-
-#if !defined(DO_NOT_SUPPORT_RAMP)
+#else
     if (MotorRampState == MOTOR_STATE_START) {
         NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
         /*
@@ -211,13 +209,6 @@ bool EncoderMotor::updateMotor() {
                     tNewSpeedPWM = RequestedDriveSpeedPWM;
                 }
             }
-#if defined(DEBUG)
-            Serial.print(PWMPin);
-            Serial.print(F(" State="));
-            Serial.print(MotorRampState);
-            Serial.print(F(" Newspeed="));
-            Serial.println(tNewSpeedPWM);
-#endif
         }
     }
 
@@ -227,7 +218,7 @@ bool EncoderMotor::updateMotor() {
          * Wait until target distance - braking distance reached
          */
         if (CheckDistanceInUpdateMotor && (getDistanceMillimeter() + getBrakingDistanceMillimeter() >= TargetDistanceMillimeter)) {
-            if (CompensatedSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM) {
+            if (RequestedSpeedPWM > RAMP_DOWN_VALUE_OFFSET_SPEED_PWM) {
                 tNewSpeedPWM -= (RAMP_DOWN_VALUE_OFFSET_SPEED_PWM - RAMP_DOWN_VALUE_DELTA); // RAMP_VALUE_DELTA is immediately subtracted below
             } else {
                 tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
@@ -242,8 +233,7 @@ bool EncoderMotor::updateMotor() {
             Serial.print(getDistanceMillimeter());
             Serial.print(F(" mm Breakdist="));
             Serial.print(getBrakingDistanceMillimeter());
-            Serial.print(F(" mm NewPWM="));
-            Serial.println(tNewSpeedPWM);
+            Serial.println(F(" mm"));
 #endif
         }
     }
@@ -254,44 +244,44 @@ bool EncoderMotor::updateMotor() {
             NextRampChangeMillis = tMillis + RAMP_INTERVAL_MILLIS;
             /*
              * Decrease motor speed RAMP_UPDATE_INTERVAL_STEPS times every RAMP_UPDATE_INTERVAL_MILLIS milliseconds
+             * until RAMP_VALUE_MIN_SPEED_PWM is reached
              */
-            if (tNewSpeedPWM > (RAMP_DOWN_VALUE_DELTA + RAMP_VALUE_MIN_SPEED_PWM)) {
-                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
+            if (tNewSpeedPWM == RAMP_VALUE_MIN_SPEED_PWM) {
+                /*
+                 * Ramp ended, last value was RAMP_VALUE_MIN_SPEED_PWM
+                 */
+                if(!CheckDistanceInUpdateMotor){
+                    // can stop now
+                    tNewSpeedPWM = 0;
+                } else {
+                    // continue to check distance a slow speed
+                    MotorRampState = MOTOR_STATE_CHECK_DISTANCE;
+                }
             } else {
-                tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
+                tNewSpeedPWM -= RAMP_DOWN_VALUE_DELTA;
+                    if (tNewSpeedPWM < RAMP_VALUE_MIN_SPEED_PWM) {
+                    // Clip at RAMP_VALUE_MIN_SPEED_PWM
+                    tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
+                }
             }
-#if defined(DEBUG)
-            Serial.print(PWMPin);
-            Serial.print(F(" State="));
-            Serial.print(MotorRampState);
-            Serial.print(F(" Newspeed="));
-            Serial.println(tNewSpeedPWM);
-#endif
         }
-
     }
-    // End of motor state machine
 
-#if defined(TRACE)
-    Serial.print(PWMPin);
-#  if !defined(DO_NOT_SUPPORT_RAMP)
-    Serial.print(F(" St="));
-    Serial.print(MotorRampState);
-#  endif
-#endif
-    if (tNewSpeedPWM != CompensatedSpeedPWM) {
-#if defined(TRACE)
+    /*
+     * End of motor state machine, now set speed if changed
+     */
+    if (tNewSpeedPWM != RequestedSpeedPWM) {
+#if defined(DEBUG)
+        // The speed 0
+        Serial.print(PWMPin);
+        Serial.print(F(" St="));
+        Serial.print(MotorRampState);
         Serial.print(F(" Ns="));
-        Serial.print(tNewSpeedPWM);
+        Serial.println(tNewSpeedPWM);
 #endif
-        PWMDcMotor::setSpeedPWMAndDirection(tNewSpeedPWM, CurrentDirection);
+        PWMDcMotor::setSpeedPWM(tNewSpeedPWM);
     }
-#if defined(TRACE)
-    else {
-        Serial.println(); // setSpeedPWMAndDirection prints a newline for TRACE
-    }
-#endif
-    return (CompensatedSpeedPWM > 0); // current speed == 0
+    return (RequestedSpeedPWM > 0); // current speed == 0
 #endif // !defined(DO_NOT_SUPPORT_RAMP)
 }
 
@@ -310,7 +300,7 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
 // only synchronize if manually operated or at full speed
 #if !defined(DO_NOT_SUPPORT_RAMP)
         if ((MotorRampState == MOTOR_STATE_STOPPED && aOtherMotorControl->MotorRampState == MOTOR_STATE_STOPPED
-                && CompensatedSpeedPWM > 0)
+                && CurrentCompensatedSpeedPWM > 0)
                 || (MotorRampState == MOTOR_STATE_DRIVE && aOtherMotorControl->MotorRampState == MOTOR_STATE_DRIVE))
 #endif
             {
@@ -322,17 +312,17 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
                  */
                 if (aOtherMotorControl->SpeedPWMCompensation >= 2) {
                     aOtherMotorControl->SpeedPWMCompensation -= 2;
-                    aOtherMotorControl->CompensatedSpeedPWM += 2;
-                    aOtherMotorControl->setSpeedPWMAndDirection(aOtherMotorControl->CompensatedSpeedPWM, DIRECTION_FORWARD);
+                    aOtherMotorControl->CurrentCompensatedSpeedPWM += 2;
+                    aOtherMotorControl->setSpeedPWMAndDirection(aOtherMotorControl->CurrentCompensatedSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                     EncoderCount = aOtherMotorControl->EncoderCount;
-                } else if (CompensatedSpeedPWM > DriveSpeedPWM / 2) {
+                } else if (CurrentCompensatedSpeedPWM > DriveSpeedPWM / 2) {
                     /*
                      * else increase this motors compensation
                      */
                     SpeedPWMCompensation += 2;
-                    CompensatedSpeedPWM -= 2;
-                    PWMDcMotor::setSpeedPWMAndDirection(CompensatedSpeedPWM, DIRECTION_FORWARD);
+                    CurrentCompensatedSpeedPWM -= 2;
+                    PWMDcMotor::setSpeedPWMAndDirection(CurrentCompensatedSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                 }
 
@@ -343,16 +333,16 @@ void EncoderMotor::synchronizeMotor(EncoderMotor *aOtherMotorControl, unsigned i
                  */
                 if (SpeedPWMCompensation >= 2) {
                     SpeedPWMCompensation -= 2;
-                    CompensatedSpeedPWM += 2;
-                    PWMDcMotor::setSpeedPWMAndDirection(CompensatedSpeedPWM, DIRECTION_FORWARD);
+                    CurrentCompensatedSpeedPWM += 2;
+                    PWMDcMotor::setSpeedPWMAndDirection(CurrentCompensatedSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
-                } else if (aOtherMotorControl->CompensatedSpeedPWM > aOtherMotorControl->DriveSpeedPWM / 2) {
+                } else if (aOtherMotorControl->CurrentCompensatedSpeedPWM > aOtherMotorControl->DriveSpeedPWM / 2) {
                     /*
                      * else increase other motors compensation
                      */
                     aOtherMotorControl->SpeedPWMCompensation += 2;
-                    aOtherMotorControl->CompensatedSpeedPWM -= 2;
-                    aOtherMotorControl->setSpeedPWMAndDirection(aOtherMotorControl->CompensatedSpeedPWM, DIRECTION_FORWARD);
+                    aOtherMotorControl->CurrentCompensatedSpeedPWM -= 2;
+                    aOtherMotorControl->setSpeedPWMAndDirection(aOtherMotorControl->CurrentCompensatedSpeedPWM, DIRECTION_FORWARD);
                     MotorControlValuesHaveChanged = true;
                 }
             }
@@ -376,12 +366,12 @@ void EncoderMotor::resetEncoderMotorValues() {
 }
 
 /*
- * Reset EncoderInterruptDeltaMillis, EncoderInterruptMillisArray, MillisArrayIndex and AverageSpeedIsValid
+ * Reset EncoderInterruptDeltaMillis, EncoderInterruptMillisArray, EncoderInterruptMillisArrayIndex and AverageSpeedIsValid
  */
 void EncoderMotor::resetSpeedValues() {
 #if defined(_SUPPORT_AVERAGE_SPEED)
     memset((void*) &EncoderInterruptMillisArray, 0,
-            ((uint8_t*) &EncoderInterruptDeltaMillis + sizeof(EncoderInterruptDeltaMillis)) - (uint8_t*) &EncoderInterruptDeltaMillis);
+            ((uint8_t*) &EncoderInterruptDeltaMillis + sizeof(EncoderInterruptDeltaMillis)) - (uint8_t*) &EncoderInterruptMillisArray);
 #else
     EncoderInterruptDeltaMillis = 0;
 #endif
@@ -456,7 +446,7 @@ unsigned int EncoderMotor::getBrakingDistanceMillimeter() {
  * Reset speed values after 1 second
  */
 unsigned int EncoderMotor::getSpeed() {
-    if (millis() - LastEncoderInterruptMillis > 1000) {
+    if (millis() - LastEncoderInterruptMillis > SPEED_TIMEOUT_MILLIS) {
         resetSpeedValues(); // Reset speed values after 1 second
     }
     unsigned long tEncoderInterruptDeltaMillis = EncoderInterruptDeltaMillis;
@@ -480,29 +470,29 @@ unsigned int EncoderMotor::getAverageSpeed() {
     /*
      * First check for timeout
      */
-    if (millis() - LastEncoderInterruptMillis > 1000) {
+    if (millis() - LastEncoderInterruptMillis > SPEED_TIMEOUT_MILLIS) {
         resetSpeedValues(); // Reset speed values after 1 second
     } else {
-        int8_t tMillisArrayIndex = MillisArrayIndex;
+        int8_t tEncoderInterruptMillisArrayIndex = EncoderInterruptMillisArrayIndex;
         if (!AverageSpeedIsValid) {
-            tMillisArrayIndex--;
-            if (tMillisArrayIndex > 0) {
-                // here MillisArray is not completely filled and MillisArrayIndex had no wrap around
-                tAverageSpeed = (SPEED_SCALE_VALUE * tMillisArrayIndex)
-                        / (EncoderInterruptMillisArray[tMillisArrayIndex] - EncoderInterruptMillisArray[0]);
+            tEncoderInterruptMillisArrayIndex--;
+            if (tEncoderInterruptMillisArrayIndex > 0) {
+                // here MillisArray is not completely filled and EncoderInterruptMillisArrayIndex had no wrap around
+                tAverageSpeed = (SPEED_SCALE_VALUE * tEncoderInterruptMillisArrayIndex)
+                        / (EncoderInterruptMillisArray[tEncoderInterruptMillisArrayIndex] - EncoderInterruptMillisArray[0]);
             }
         } else {
-            // tMillisArrayIndex points to the next value to write == the oldest value to overwrite
-            unsigned long tOldestEncoderInterruptMillis = EncoderInterruptMillisArray[tMillisArrayIndex];
+            // tEncoderInterruptMillisArrayIndex points to the next value to write == the oldest value to overwrite
+            unsigned long tOldestEncoderInterruptMillis = EncoderInterruptMillisArray[tEncoderInterruptMillisArrayIndex];
 
             // get index of current value
-            tMillisArrayIndex--;
-            if (tMillisArrayIndex < 0) {
+            tEncoderInterruptMillisArrayIndex--;
+            if (tEncoderInterruptMillisArrayIndex < 0) {
                 // wrap around
-                tMillisArrayIndex = AVERAGE_SPEED_BUFFER_SIZE - 1;
+                tEncoderInterruptMillisArrayIndex = AVERAGE_SPEED_BUFFER_SIZE - 1;
             }
             tAverageSpeed = (SPEED_SCALE_VALUE * AVERAGE_SPEED_SAMPLE_SIZE)
-                    / (EncoderInterruptMillisArray[tMillisArrayIndex] - tOldestEncoderInterruptMillis);
+                    / (EncoderInterruptMillisArray[tEncoderInterruptMillisArrayIndex] - tOldestEncoderInterruptMillis);
         }
     }
     return tAverageSpeed;
@@ -518,12 +508,12 @@ unsigned int EncoderMotor::getAverageSpeed(uint8_t aLengthOfAverage) {
     (void) aLengthOfAverage;
     return getSpeed();
 #else
-    if (!AverageSpeedIsValid && MillisArrayIndex < aLengthOfAverage) {
+    if (!AverageSpeedIsValid && EncoderInterruptMillisArrayIndex < aLengthOfAverage) {
         // cannot compute requested average
         return 0;
     }
     // get index of aLengthOfAverage counts before
-    int8_t tHistoricIndex = (MillisArrayIndex - 1) - aLengthOfAverage;
+    int8_t tHistoricIndex = (EncoderInterruptMillisArrayIndex - 1) - aLengthOfAverage;
     if (tHistoricIndex < 0) {
         // wrap around
         tHistoricIndex += AVERAGE_SPEED_BUFFER_SIZE;
@@ -578,7 +568,7 @@ void EncoderMotor::handleEncoderInterrupt() {
     } else {
         LastEncoderInterruptMillis = tMillis;
 #if defined(_SUPPORT_AVERAGE_SPEED)
-        uint8_t tMillisArrayIndex = MillisArrayIndex;
+        uint8_t tEncoderInterruptMillisArrayIndex = EncoderInterruptMillisArrayIndex;
 #endif
         if (tDeltaMillis < ENCODER_SENSOR_TIMEOUT_MILLIS) {
             EncoderInterruptDeltaMillis = tDeltaMillis;
@@ -586,17 +576,17 @@ void EncoderMotor::handleEncoderInterrupt() {
             // timeout
             EncoderInterruptDeltaMillis = 0;
 #if defined(_SUPPORT_AVERAGE_SPEED)
-            tMillisArrayIndex = 0;
+            tEncoderInterruptMillisArrayIndex = 0;
             AverageSpeedIsValid = false;
 #endif
         }
 #if defined(_SUPPORT_AVERAGE_SPEED)
-        EncoderInterruptMillisArray[tMillisArrayIndex++] = tMillis;
-        if (tMillisArrayIndex >= AVERAGE_SPEED_BUFFER_SIZE) {
-            tMillisArrayIndex = 0;
+        EncoderInterruptMillisArray[tEncoderInterruptMillisArrayIndex++] = tMillis;
+        if (tEncoderInterruptMillisArrayIndex >= AVERAGE_SPEED_BUFFER_SIZE) {
+            tEncoderInterruptMillisArrayIndex = 0;
             AverageSpeedIsValid = true;
         }
-        MillisArrayIndex = tMillisArrayIndex;
+        EncoderInterruptMillisArrayIndex = tEncoderInterruptMillisArrayIndex;
 #endif
 
         EncoderCount++;

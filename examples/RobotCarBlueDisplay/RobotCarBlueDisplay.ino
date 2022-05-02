@@ -59,6 +59,8 @@
 /*
  * Enable functionality of this program
  */
+//#define TEST_TIMING
+//#include "digitalWriteFast.h"
 #define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
 //#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
@@ -76,13 +78,23 @@
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #endif
 
+#if defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR)
+// Must be before #include "BlueDisplay.hpp"
+#define ADC_INTERNAL_REFERENCE_MILLIVOLT 1070L    // Value measured at the AREF pin
+#endif
+
 /*
  * Settings to configure the BlueDisplay library and to reduce its size
  */
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
 #define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
-#include "BlueDisplay.hpp" // include source of library
-#include "RobotCarBlueDisplay.h"
+
+#define SUPPRESS_HPP_WARNING    // Suppress warnings we get because of helper includes for eclipse indexer
+#include "RobotCarGui.h"        // This helps the eclipse indexer
+#include "RobotCarBlueDisplay.h" // This helps the eclipse indexer
+
+#include "RobotCarUtils.hpp"
+#include "BlueDisplay.hpp"      // include source of library
 
 #define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
 #include "CarPWMMotorControl.hpp" // include source of library
@@ -93,27 +105,21 @@
 #include "RobotCarGui.hpp"
 
 #if defined(CAR_HAS_DISTANCE_SENSOR)
-#include "Distance.h"   // This helps the eclipse indexer
-#include "Distance.hpp" // requires definitions from RobotCarGui.h
+#include "Distance.h"           // This helps the eclipse indexer
+#include "Distance.hpp"         // requires definitions from RobotCarGui.h
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
-#define USE_NO_RTX_EXTENSIONS // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
+#define USE_NO_RTX_EXTENSIONS   // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
+#include <PlayRtttl.h>
 #include <PlayRtttl.hpp>
 #endif
-
-#include "RobotCarUtils.hpp" // for print
 
 /*
  * Timeouts for demo mode and inactivity remainder
  */
 #define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
 #define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
-
-#if defined(MONITOR_VIN_VOLTAGE)
-#include "ADCUtils.h"
-float sVINVoltage;
-#endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
 bool sPlayMelody = false;
@@ -228,13 +234,10 @@ void setup() {
 #endif
 #if defined(CAR_HAS_DISTANCE_SENSOR)
     initDistance();
-#  if defined(ENABLE_RTTTL_FOR_CAR)
-    randomSeed(getUSDistance(10000));
-#  endif
 #endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
-    readVINVoltage();
+    readVINVoltage(); // The value might not correct, but it sets the channel and reference for VIN initially
     randomSeed(sVINVoltage * 100);
 #endif
 
@@ -247,12 +250,18 @@ void setup() {
     }
 }
 
+/*
+ * 35us per loop for idle HomePage, TestPage and SensorDrivePage
+ * 140 us per loop for idle AutoDrivePage
+ */
 void loop() {
-
+#if defined(TEST_TIMING)
+    digitalToggleFast(PIN_BUZZER);
+#endif
     /*
      * Required, if we use rotation, ramps and fixed distance driving
      */
-    RobotCarPWMMotorControl.updateMotors();
+    RobotCarPWMMotorControl.updateMotors(); // 2 us, if driving
 
     /*
      * check for user input and update display output
@@ -324,23 +333,6 @@ void loop() {
 
     }
 }
-
-#if defined(MONITOR_VIN_VOLTAGE)
-void readVINVoltage() {
-    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
-
-//    BlueDisplay1.debug("VIN Raw=", tVIN);
-
-// assume resistor network of 1MOhm / 100kOhm (divider by 11)
-// tVIN * 0,01182795
-#  if defined(VIN_VOLTAGE_CORRECTION)
-    // we have a diode (requires 0.8 volt) between LIPO and VIN
-    sVINVoltage = (tVIN * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
-#  else
-    sVINVoltage = tVIN * ((11.0 * 1.1) / 1023);
-#  endif
-}
-#endif // MONITOR_VIN_VOLTAGE
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
 #include "digitalWriteFast.h"

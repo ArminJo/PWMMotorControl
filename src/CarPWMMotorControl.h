@@ -43,7 +43,7 @@
  */
 #define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT         2.2777
 #define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT         4.1 // Estimated, with slip. Value is smaller for turn in place mode.
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT 2.2 // For turns with 4 wheels. For turn with 2 wheels it must be doubled.
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT 2.3 // For turns with 4 wheels. For turn with 2 wheels it must be doubled (*2.2).
 
 #if ! defined(FACTOR_DEGREE_TO_MILLIMETER_DEFAULT)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
@@ -89,6 +89,8 @@ public:
     void setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
     void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
+    void setDriveSpeedPWMTo2Volt(uint16_t aBridgeSupplyMillivolt);
+    void setDriveSpeedPWMTo2Volt(float aBridgeSupplyVoltage);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
@@ -191,7 +193,7 @@ public:
 
     void setSpeedPWMAndDirection(int aRequestedSpeedPWM);
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aLeftRightSpeedPWMDelta);
+    void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aSpeedPWMCompensationRightDelta);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
 
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE

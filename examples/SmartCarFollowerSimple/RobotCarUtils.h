@@ -25,7 +25,13 @@
 void printConfigInfo();
 void initRobotCarPWMMotorControl();
 unsigned int getDistanceAndPlayTone();
+
+#if defined(MONITOR_VIN_VOLTAGE)
+extern uint16_t sVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
+extern float sVINVoltage;
+void readVINVoltage();
 void checkVinPeriodicallyAndPrintIfChanged();
+#endif
 
 #endif // _ROBOT_CAR_UTILS_H
 #pragma once

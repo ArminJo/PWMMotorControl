@@ -159,20 +159,21 @@
 
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
-#define DEFAULT_MILLIMETER_PER_SECOND       200 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_MILLIMETER_PER_SECOND            200 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  75 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #  else
-#define DEFAULT_MILLIMETER_PER_SECOND       220 // at DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#define SPEED_PER_VOLT                      130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
+#define DEFAULT_MILLIMETER_PER_SECOND            220 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  20  // 15 to 20, constant value for the formula below
+#define SPEED_PER_VOLT                           130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
 #  endif
 #endif
 /*
  * Use MILLIS_PER_CENTIMETER instead of MILLIS_PER_MILLIMETER to get a reasonable resolution
  */
 #define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND)
-#define DEFAULT_MOTOR_START_TIME_MILLIS 20 // 15 to 20, constant value for the formula below
 /*
- * Currently formula used to convert distance in 11 mm steps to motor on time in milliseconds is:
- * computedMillisOfMotorStopForDistance = DEFAULT_MOTOR_START_TIME_MILLIS + (((aRequestedDistanceCount * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
+ * Currently formula used to convert distance in mm to motor on time in milliseconds is:
+ * computedMillisOfMotorStopForDistance = DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER + ((((aRequestedDistanceMillimeter - 10) * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
  */
 
 /*******************************************************
@@ -198,7 +199,9 @@
 #define RAMP_VALUE_MIN_SPEED_PWM         DEFAULT_DRIVE_SPEED_PWM // Maximal speed, where motor can be stopped immediately
 #define RAMP_UP_VALUE_DELTA              ((SPEED_PWM_FOR_1_VOLT * RAMP_UP_VOLTAGE_PER_SECOND) / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS))
 #define RAMP_DOWN_VALUE_DELTA            ((SPEED_PWM_FOR_1_VOLT * RAMP_DOWN_VOLTAGE_PER_SECOND) / (MILLIS_IN_ONE_SECOND / RAMP_INTERVAL_MILLIS))
-
+#if (RAMP_DOWN_VALUE_DELTA > RAMP_VALUE_MIN_SPEED_PWM)
+#error RAMP_DOWN_VALUE_DELTA must be smaller than RAMP_VALUE_MIN_SPEED_PWM !
+#endif
 #define RAMP_DECELERATION_TIMES_2        (2000 * 2) // 2000 was measured by IMU for 14V/s and 2500 mV offset.
 
 /********************************************
@@ -213,7 +216,7 @@
 #define DIRECTION_MASK                  (DIRECTION_FORWARD | DIRECTION_BACKWARD)
 #define oppositeDIRECTION(aDirection)   (aDirection ^ DIRECTION_MASK) // invert every bit
 
-#define STOP_MODE_KEEP                  1 // just for stop()
+#define STOP_MODE_KEEP                  1 // Take DefaultStopMode used as parameter only for stop()
 #define DEFAULT_STOP_MODE               STOP_MODE_BRAKE
 
 #if defined(DEBUG)
@@ -269,6 +272,7 @@ struct EepromMotorInfoStruct {
 #define MOTOR_STATE_RAMP_UP     2
 #define MOTOR_STATE_DRIVE       3
 #define MOTOR_STATE_RAMP_DOWN   4
+#define MOTOR_STATE_CHECK_DISTANCE 5
 
 class PWMDcMotor {
 public:
@@ -319,6 +323,8 @@ public:
     void setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, uint8_t aSpeedPWMCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
+    void setDriveSpeedPWMFor2Volt(uint16_t aBridgeSupplyMillivolt);
+    void setDriveSpeedPWMFor2Volt(float aBridgeSupplyVoltage);
     void updateDriveSpeedPWM(uint8_t aDriveSpeedPWM); // if running update also current speed
 
     void startRampUp(uint8_t aRequestedDirection);
@@ -368,7 +374,8 @@ public:
     /**********************************
      * Start of values for EEPROM
      *********************************/
-    uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance.
+    uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance. Default is a PWM value which corresponds to 2 volt.
+    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt.
 
     /**********************************
      * End of EEPROM values
@@ -380,13 +387,13 @@ public:
 #endif
 
     /*
-     * Positive value to be subtracted from TargetPWM to get CompensatedSpeedPWM to compensate for different left and right motors
+     * Positive value to be subtracted from TargetPWM to get CurrentCompensatedSpeedPWM to compensate for different left and right motors
      * Currently SpeedPWMCompensation is in steps of 2 and only one motor can have a positive value, the other is set to zero.
      * Value is computed in EncoderMotor::synchronizeMotor()
      */
     uint8_t SpeedPWMCompensation;   // Positive value!
-    uint8_t RequestedSpeedPWM;      // Is always >= CompensatedSpeedPWM
-    uint8_t CompensatedSpeedPWM;    // RequestedSpeedPWM - SpeedPWMCompensation. Stopped if CompensatedSpeedPWM == 0
+    uint8_t RequestedSpeedPWM;      // Last PWM requested for motor. Stopped if RequestedSpeedPWM == 0. It is always >= CurrentCompensatedSpeedPWM
+    uint8_t CurrentCompensatedSpeedPWM; // RequestedSpeedPWM - SpeedPWMCompensation.
     uint8_t CurrentDirection; // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
     static bool MotorPWMHasChanged;
 

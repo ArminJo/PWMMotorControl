@@ -28,7 +28,7 @@
 
 /*
  * This is the available set of predefined configurations of RobotCarConfigurations.h
- * All configurations include a HC-SR04 ultrasonic distance sensor mounted on a pan servo.
+ * All configurations (except MECANUM_BASIC_CONFIGURATION) include a HC-SR04 ultrasonic distance sensor mounted on a pan servo.
  */
 //////////////////////////////////////////////////////
 //#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
@@ -47,7 +47,8 @@
 //#define MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION // Basic + encoder + 4 Wheels + IR distance
 //#define MOTOR_SHIELD_2WD_FULL_CONFIGURATION       // Basic + encoder + VL53L1X TimeOfFlight sensor + MPU6050
 //#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
-//#define MECANUM_BASIC_CONFIGURATION               // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge
+//#define MECANUM_BASIC_CONFIGURATION               // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
+//#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 //#define CAR_IS_ESP32_CAM_BASED                    // Car controlled by an ESP32-CAM like https://github.com/ArminJo/ESP32-Cam-Sewer-inspection-car
 //////////////////////////////////////////////////////
 //
@@ -284,13 +285,14 @@
 #if defined(MECANUM_DISTANCE_CONFIGURATION)
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 #define MECANUM_BASIC_CONFIGURATION
 #define CONFIG_NAME   " + US distance + servo head down"
 #endif
 
 /*
  * BASIC CONFIGURATION
- * Nano Breadboard version with Arduino NANO, without shield and 4 mecanum wheels
+ * Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
  */
 #if defined(MECANUM_BASIC_CONFIGURATION)
 #define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION of 0.81.
@@ -313,10 +315,8 @@
 /*
  * Some rules
  */
-#if defined(CAR_IS_NANO_BASED)
-#  if !defined(VIN_VOLTAGE_CORRECTION)
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode after the VIN power jack of the UNO board
-#  endif
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER) && !defined(VOLTAGE_DIVIDER_DIVISOR)
+#define VOLTAGE_DIVIDER_DIVISOR   11.0  // VIN/11 by 1MOhm to VIN and 100kOhm to ground.
 #endif
 
 #if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)

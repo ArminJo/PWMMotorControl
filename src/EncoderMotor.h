@@ -27,10 +27,11 @@
 #include "PWMDcMotor.h"
 #include <stdint.h>
 
+
 #if !defined(DO_NOT_SUPPORT_AVERAGE_SPEED)
-#define _SUPPORT_AVERAGE_SPEED // to avoid double negations
-#define AVERAGE_SPEED_SAMPLE_SIZE 20
-#define AVERAGE_SPEED_BUFFER_SIZE 21 // one more than samples, because speed is the difference between 2 samples
+#define _SUPPORT_AVERAGE_SPEED          // to avoid double negations
+#define AVERAGE_SPEED_SAMPLE_SIZE       20
+#define AVERAGE_SPEED_BUFFER_SIZE       21 // one more than samples, because speed is the difference between 2 samples
 #endif
 
 // maybe useful especially for more than 2 motors
@@ -40,8 +41,9 @@
  * 20 slot Encoder generates 4 to 5 Hz at min speed and 110 Hz at max speed => 200 to 8 ms per period
  */
 #define ENCODER_COUNTS_PER_FULL_ROTATION    20
-#define ENCODER_SENSOR_TIMEOUT_MILLIS       400L // Timeout for encoder ticks if motor is running
 #define ENCODER_SENSOR_RING_MILLIS          4
+#define ENCODER_SENSOR_TIMEOUT_MILLIS       400L // Timeout for encoder ticks if motor is running
+#define SPEED_TIMEOUT_MILLIS                1000 // After this timeout for encoder interrupts speed values are reset
 
 /*
  * Some factors depending on wheel diameter and encoder resolution
@@ -153,9 +155,9 @@ public:
      * for speed computation
      */
 #if defined(_SUPPORT_AVERAGE_SPEED) // for function getAverageSpeed()
-    volatile unsigned int EncoderInterruptMillisArray[AVERAGE_SPEED_BUFFER_SIZE]; // store for 20 deltas
-    volatile uint8_t MillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite. 0 to 20|(AVERAGE_SPEED_BUFFER_SIZE-1)
-    volatile bool AverageSpeedIsValid; // true if 11 values are written since last timeout
+    volatile unsigned int EncoderInterruptMillisArray[AVERAGE_SPEED_BUFFER_SIZE]; // store for 20 deltas, is cleared after SPEED_TIMEOUT_MILLIS
+    volatile uint8_t EncoderInterruptMillisArrayIndex; // Index of the next value to write  == the oldest value to overwrite. 0 to 20|(AVERAGE_SPEED_BUFFER_SIZE-1)
+    volatile bool AverageSpeedIsValid; // true if array is completely filled up
 #endif
     // Do not move it!!! It must be after AverageSpeedIsValid and is required for resetSpeedValues()
     volatile unsigned long EncoderInterruptDeltaMillis; // Used to get speed

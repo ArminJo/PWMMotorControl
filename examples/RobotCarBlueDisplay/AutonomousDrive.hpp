@@ -315,8 +315,9 @@ int doBuiltInCollisionDetection() {
  ***************************************************/
 
 void checkSpeedAndGo(unsigned int aSpeed, uint8_t aRequestedDirection) {
-    if (aSpeed > RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM * 2) {
-        aSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM * 2;
+    // Clip PWM at 4 volt
+    if (aSpeed > RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt * 2) {
+        aSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt * 2;
     }
     if (aSpeed > MAX_SPEED_PWM) {
         aSpeed = MAX_SPEED_PWM;
@@ -386,7 +387,7 @@ void driveFollowerModeOneStep() {
 //        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_FORWARD) {
 //            Serial.println(F("Go forward"));
 //        }
-                tSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM / 2
+                tSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt / 2
                         + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
                 checkSpeedAndGo(tSpeed, DIRECTION_FORWARD);
 
@@ -394,7 +395,7 @@ void driveFollowerModeOneStep() {
 //        if (RobotCarPWMMotorControl.getCarDirectionOrBrakeMode() != DIRECTION_BACKWARD) {
 //            Serial.println(F("Go backward"));
 //        }
-                tSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM / 2
+                tSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt / 2
                         + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
                 checkSpeedAndGo(tSpeed, DIRECTION_BACKWARD);
 

@@ -41,6 +41,7 @@ BDButton TouchButton5cm;
 BDButton TouchButton10cm;
 BDButton TouchButton20cm;
 BDButton TouchButton40cm;
+BDButton TouchButtonTest;
 
 BDButton TouchButton45DegreeRight;
 BDButton TouchButton45DegreeLeft;
@@ -53,8 +54,11 @@ bool sShowInfo = true;
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
     RobotCarPWMMotorControl.startGoDistanceMillimeter(aValue, sRobotCarDirection);
+#if !defined(USE_ENCODER_MOTOR_CONTROL)
+    BlueDisplay1.debug("Millis=",
+            (uint16_t) (RobotCarPWMMotorControl.rightCarMotor.computedMillisOfMotorStopForDistance - millis()));
+#endif
 }
-
 
 /*
  * stop and reset motors
@@ -64,6 +68,13 @@ void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
     RobotCarPWMMotorControl.resetEncoderControlValues();
     sLastSpeedSliderValue = 0;
+}
+
+/*
+ * For miscellaneous test purposes
+ */
+void doTest(BDButton *aTheTouchedButton, int16_t aValue) {
+    doDistance(NULL, 10);
 }
 
 void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
@@ -146,6 +157,9 @@ void initTestPage(void) {
 //    TouchButton40cm.init(&Button40cm, F("40cm"));
 //    TouchButtonInfo.init(&ButtonDebug, F("dbg"));
 
+    TouchButtonTest.init(BUTTON_WIDTH_8_POS_6, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("Test"),
+    TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doTest);
+
     TouchButton45DegreeLeft.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_BLUE,
             F("45\xB0"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 45, &doRotation); // \xB0 is degree character
     TouchButton45DegreeRight.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_BLUE,
@@ -176,23 +190,25 @@ void drawTestPage(void) {
 
     TouchButton5cm.drawButton();
     TouchButton10cm.drawButton();
-#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+//#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     TouchButtonCalibrate.drawButton();
-#endif
+//#endif
 
     TouchButton20cm.drawButton();
     TouchButton40cm.drawButton();
+    TouchButtonTest.drawButton();
+
+    TouchButtonCompensationLeft.drawButton();
+    TouchButtonCompensationRight.drawButton();
     TouchButtonInfo.drawButton();
+
+#if defined(ENABLE_EEPROM_STORAGE)
+    TouchButtonCompensationStore.drawButton();
+#endif
 
     TouchButton45DegreeLeft.drawButton();
     TouchButton45DegreeRight.drawButton();
     TouchButton360Degree.drawButton();
-
-    TouchButtonCompensationLeft.drawButton();
-    TouchButtonCompensationRight.drawButton();
-#if defined(ENABLE_EEPROM_STORAGE)
-    TouchButtonCompensationStore.drawButton();
-#endif
 
     TouchButton90DegreeLeft.drawButton();
     TouchButton90DegreeRight.drawButton();
@@ -223,6 +239,9 @@ void drawTestPage(void) {
 void startTestPage(void) {
     doReset(NULL, 0);
     drawTestPage();
+    if (!isCalibrated) {
+        calibrateDriveSpeedPWM();
+    }
 }
 
 void loopTestPage(void) {

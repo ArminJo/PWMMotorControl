@@ -157,7 +157,9 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
  */
 void CarPWMMotorControl::setDefaultsForFixedDistanceDriving() {
     rightCarMotor.setDefaultsForFixedDistanceDriving();
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
     leftCarMotor.setDefaultsForFixedDistanceDriving();
+#endif
 }
 
 /**
@@ -165,6 +167,10 @@ void CarPWMMotorControl::setDefaultsForFixedDistanceDriving() {
  *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
 void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, int8_t aSpeedPWMCompensationRight) {
+#if defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
+    rightCarMotor.setDriveSpeedPWM(aDriveSpeedPWM);
+    (void) aSpeedPWMCompensationRight;
+#else
     if (aSpeedPWMCompensationRight >= 0) {
         rightCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, aSpeedPWMCompensationRight);
         leftCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, 0);
@@ -172,6 +178,7 @@ void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpee
         rightCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, 0);
         leftCarMotor.setDriveSpeedAndSpeedCompensationPWM(aDriveSpeedPWM, -aSpeedPWMCompensationRight);
     }
+#endif
 }
 
 /**
@@ -179,7 +186,7 @@ void CarPWMMotorControl::setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpee
  *  If negative, -value is added to the compensation value the left motor, or subtracted from the right motor value.
  */
 void CarPWMMotorControl::setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight) {
-
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
     if (aSpeedPWMCompensationRight >= 0) {
         rightCarMotor.setSpeedPWMCompensation(aSpeedPWMCompensationRight);
         leftCarMotor.setSpeedPWMCompensation(0);
@@ -187,6 +194,9 @@ void CarPWMMotorControl::setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRig
         rightCarMotor.setSpeedPWMCompensation(0);
         leftCarMotor.setSpeedPWMCompensation(-aSpeedPWMCompensationRight);
     }
+#else
+    (void) aSpeedPWMCompensationRight;
+#endif
 }
 
 /**
@@ -196,6 +206,7 @@ void CarPWMMotorControl::setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRig
  *  If negative, -value is added to the compensation value of the left motor, or subtracted from the right motor value.
  */
 void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta) {
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
     uint8_t tLeftCarMotorSpeedPWMCompensation = leftCarMotor.SpeedPWMCompensation;
     uint8_t tRightCarMotorSpeedPWMCompensation = rightCarMotor.SpeedPWMCompensation;
     if (aSpeedPWMCompensationRightDelta > 0) {
@@ -216,20 +227,44 @@ void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensation
     rightCarMotor.setSpeedPWMCompensation(tRightCarMotorSpeedPWMCompensation);
 
     PWMDcMotor::MotorControlValuesHaveChanged = true;
+#else
+    (void) aSpeedPWMCompensationRightDelta;
+#endif
 }
 
 void CarPWMMotorControl::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     rightCarMotor.setDriveSpeedPWM(aDriveSpeedPWM);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
     leftCarMotor.setDriveSpeedPWM(aDriveSpeedPWM);
+#endif
+}
+
+void CarPWMMotorControl::setDriveSpeedPWMTo2Volt(uint16_t aBridgeSupplyMillivolt) {
+    rightCarMotor.setDriveSpeedPWMFor2Volt(aBridgeSupplyMillivolt);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
+    leftCarMotor.setDriveSpeedPWMFor2Volt(aBridgeSupplyMillivolt);
+#endif
+}
+
+void CarPWMMotorControl::setDriveSpeedPWMTo2Volt(float aBridgeSupplyVoltage) {
+    rightCarMotor.setDriveSpeedPWMFor2Volt(aBridgeSupplyVoltage);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
+    leftCarMotor.setDriveSpeedPWMFor2Volt(aBridgeSupplyVoltage);
+#endif
 }
 
 /*
+ * Checks speed and direction and stops car if required
  * @return true if direction has changed and motor has stopped
  */
 bool CarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
     bool tReturnValue = false;
     if (CarDirection != aRequestedDirection) {
+#if defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
+        uint8_t tMaxRequestedSpeedPWM = rightCarMotor.RequestedSpeedPWM;
+#else
         uint8_t tMaxRequestedSpeedPWM = max(rightCarMotor.RequestedSpeedPWM, leftCarMotor.RequestedSpeedPWM);
+#endif
         if (tMaxRequestedSpeedPWM > 0) {
             /*
              * Direction change requested but motor(s) still running-> first stop motor(s)
@@ -257,11 +292,11 @@ bool CarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequestedDirecti
  *  Direct motor control, no state or flag handling
  */
 void CarPWMMotorControl::setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
+    checkAndHandleDirectionChange(aRequestedDirection);
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
-    setDirection(aRequestedDirection);
+    setDirection(aRequestedDirection); // sets direction for all 4 motors
     rightCarMotor.setSpeedPWM(aRequestedSpeedPWM);
 #else
-    checkAndHandleDirectionChange(aRequestedDirection);
     rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
     leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
 #endif
@@ -271,7 +306,9 @@ void CarPWMMotorControl::setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uin
  */
 void CarPWMMotorControl::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
     rightCarMotor.changeSpeedPWM(aRequestedSpeedPWM);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
     leftCarMotor.changeSpeedPWM(aRequestedSpeedPWM);
+#endif
 }
 
 /*
@@ -279,27 +316,33 @@ void CarPWMMotorControl::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
  * @param aLeftRightSpeedPWM if positive, this value is subtracted from the left motor value, if negative subtracted from the right motor value
  */
 void CarPWMMotorControl::setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
-        int8_t aLeftRightSpeedPWMDelta) {
+        int8_t aSpeedPWMCompensationRightDelta) {
     checkAndHandleDirectionChange(aRequestedDirection);
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-    EncoderMotor *tMotorWithModifiedSpeedPWM;
+#if defined(CAR_HAS_4_MECANUM_WHEELS) // We assume, that all motors share the same PWM pin
+    setDirection(aRequestedDirection); // sets direction for all 4 motors
+    rightCarMotor.setSpeedPWM(aRequestedSpeedPWM);
+    (void) aSpeedPWMCompensationRightDelta;
 #else
+#  if defined(USE_ENCODER_MOTOR_CONTROL)
+    EncoderMotor *tMotorWithModifiedSpeedPWM;
+#  else
     PWMDcMotor *tMotorWithModifiedSpeedPWM;
-#endif
-    if (aLeftRightSpeedPWMDelta >= 0) {
+#  endif
+    if (aSpeedPWMCompensationRightDelta >= 0) {
         rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
         tMotorWithModifiedSpeedPWM = &leftCarMotor;
     } else {
-        aLeftRightSpeedPWMDelta = -aLeftRightSpeedPWMDelta;
+        aSpeedPWMCompensationRightDelta = -aSpeedPWMCompensationRightDelta;
         leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
         tMotorWithModifiedSpeedPWM = &rightCarMotor;
     }
 
-    if (aRequestedSpeedPWM >= aLeftRightSpeedPWMDelta) {
-        tMotorWithModifiedSpeedPWM->setSpeedPWMAndDirection(aRequestedSpeedPWM - aLeftRightSpeedPWMDelta, aRequestedDirection);
+    if (aRequestedSpeedPWM >= aSpeedPWMCompensationRightDelta) {
+        tMotorWithModifiedSpeedPWM->setSpeedPWMAndDirection(aRequestedSpeedPWM - aSpeedPWMCompensationRightDelta, aRequestedDirection);
     } else {
         tMotorWithModifiedSpeedPWM->setSpeedPWMAndDirection(0, aRequestedDirection);
     }
+#endif
 }
 
 /*
@@ -418,6 +461,14 @@ void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
 void CarPWMMotorControl::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
     rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM);
     leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM);
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    if (aRequestedSpeedPWM < 0) {
+        aRequestedSpeedPWM = -aRequestedSpeedPWM;
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_BACKWARD);
+    } else {
+        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_FORWARD);
+    }
+#endif
 }
 
 uint8_t CarPWMMotorControl::getCarDirection() {
@@ -426,12 +477,16 @@ uint8_t CarPWMMotorControl::getCarDirection() {
 
 void CarPWMMotorControl::readMotorValuesFromEeprom() {
     leftCarMotor.readMotorValuesFromEeprom(0);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     rightCarMotor.readMotorValuesFromEeprom(1);
+#endif
 }
 
 void CarPWMMotorControl::writeMotorValuesToEeprom() {
     leftCarMotor.writeMotorValuesToEeprom(0);
+#if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     rightCarMotor.writeMotorValuesToEeprom(1);
+#endif
 }
 
 /*
@@ -441,6 +496,10 @@ void CarPWMMotorControl::writeMotorValuesToEeprom() {
 void CarPWMMotorControl::stop(uint8_t aStopMode) {
     rightCarMotor.stop(aStopMode);
     leftCarMotor.stop(aStopMode);
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    backRightCarMotor.stop(aStopMode);
+    backLeftCarMotor.stop(aStopMode);
+#endif
     CarDirection = DIRECTION_STOP;
 }
 
@@ -450,6 +509,10 @@ void CarPWMMotorControl::stop(uint8_t aStopMode) {
 void CarPWMMotorControl::setStopMode(uint8_t aStopMode) {
     rightCarMotor.setStopMode(aStopMode);
     leftCarMotor.setStopMode(aStopMode);
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    backRightCarMotor.setStopMode(aStopMode);
+    backLeftCarMotor.setStopMode(aStopMode);
+#endif
 }
 
 void CarPWMMotorControl::resetEncoderControlValues() {
@@ -541,7 +604,7 @@ bool CarPWMMotorControl::updateMotors() {
 #  if !defined(USE_ENCODER_MOTOR_CONTROL)
 #    if !defined(DO_NOT_SUPPORT_RAMP)
             if (rightCarMotor.MotorRampState >= MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
-                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) // no START and STOPPED
+                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) // no START and STOPPED handled here
 #    endif
             {
                 unsigned int tBrakingDistanceMillimeter = getBrakingDistanceMillimeter();
@@ -553,7 +616,7 @@ bool CarPWMMotorControl::updateMotors() {
                 Serial.print(F(" St="));
                 Serial.print(rightCarMotor.MotorRampState);
                 Serial.print(F(" Ns="));
-                Serial.println(rightCarMotor.CompensatedSpeedPWM);
+                Serial.println(rightCarMotor.CurrentCompensatedSpeedPWM);
 #endif
                 if (CarDistanceMillimeterFromIMU >= CarRequestedDistanceMillimeter) {
                     CarRequestedDistanceMillimeter = 0;
@@ -578,13 +641,21 @@ bool CarPWMMotorControl::updateMotors() {
          * In case of IMU distance driving only ramp up and down are managed by these calls
          */
         tReturnValue = rightCarMotor.updateMotor();
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
         tReturnValue |= leftCarMotor.updateMotor();
         rightCarMotor.synchronizeRampDown(&leftCarMotor);
+#  endif
     }
 
 #else // USE_MPU6050_IMU
     bool tReturnValue = rightCarMotor.updateMotor();
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     tReturnValue |= leftCarMotor.updateMotor();
+#  else
+    if(!tReturnValue && rightCarMotor.MotorPWMHasChanged) {
+        stop(); // stop all other motors too, if right car motor was just stopped
+    }
+#  endif
 #endif // USE_MPU6050_IMU
 
     return tReturnValue;;
@@ -610,13 +681,21 @@ void CarPWMMotorControl::delayAndUpdateMotors(unsigned int aDelayMillis) {
 void CarPWMMotorControl::startRampUp(uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
     rightCarMotor.startRampUp(aRequestedDirection);
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     leftCarMotor.startRampUp(aRequestedDirection);
+#else
+    setDirection(aRequestedDirection); // set direction for all other motors too
+#endif
 }
 
 void CarPWMMotorControl::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
     rightCarMotor.setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     leftCarMotor.setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+#else
+    setDirection(aRequestedDirection); // set direction for all other motors too
+#endif
 }
 
 /*
@@ -626,7 +705,12 @@ void CarPWMMotorControl::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t
 void CarPWMMotorControl::waitForDriveSpeedPWM(void (*aLoopCallback)(void)) {
 #if !defined(DO_NOT_SUPPORT_RAMP)
     while (updateMotors(aLoopCallback)
-            && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE || leftCarMotor.MotorRampState != MOTOR_STATE_DRIVE)) {
+#  if defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
+            && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE))
+#  else
+            && (rightCarMotor.MotorRampState != MOTOR_STATE_DRIVE || leftCarMotor.MotorRampState != MOTOR_STATE_DRIVE))
+#  endif
+    {
         ;
     }
 #else
@@ -674,7 +758,7 @@ void CarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, u
     setDirection(aRequestedDirection); // this sets the direction for all the other motors
 #  else
     leftCarMotor.startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
-#endif
+#  endif
 #endif
 }
 
@@ -710,8 +794,7 @@ void CarPWMMotorControl::stopAndWaitForIt(void (*aLoopCallback)(void)) {
         return;
     }
 
-    rightCarMotor.startRampDown();
-    leftCarMotor.startRampDown();
+    startRampDown();
     /*
      * blocking wait for stop
      */
@@ -722,11 +805,17 @@ void CarPWMMotorControl::startRampDown() {
     if (isStopped()) {
         return;
     }
+#if defined(DO_NOT_SUPPORT_RAMP)
+    stop(STOP_MODE_KEEP);
+#else
     /*
      * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE to MOTOR_STATE_RAMP_DOWN
      */
     rightCarMotor.startRampDown();
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     leftCarMotor.startRampDown();
+#  endif
+#endif
 }
 
 /*
@@ -743,12 +832,20 @@ bool CarPWMMotorControl::isState(uint8_t aState) {
     (void) aState;
     return true;
 #else
+#  if defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
+    return (rightCarMotor.MotorRampState == aState);
+#  else
     return (rightCarMotor.MotorRampState == aState && leftCarMotor.MotorRampState == aState);
+#  endif
 #endif
 }
 
 bool CarPWMMotorControl::isStopped() {
+#if defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
+    return (rightCarMotor.RequestedSpeedPWM == 0);
+#else
     return (rightCarMotor.RequestedSpeedPWM == 0 && leftCarMotor.RequestedSpeedPWM == 0);
+#endif
 }
 
 /*
@@ -759,8 +856,12 @@ bool CarPWMMotorControl::isStateRamp() {
 #if defined(DO_NOT_SUPPORT_RAMP)
     return false;
 #else
+#  if defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
+    return (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP);
+#  else
     return (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP
             || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP);
+#  endif
 #endif
 }
 
@@ -773,10 +874,10 @@ void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillim
 }
 
 /**
- * Set distances and SpeedPWM for 2 motors to turn the requested angle
+ * Set distances and SpeedPWM (DriveSpeedPWM or DEFAULT_START_SPEED_PWM) for 2 motors to turn the requested angle
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
- * @param  aUseSlowSpeed true -> use slower SpeedPWM (0.5 times DriveSpeedPWM) instead of DriveSpeedPWM for rotation to be more exact
+ * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact
  */
 char sTurnDirectionCharArray[3] = { 'F', 'B', 'P' };
 void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed) {
@@ -791,10 +892,10 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
 
     if(aTurnDirection == TURN_FORWARD){
         tDirection |= DIRECTION_FORWARD;
-        aRotationDegrees *=2; // we need twice the time of an in place turn
+        aRotationDegrees = (aRotationDegrees * 67) / 32;   // We need twice the time of an in place turn
     } else if(aTurnDirection == TURN_BACKWARD){
         tDirection |= DIRECTION_BACKWARD;
-        aRotationDegrees *=2;
+        aRotationDegrees = (aRotationDegrees * 67) / 32;   // We need twice the time of an in place turn
     }
     setDirection(tDirection | DIRECTION_TURN);
 
@@ -803,6 +904,7 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
         tTurnSpeed = DEFAULT_START_SPEED_PWM;
     }
     unsigned int tDistanceMillimeter = (aRotationDegrees * FactorDegreeToMillimeter) + 0.5;
+    // Use direction set by setDirection() above
     rightCarMotor.startGoDistanceMillimeter(tTurnSpeed, tDistanceMillimeter, rightCarMotor.getDirection());
 #else // CAR_HAS_4_MECANUM_WHEELS
 
@@ -942,7 +1044,9 @@ unsigned int CarPWMMotorControl::getDistanceMillimeter() {
 #else
 void CarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond) {
     rightCarMotor.setMillimeterPerSecondForFixedDistanceDriving(aMillimeterPerSecond);
+#  if !defined(CAR_HAS_4_MECANUM_WHEELS) // we assume, that all motors share the same PWM pin
     leftCarMotor.setMillimeterPerSecondForFixedDistanceDriving(aMillimeterPerSecond);
+#  endif
 }
 
 #endif // USE_ENCODER_MOTOR_CONTROL

@@ -42,7 +42,6 @@
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED  // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
 #define USE_SOFT_I2C_MASTER           // Saves 1044 bytes program memory and 99 bytes RAM compared with Arduino Wire
-//#define DISABLE_AUTO_OFFSET_RECALCULATION // saves around 580 bytes program space
 #include "RobotCarPinDefinitionsAndMore.h"
 
 #include "CarPWMMotorControl.h" // This helps the Eclipse indexer
@@ -53,7 +52,8 @@
 
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#include "ADCUtils.h"
+#define VOLTAGE_DIVIDER_DIVISOR   11.0  // VIN/11 by 1MOhm to VIN and 100kOhm to ground.
+#include "ADCUtils.hpp"
 #define VIN_11TH_IN_CHANNEL         2 // = A2
 uint16_t readVINVoltageMilliVolt();
 float sVINVoltage;
@@ -105,7 +105,8 @@ void loop() {
     Serial.print(F("Set speed to DEFAULT_DRIVE_SPEED_PWM="));
     Serial.println(DEFAULT_DRIVE_SPEED_PWM);
 #endif
-    uint8_t sSpeedPWM = DEFAULT_DRIVE_SPEED_PWM;
+//    uint8_t sSpeedPWM = DEFAULT_DRIVE_SPEED_PWM;
+    uint8_t sSpeedPWM = DEFAULT_DRIVE_SPEED_PWM *2;
 
     uint8_t tLoopIndex = 0;
 
@@ -226,7 +227,7 @@ void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aW
 
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
             uint16_t tMillivolt = readVINVoltageMilliVolt();
-            uint8_t tMotorPWM = RobotCarPWMMotorControl.rightCarMotor.CompensatedSpeedPWM;
+            uint8_t tMotorPWM = RobotCarPWMMotorControl.rightCarMotor.CurrentCompensatedSpeedPWM;
             uint16_t tMotorDezivolt = (((uint32_t) tMillivolt * tMotorPWM) + 12800) / 25600L;
             Serial.print(tMotorDezivolt);
             Serial.print(' ');
@@ -268,7 +269,7 @@ void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aW
 
 #if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 uint16_t readVINVoltageMilliVolt() {
-    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
+    uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUXAndReference(VIN_11TH_IN_CHANNEL, INTERNAL);
     return ((ADC_INTERNAL_REFERENCE_MILLIVOLT * 11 * (uint32_t) tVIN) + 512) / 1023;
 }
 #endif // MONITOR_VIN_VOLTAGE

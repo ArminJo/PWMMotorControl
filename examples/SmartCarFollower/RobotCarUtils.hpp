@@ -26,6 +26,13 @@
 #define _ROBOT_CAR_UTILS_HPP
 
 #include "RobotCarUtils.h"
+#include "CarPWMMotorControl.h"
+
+#if defined(MONITOR_VIN_VOLTAGE)
+#include "ADCUtils.hpp"
+uint16_t sVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
+float sVINVoltage;
+#endif
 
 void printConfigInfo() {
 #if defined(BASIC_CONFIG_NAME)
@@ -53,7 +60,8 @@ void initRobotCarPWMMotorControl() {
 #endif
 }
 
-#if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#if defined(CAR_HAS_DISTANCE_SENSOR)
+#include "Distance.h"
 unsigned int getDistanceAndPlayTone() {
     /*
      * Get distance
@@ -76,6 +84,42 @@ unsigned int getDistanceAndPlayTone() {
 #endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
+#  if (MOTOR_PWM_PIN == 5) || (MOTOR_PWM_PIN == 6)
+#define NUMBER_OF_VIN_SAMPLES   10 // Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us.
+#  else
+#define NUMBER_OF_VIN_SAMPLES   20 // Get 20 samples lasting 2060 us, which is almost the PWM period of 2048 us.
+#  endif
+/*
+ * Read multiple samples during a PWM period
+ */
+void readVINVoltage() {
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+    // Here we have also other channels than VIN, that we convert during the loop
+    uint8_t tOldADMUX = checkAndWaitForReferenceAndChannelToSwitch(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL);
+#  endif
+    /*
+     * Here VIN is the only channel we convert.
+     * Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us.
+     */
+    sVINRawSum = readADCChannelWithReferenceMultiSamples(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL, NUMBER_OF_VIN_SAMPLES); // 10 samples
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+    checkAndWaitForReferenceAndChannelToSwitch(tOldADMUX & MASK_FOR_ADC_CHANNELS, tOldADMUX >> SHIFT_VALUE_FOR_REFERENCE);
+#  endif
+
+//    BlueDisplay1.debug("VIN Raw=", tVINRaw);
+
+// assume resistor network of 1MOhm / 100kOhm (divider by 11)
+// tVIN * 0,01182795
+#  if defined(VIN_VOLTAGE_CORRECTION)
+    // we have a diode (requires 0.8 to 0.9 volt) between LIPO and VIN
+    sVINVoltage = (sVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023)) + VIN_VOLTAGE_CORRECTION;
+#  else
+    sVINVoltage = sVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023);
+#  endif
+#endif // defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+}
+
 /*
  * Check VIN every 2 seconds (PRINT_VOLTAGE_PERIOD_MILLIS) and print if changed
  * Resolution is 10 mV
@@ -84,42 +128,20 @@ void checkVinPeriodicallyAndPrintIfChanged() {
 #  if defined(ESP32)
     // On ESP32 currently not supported
 #  else
+    static uint16_t sLastVINRawSumPrinted;
     static uint32_t sMillisOfLastVCCInfo;
-    static uint16_t  sLastVINRaw;
     uint32_t tMillis = millis();
 
     if (tMillis - sMillisOfLastVCCInfo >= PRINT_VOLTAGE_PERIOD_MILLIS) {
         sMillisOfLastVCCInfo = tMillis;
-#    if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-        // We need to change ADC channel and reference from the values of reading IR distance sensor, so we have to wait for the signal to settle
-        uint16_t tVINRaw = waitAndReadADCChannelWithReferenceAndRestoreADMUX(VIN_11TH_IN_CHANNEL, INTERNAL);
-#    else
-        // Here we have no IR distance sensor, so we can keep it simple
-        analogReference(INTERNAL);
-        uint16_t tVINRaw = analogRead(PIN_VIN_11TH_IN); // this switches the reference and ADC-mux
-        // to be tested
-//        delay(10);                                      // wait to settle signal
-//        tVINRaw = analogRead(PIN_VIN_11TH_IN);
-#    endif
-//        Serial.print(F("VINRaw="));
-//        Serial.println(tVINRaw);
+        readVINVoltage();
         /*
-         * Compute and print if changed
+         * Check if voltage has changed (44 bytes)
          */
-        if(abs(sLastVINRaw - tVINRaw) > 2) {
-            sLastVINRaw = tVINRaw;
-            /*
-             * Assume resistor network of 1MOhm / 100kOhm (divider by 11)
-             * tVIN = tVINRaw * 0,01182795 => resolution is 0.01 volt
-             */
-#    if defined(VIN_VOLTAGE_CORRECTION)
-            // we have a diode  which requires around 0.8 volt between LIPO and VIN
-            float tVIN = (tVINRaw * ((11.0 * 1.1) / 1023)) + VIN_VOLTAGE_CORRECTION;
-#    else
-            float tVIN = tVINRaw * ((11.0 * 1.1) / 1023);
-#    endif
+        if(abs(sLastVINRawSumPrinted - sVINRawSum) > NUMBER_OF_VIN_SAMPLES) {
+            sLastVINRawSumPrinted = sVINRawSum;
             Serial.print(F("VIN="));
-            Serial.print(tVIN);
+            Serial.print(sVINVoltage);
             Serial.println(F("V"));
         }
     }

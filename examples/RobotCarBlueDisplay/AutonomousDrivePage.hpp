@@ -257,6 +257,9 @@ void startAutonomousDrivePage(void) {
 #endif
 
     drawAutonomousDrivePage();
+    if(!isCalibrated) {
+        calibrateDriveSpeedPWM();
+    }
 }
 
 // currently not used
