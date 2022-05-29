@@ -405,4 +405,3 @@ __attribute__((optimize("-Os"))) void printTextSectionAddresses() {
 }
 
 #endif // _AVR_TRACING_HPP
-#pragma once

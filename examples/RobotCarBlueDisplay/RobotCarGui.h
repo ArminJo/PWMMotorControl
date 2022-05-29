@@ -86,6 +86,7 @@ void insertToPath(int aLength, int aDegree, bool aAddEntry);
 // from AutonomousDrivePage
 extern BDButton TouchButtonStep;
 extern BDButton TouchButtonScanSpeed;
+extern BDButton TouchButtonDistanceFeedbackMode;
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDButton TouchButtonScanMode;
 #endif
@@ -229,7 +230,7 @@ void delayAndLoopGUI(uint16_t aDelayMillis);
  */
 #if defined(CAR_HAS_DISTANCE_SERVO)
 void drawForwardDistancesInfos();
-void clearPrintedForwardDistancesInfos();
+void clearPrintedForwardDistancesInfos(bool aDoFullClear);
 void drawCollisionDecision(int aDegreesToTurn, uint8_t aLengthOfVector, bool aDoClearVector);
 #endif
 

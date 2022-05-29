@@ -274,4 +274,3 @@ void toggleDistanceScanSpeed() {
 
 #endif
 #endif // _ROBOT_CAR_IR_COMMANDS_HPP
-#pragma once

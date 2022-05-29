@@ -60,7 +60,11 @@
 #endif
 
 //#define TRACE
-//#define DEBUG
+#if defined(DEBUG)
+#define LOCAL_DEBUG
+#else
+//#define LOCAL_DEBUG // This enables debug output only for this file - only for development
+#endif
 
 char sDirectionCharArray[3] = { 'S', 'F', 'B' };
 const char *sDirectionStringArray[3] = { "stop", "forward", "backward" };
@@ -280,6 +284,11 @@ float PWMDcMotor::getMotorVoltageforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t 
     return aSpeedPWM * ((aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT) / (1000.0 * MAX_SPEED_PWM));
 }
 
+uint16_t PWMDcMotor::getMotorVoltageMillivoltforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt) {
+    // if aFullBridgeInputVoltageMillivolt is constant, this can be optimized well
+    return ((uint32_t) (aSpeedPWM * ((aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT))) / MAX_SPEED_PWM);
+}
+
 float PWMDcMotor::getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage) {
     return aSpeedPWM * ((aFullBridgeInputVoltage - FULL_BRIDGE_LOSS_MILLIVOLT) / (1000.0 * MAX_SPEED_PWM));
 }
@@ -391,12 +400,18 @@ void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
  * Signed speed
  */
 void PWMDcMotor::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
+    uint8_t tDirection;
     if (aRequestedSpeedPWM < 0) {
         aRequestedSpeedPWM = -aRequestedSpeedPWM;
-        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_BACKWARD);
+        tDirection = DIRECTION_BACKWARD;
     } else {
-        setSpeedPWMAndDirection(aRequestedSpeedPWM, DIRECTION_FORWARD);
+        tDirection = DIRECTION_FORWARD;
     }
+
+    if (aRequestedSpeedPWM > MAX_SPEED_PWM) {
+        aRequestedSpeedPWM = MAX_SPEED_PWM;
+    }
+    setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
 }
 
 /*
@@ -482,17 +497,37 @@ void PWMDcMotor::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
 /*
  * Formula is: 2VPWM = (2000mV / tBridgeMillivolt) * 255
  */
-void PWMDcMotor::setDriveSpeedPWMFor2Volt(uint16_t aBridgeSupplyMillivolt) {
-    uint16_t tBridgeMillivolt = aBridgeSupplyMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT;
+void PWMDcMotor::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
+    uint16_t tBridgeMillivolt = aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT;
     DriveSpeedPWMFor2Volt = (2000 * MAX_SPEED_PWM) / tBridgeMillivolt;
     DriveSpeedPWM = DriveSpeedPWMFor2Volt;
     MotorControlValuesHaveChanged = true;
 }
-void PWMDcMotor::setDriveSpeedPWMFor2Volt(float aBridgeSupplyVoltage) {
-    float tBridgeVolt = aBridgeSupplyVoltage - (((float) FULL_BRIDGE_LOSS_MILLIVOLT) / 1000);
+void PWMDcMotor::setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltage) {
+    float tBridgeVolt = aFullBridgeInputVoltage - (((float) FULL_BRIDGE_LOSS_MILLIVOLT) / 1000);
     DriveSpeedPWMFor2Volt = (2 * MAX_SPEED_PWM) / tBridgeVolt;
     DriveSpeedPWM = DriveSpeedPWMFor2Volt;
     MotorControlValuesHaveChanged = true;
+}
+
+/*
+ * Can be used to get real value for DEFAULT_START_SPEED_PWM
+ */
+uint8_t PWMDcMotor::getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt) {
+    uint16_t tSpeedPWM = ((uint32_t) (aSpeedPWM * FULL_BRIDGE_OUTPUT_MILLIVOLT))
+            / (aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT);
+    if (tSpeedPWM > MAX_SPEED_PWM) {
+        return MAX_SPEED_PWM;
+    }
+    return tSpeedPWM;
+}
+uint8_t PWMDcMotor::getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage) {
+    uint16_t tSpeedPWM = ((uint32_t) (aSpeedPWM * FULL_BRIDGE_OUTPUT_MILLIVOLT))
+            / (1000.0 * (aFullBridgeInputVoltage - FULL_BRIDGE_LOSS_MILLIVOLT));
+    if (tSpeedPWM > MAX_SPEED_PWM) {
+        return MAX_SPEED_PWM;
+    }
+    return tSpeedPWM;
 }
 
 /*
@@ -872,8 +907,8 @@ void PWMDcMotor::printValues(Print *aSerial) {
     aSerial->println();
 }
 
-const char StringNot[] PROGMEM = { " not" };
-const char StringDefined[] PROGMEM = { " defined" };
+const char StringNot[] PROGMEM = {" not"};
+const char StringDefined[] PROGMEM = {" defined"};
 
 void PWMDcMotor::printCompileOptions(Print *aSerial) {
     aSerial->println();
@@ -929,5 +964,7 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
 //    }
 //}
 
+#if defined(LOCAL_DEBUG)
+#undef LOCAL_DEBUG
+#endif
 #endif // _PWM_DC_MOTOR_HPP
-#pragma once

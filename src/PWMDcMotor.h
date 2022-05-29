@@ -38,21 +38,42 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "1.9.0"
+#define VERSION_PWMMOTORCONTROL "1.9.1"
 #define VERSION_PWMMOTORCONTROL_MAJOR 1
 #define VERSION_PWMMOTORCONTROL_MINOR 9
+#define VERSION_PWMMOTORCONTROL_PATCH 1
 // The change log is at the bottom of the file
+
+/*
+ * Macro to convert 3 version parts into an integer
+ * To be used in preprocessor comparisons, such as #if VERSION_SERVO_EASING_HEX >= VERSION_HEX_VALUE(3, 0, 0)
+ */
+#define VERSION_HEX_VALUE(major, minor, patch) ((major << 16) | (minor << 8) | (patch))
+#define VERSION_PWMMOTORCONTROL_HEX  VERSION_HEX_VALUE(VERSION_PWMMOTORCONTROL_MAJOR, VERSION_PWMMOTORCONTROL_MINOR, VERSION_PWMMOTORCONTROL_PATCH)
 
 #define MILLIS_IN_ONE_SECOND            1000L
 #define MILLIMETER_IN_ONE_CENTIMETER    10L
 
 /*
- * Activate this, if you have encoder interrupts attached at pin 2 and 3
- * and want to use the methods of the EncoderMotor class for fixed distance / closed loop driving.
- * Enabling it will overload some PWMDCMotor class functions and force the usage of the EncoderMotor class in CarPWMMotorControl.
+ * Parameters for PWMMotorControl
  */
-//#define USE_ENCODER_MOTOR_CONTROL
-//#define USE_ADAFRUIT_MOTOR_SHIELD // Activate this if you use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+//Enabling it will overload some PWMDCMotor class functions and force the usage of the EncoderMotor class in CarPWMMotorControl.
+//#define USE_ENCODER_MOTOR_CONTROL       // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+//#define USE_ADAFRUIT_MOTOR_SHIELD       // Use Adafruit Motor Shield v2 with 2xTB6612 connected by I2C instead of external TB6612 or L298 breakout board.
+//#define USE_MPU6050_IMU                 // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
+//#define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+//#define VIN_1_LI_ION                    // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
+//#define FULL_BRIDGE_INPUT_MILLIVOLT 6000// Default. For 4 x AA batteries (6 volt).
+//#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+//#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage / motors default speed. Default value is 2.0 volt.
+//#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+//#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the encoder function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+
+//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
+#if !defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
+#define _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // to avoid double negations
+#endif
+
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
 #  if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)
@@ -60,15 +81,6 @@
 #  endif
 #endif
 
-//#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
-#if !defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
-#define _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // to avoid double negations
-#endif
-
-//#define DO_NOT_SUPPORT_RAMP // saves 320 bytes programming space
-
-//#define VIN_2_LI_ION // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LI_ION // If you use a mosfet bridge, 1 Li-ion cell may be sufficient.
 /*
  * Helper macro for getting a macro definition as string
  */
@@ -80,23 +92,20 @@
 #define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"
 
 /*
- * Propagate debug level
+ * Propagate debug level, we have no INFO output in the sources
  */
 #if defined(TRACE)    // Information you need to understand details of a function or if you hunt a bug.
 #  if !defined(DEBUG)
 #define DEBUG   // Information need to understand the operating of your program. E.g. function calls and values of control variables.
 #  endif
 #endif
-#if defined(DEBUG)
-#  if !defined(INFO)
-#define INFO    // Information you want to see in regular operation to see what the program is doing. E.g. "START ../src/LightToTone.cpp Version 1.2 from Dec 31 2019" or "Now playing Muppets melody".
-#  endif
-#endif
 
 /********************************************
  * Car and motor driver characteristics
  ********************************************/
+#if !defined(DEFAULT_CIRCUMFERENCE_MILLIMETER)
 #define DEFAULT_CIRCUMFERENCE_MILLIMETER     220
+#endif
 
 #if !defined(FULL_BRIDGE_INPUT_MILLIVOLT)
 #  if defined(VIN_2_LI_ION)
@@ -137,7 +146,7 @@
 
 // Default values - used if EEPROM values are invalid or not available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
-// At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt, 68 for 7.4 volt
+// Corresponds to 2 volt. At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt VCC, 68 for 7.4 volt VCC
 #define DEFAULT_DRIVE_SPEED_PWM             (((DEFAULT_DRIVE_MILLIVOLT * MAX_SPEED_PWM) + (FULL_BRIDGE_OUTPUT_MILLIVOLT / 2)) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #endif
 
@@ -162,8 +171,8 @@
 #define DEFAULT_MILLIMETER_PER_SECOND            200 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
 #define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  75 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #  else
-#define DEFAULT_MILLIMETER_PER_SECOND            220 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  20  // 15 to 20, constant value for the formula below
+#define DEFAULT_MILLIMETER_PER_SECOND            190 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  85  // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #define SPEED_PER_VOLT                           130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
 #  endif
 #endif
@@ -209,33 +218,41 @@
  ********************************************/
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
 #define DIRECTION_STOP                  0x00
-#define STOP_MODE_BRAKE                 0x00
 #define DIRECTION_FORWARD               0x01
 #define DIRECTION_BACKWARD              0x02
-#define STOP_MODE_RELEASE               0x03
 #define DIRECTION_MASK                  (DIRECTION_FORWARD | DIRECTION_BACKWARD)
 #define oppositeDIRECTION(aDirection)   (aDirection ^ DIRECTION_MASK) // invert every bit
-
-#define STOP_MODE_KEEP                  1 // Take DefaultStopMode used as parameter only for stop()
+/*
+ * Stop mode definitions
+ */
+#define STOP_MODE_BRAKE                 0x00
+#define STOP_MODE_RELEASE               0x03
 #define DEFAULT_STOP_MODE               STOP_MODE_BRAKE
+#define STOP_MODE_KEEP                  1 // Take DefaultStopMode - used only as parameter for stop()
+
+/*
+ * Extension for mecanum wheel movements
+ * They are coded as bit positions in the upper nibble
+ */
+#define DIRECTION_STRAIGHT                  0x00
+#define DIRECTION_LEFT                      0x10
+#define DIRECTION_DIAGONAL_LEFT_FORWARD     0x11
+#define DIRECTION_DIAGONAL_LEFT_BACKWARD    0x12
+#define DIRECTION_RIGHT                     0x20
+#define DIRECTION_DIAGONAL_RIGHT_FORWARD    0x21
+#define DIRECTION_DIAGONAL_RIGHT_BACKWARD   0x22
+#define DIRECTION_LEFT_RIGHT_MASK           (DIRECTION_LEFT | DIRECTION_RIGHT)
+#define oppositeSIDE(aSide)                 (aSide ^ DIRECTION_LEFT_RIGHT_MASK)
+#define DIRECTION_TURN                      0x40
+#define DIRECTION_TURN_LEFT                 0x50
+#define DIRECTION_TURN_RIGHT                0x60
+#define DIRECTION_TURN_MASK                 DIRECTION_TURN
+#define DIRECTION_NOT_TURN                  0x00
 
 #if defined(DEBUG)
 extern char sDirectionCharArray[3];
 #endif
 extern const char *sDirectionStringArray[3];
-
-/*
- * Extension for mecanum wheel movements
- * They are coded as bit positions
- */
-#define DIRECTION_STRAIGHT          0x00
-#define DIRECTION_LEFT              0x10
-#define DIRECTION_RIGHT             0x20
-#define DIRECTION_LEFT_RIGHT_MASK   (DIRECTION_LEFT | DIRECTION_RIGHT)
-#define oppositeSIDE(aSide) (aSide ^ DIRECTION_LEFT_RIGHT_MASK)
-#define DIRECTION_TURN              0x40
-#define DIRECTION_TURN_MASK         DIRECTION_TURN
-#define DIRECTION_NOT_TURN          0x00
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
@@ -309,7 +326,10 @@ public:
     void setSpeedPWMCompensation(uint8_t aSpeedPWMCompensation);
 
     static float getMotorVoltageforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt);
+    static uint16_t getMotorVoltageMillivoltforPWMAndMillivolt(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt);
     static float getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage);
+    static uint8_t getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt);
+    static uint8_t getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage);
     uint8_t getDirection();
     static void printDirectionString(Print *aSerial, uint8_t aDirection);
 
@@ -323,8 +343,8 @@ public:
     void setDriveSpeedAndSpeedCompensationPWM(uint8_t aDriveSpeedPWM, uint8_t aSpeedPWMCompensation = 0);
     void setDefaultsForFixedDistanceDriving();
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
-    void setDriveSpeedPWMFor2Volt(uint16_t aBridgeSupplyMillivolt);
-    void setDriveSpeedPWMFor2Volt(float aBridgeSupplyVoltage);
+    void setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltage);
     void updateDriveSpeedPWM(uint8_t aDriveSpeedPWM); // if running update also current speed
 
     void startRampUp(uint8_t aRequestedDirection);
@@ -375,7 +395,7 @@ public:
      * Start of values for EEPROM
      *********************************/
     uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance. Default is a PWM value which corresponds to 2 volt.
-    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt.
+    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt. Used to go fixed distances.
 
     /**********************************
      * End of EEPROM values
@@ -418,7 +438,13 @@ public:
 };
 
 /*
- * Version 2.0.0 - 03/2022
+ * Version 2.0.0 - 08/2022
+ *
+ * Version 1.9.1 - 05/2022
+ * - MecanumWheelCar support.
+ * - IMUCarData improved.
+ *
+ * Version 1.9.0 - 04/2022
  * - Removed all *Compensated functions, compensation now is always active.
  * - Removed StopSpeed from EepromMotorinfoStruct.
  * - Removed StartSpeed.

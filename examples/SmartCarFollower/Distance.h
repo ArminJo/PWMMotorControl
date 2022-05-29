@@ -22,12 +22,12 @@
 
 #include <Arduino.h>
 
-#if (defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)) && !defined(USE_STANDARD_SERVO_LIBRARY)
-#define USE_STANDARD_SERVO_LIBRARY // Must use standard servo library, because we have more servos and cannot use LightweightServo library
-#endif
+#include "HCSR04.h" // for DISTANCE_TIMEOUT_RESULT if Distance.h is included
 
 #if defined(CAR_HAS_SERVO)
-#  if defined(USE_STANDARD_SERVO_LIBRARY)
+#  if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+#include "LightweightServo.h" // We do not have a Servo object here
+#  else
 #    if defined(ESP32)
 #include <ESP32Servo.h>
 #    else
@@ -36,8 +36,6 @@
 #    if defined(CAR_HAS_DISTANCE_SERVO)
 extern Servo DistanceServo;
 #    endif
-#  else
-#include "LightweightServo.h" // We do not have a Servo object here
 #  endif
 #endif // defined(CAR_HAS_SERVO)
 
@@ -72,7 +70,7 @@ extern uint8_t sDistanceSourceMode;
 #define START_DEGREES       ((180 - (DEGREES_PER_STEP * STEPS_PER_SCAN)) / 2) // 9 for 18, 13,5 for 17 - we need it symmetrical in the 180 degrees range
 
 #define DISTANCE_TIMEOUT_CM                     200 // do not measure distances greater than 200 cm
-#define DISTANCE_TIMEOUT_CM_FOLLOWER            130 // do not measure and process distances greater than 130 cm
+#define DISTANCE_TIMEOUT_CM_FOLLOWER            150 // do not measure and process distances greater than 130 cm
 #define DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE    100 // do not measure and process distances greater than 100 cm
 
 #define DISTANCE_MAX_FOR_WALL_DETECTION_CM      40
@@ -112,8 +110,9 @@ struct ForwardDistancesInfoStruct {
 //    uint8_t WallLeftDistance;
 };
 extern ForwardDistancesInfoStruct sForwardDistancesInfo;
-extern unsigned int sUSDistanceCentimeter;
-extern unsigned int sIROrTofDistanceCentimeter;
+extern uint8_t sUSDistanceCentimeter;
+extern uint8_t sUSDistanceTimeoutCentimeter;
+extern uint8_t sIROrTofDistanceCentimeter;
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
 extern bool sDoSlowScan;
@@ -121,11 +120,11 @@ extern uint8_t sLastDistanceServoAngleInDegrees; // needed for optimized delay f
 #endif
 
 extern int sLastDecisionDegreesToTurnForDisplay;
-extern int sNextDegreesToTurn;
+extern int sNextRotationDegree;
 extern int sLastDegreesTurned;
 
 void initDistance();
-bool printDistanceIfChanged(Print *aSerial);
+void printDistanceIfChanged(Print *aSerial);
 unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
         bool aWaitForCurrentMeasurementToEnd = false);
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
@@ -143,10 +142,6 @@ void postProcessDistances(uint8_t aDistanceThreshold);
 int doBuiltInCollisionDetection();
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-#if defined(USE_SOFT_I2C_MASTER)
-#include "SoftI2CMasterConfig.h"
-#include "SoftI2CMaster.h"
-#endif
 #include "vl53l1x_class.h"
 extern VL53L1X sToFDistanceSensor;
 uint8_t getToFDistanceAsCentimeter();

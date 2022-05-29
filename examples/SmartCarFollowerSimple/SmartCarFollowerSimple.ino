@@ -31,18 +31,19 @@
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
-//#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
-//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
-//#define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
-//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
-
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 //#define TRACE
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
-
 
 /*
  * Speed compensation to enable driving straight ahead.
@@ -54,8 +55,8 @@
 /*
  * Values to configure the behavior of the follower
  */
-#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER 30 // If measured distance is less than this value, go backwards
-#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER 40 // If measured distance is greater than this value, go forward
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER 20 // If measured distance is less than this value, go backwards
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER 30 // If measured distance is greater than this value, go forward
 
 #if defined(ESP32)
 #include <ESP32Servo.h>
@@ -63,13 +64,13 @@
 #include <Servo.h>
 #endif
 #include "HCSR04.h"
-#include "CarPWMMotorControl.h" // helps the eclipse indexer
 #include "CarPWMMotorControl.hpp"
 
 Servo DistanceServo;
 
 void printConfigInfo();
 bool printDistanceIfChanged(unsigned int aCentimeter);
+void initRobotCarPWMMotorControl();
 
 /*
  * Start of robot car control program
@@ -81,8 +82,7 @@ void setup() {
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
     printConfigInfo();
 
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
-    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
+    initRobotCarPWMMotorControl();
     RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
 
     /*
@@ -161,6 +161,22 @@ void loop() {
     }
 
     delay(100);
+}
+
+/*
+ * Call RobotCarPWMMotorControl.init() with different sets of parameters
+ */
+void initRobotCarPWMMotorControl() {
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+    RobotCarPWMMotorControl.init();
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+    RobotCarPWMMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
+    FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
+    BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
+#else
+    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
+#endif
 }
 
 void printConfigInfo() {

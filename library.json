@@ -6,7 +6,7 @@
     "type": "git",
     "url": "https://github.com/ArminJo/PWMMotorControl"
   },
-  "version": "1.9.0",
+  "version": "1.9.1",
   "exclude": "pictures",
   "authors": {
     "name": "Armin Joachimsmeyer",

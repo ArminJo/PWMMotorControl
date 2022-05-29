@@ -213,4 +213,3 @@ void DrawPath() {
 }
 #endif // ENABLE_PATH_INFO_PAGE
 #endif // _ROBOT_CAR_PATH_INFO_PAGE_HPP
-#pragma once

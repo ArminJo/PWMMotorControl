@@ -125,6 +125,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | Enabling requires additionally 694 bytes program memory. |
 | `DO_NOT_SUPPORT_RAMP` | disabled | Enabling saves 378 bytes program memory. |
 | `DO_NOT_SUPPORT_AVERAGE_SPEED` | disabled | Enabling disables the function getAverageSpeed() and saves 44 bytes RAM per motor and 156 bytes program memory. |
+| `USE_SOFT_I2C_MASTER` | disabled | Saves up to 2110 bytes program memory and 200 bytes RAM for I2C communication compared with Arduino Wire. |
 
 ## Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.
@@ -198,6 +199,10 @@ VIN sensing
 
 # Revision History
 ### Version 2.0.0 - work in progress
+
+### Version 1.9.1 - a 2.0.0 pre release
+- MecanumWheelCar support.
+- IMUCarData improved.
 
 ### Version 1.9.0 - a 2.0.0 pre release
 - Removed all *Compensated functions, compensation now is always active.

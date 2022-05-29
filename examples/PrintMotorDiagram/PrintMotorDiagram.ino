@@ -25,7 +25,7 @@
 
 #include <Arduino.h>
 
-//#define USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR
+//#define USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR // runs motor without encoder
 
 /*
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.

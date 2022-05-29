@@ -214,4 +214,3 @@ void stopHomePage(void) {
     startStopRobotCar(false);
 }
 #endif // _ROBOT_CAR_HOME_PAGE_HPP
-#pragma once

@@ -27,11 +27,11 @@
 
 #include "Distance.h"
 
-#if defined(CAR_HAS_SERVO) && !defined(USE_STANDARD_SERVO_LIBRARY)
+#if defined(CAR_HAS_SERVO) && defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+#define DISABLE_SERVO_TIMER_AUTO_INITIALIZE // saves 70 bytes program space
 #include "LightweightServo.hpp"
 #endif
 
-#include "HCSR04.h"
 #include "pitches.h"
 
 bool sDoSlowScan = false;
@@ -42,15 +42,17 @@ uint8_t sDistanceSourceMode =  DISTANCE_SOURCE_MODE_DEFAULT;
 #endif
 
 uint8_t sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-unsigned int sUSDistanceCentimeter;
-unsigned int sIROrTofDistanceCentimeter;
-unsigned int sEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
-unsigned int sLastEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
+uint8_t sUSDistanceCentimeter;
+uint8_t sUSDistanceTimeoutCentimeter; // The value to display if sUSDistanceCentimeter == DISTANCE_TIMEOUT_RESULT
+uint8_t sIROrTofDistanceCentimeter;
+uint8_t sEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
+uint8_t sLastEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
+bool sDistanceJustChanged;
 
 ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
-#  if defined(USE_STANDARD_SERVO_LIBRARY)
+#  if !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
 Servo DistanceServo;
 #  endif
 uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
@@ -58,6 +60,9 @@ uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 needed for optimized delay 
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #  if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#undef USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE // just in case...
+#include "SoftI2CMasterConfig.h"
+#include "SoftI2CMaster.h"
 VL53L1X sToFDistanceSensor(-1, -1); // 100 kHz
 #  else
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
@@ -69,7 +74,7 @@ VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
  * This initializes the pins too
  */
 void initDistance() {
-#if defined(CAR_HAS_DISTANCE_SERVO) && defined(USE_STANDARD_SERVO_LIBRARY)
+#if defined(CAR_HAS_DISTANCE_SERVO) && !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
     DistanceServo.attach(PIN_DISTANCE_SERVO);
 #endif
 
@@ -100,10 +105,12 @@ void initDistance() {
 #endif
 }
 
+/*
+ * Get distance, optionally display it and check if tone has to be changed
+ * @return  Distance in centimeter @20 degree celsius (time in us/58.25)
+ *          0 / DISTANCE_TIMEOUT_RESULT if timeout or pins are not initialized
+ */
 unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
-    /*
-     * Get distance
-     */
     unsigned int tCentimeter = getDistanceAsCentimeter(aDistanceTimeoutCentimeter, aWaitForCurrentMeasurementToEnd);
 #if defined(USE_BLUE_DISPLAY_GUI)
 #  if defined(CAR_HAS_US_DISTANCE_SENSOR)
@@ -112,14 +119,15 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
             showIROrTofDistance();
 #  endif
-#endif
-    if (sLastEffectiveDistanceCentimeter != tCentimeter) {
-        sLastEffectiveDistanceCentimeter = tCentimeter;
+#endif // defined(USE_BLUE_DISPLAY_GUI)
+
+    if (sDistanceJustChanged) {
         /*
-         * Play tone
+         * Distance has changed here
+         * Update tone according to sDistanceFeedbackMode
          */
         if (sDistanceFeedbackMode != DISTANCE_FEEDBACK_NO_TONE) {
-            if (tCentimeter == 0) {
+            if (tCentimeter == DISTANCE_TIMEOUT_RESULT) {
                 noTone (PIN_BUZZER);
             } else {
                 int tFrequency;
@@ -157,29 +165,23 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
 
 /*
  * Print without a newline
- * @return true if distance has changed and was printed
  */
-bool printDistanceIfChanged(Print *aSerial) {
-    static unsigned int sLastPrintedDistanceCentimeter;
-
-    if (sLastPrintedDistanceCentimeter != sEffectiveDistanceCentimeter) {
-        sLastPrintedDistanceCentimeter = sEffectiveDistanceCentimeter;
-        if (sEffectiveDistanceCentimeter == 0) {
-            aSerial->print("Distance timeout ");
+void printDistanceIfChanged(Print *aSerial) {
+    if (sDistanceJustChanged) {
+        if (sEffectiveDistanceCentimeter == DISTANCE_TIMEOUT_RESULT) {
+            aSerial->print("Distance timeout");
         } else {
             aSerial->print("Distance=");
             aSerial->print(sEffectiveDistanceCentimeter);
             aSerial->print("cm");
         }
-        return true;
     }
-    return false;
 }
 
 /*
  * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
  * @param doShow show distance value in the GUI
- * @return 0 for timeout
+ * @return 0 / DISTANCE_TIMEOUT_RESULT for timeout
  */
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd) {
 #if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
@@ -194,9 +196,10 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aW
     /*
      * Always get US distance
      */
-    unsigned int tCentimeterToReturn = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeoutCentimeter);
-
+    sUSDistanceTimeoutCentimeter = aDistanceTimeoutCentimeter;
+    uint8_t tCentimeterToReturn = getUSDistanceAsCentimeterWithCentimeterTimeout(aDistanceTimeoutCentimeter);
     sUSDistanceCentimeter = tCentimeterToReturn;
+
 #if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
     sIROrTofDistanceCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
@@ -222,6 +225,12 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aW
     }
 #endif
     sEffectiveDistanceCentimeter = tCentimeterToReturn;
+    if (sLastEffectiveDistanceCentimeter != tCentimeterToReturn) {
+        sLastEffectiveDistanceCentimeter = tCentimeterToReturn;
+        sDistanceJustChanged = true;
+    } else {
+        sDistanceJustChanged = false;
+    }
     return tCentimeterToReturn;
 }
 
@@ -384,10 +393,10 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;
 #endif
-#if defined(USE_STANDARD_SERVO_LIBRARY)
-    DistanceServo.write(aTargetDegrees);
-#else
+#if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
     write10(aTargetDegrees);
+#else
+    DistanceServo.write(aTargetDegrees);
 #endif
 
     /*
@@ -430,11 +439,14 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 
 /*
  * Stop, scan 70, 90 and 110 degree for moved target and returns NextDegreesToTurn.
+ * Display values if BlueDisplay GUI is enabled.
  * @return NO_TARGET_FOUND (360) if no target found
  */
 int scanForTarget(unsigned int aMaximumTargetDistance) {
-    uint8_t tDegreeFound = 0;
-    unsigned int tCentimeter;
+    noTone(PIN_BUZZER); // suppress distance tone at scanning
+
+    uint8_t tServoDegreeOfFoundTarget = 0;
+    uint8_t tCentimeter; // We have timeout at less than 255 cm
     uint8_t tServoDegreeToScan;
     int tDeltaDegree;
     /*
@@ -455,7 +467,9 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
     for (uint_fast8_t i = 0; i < 3; ++i) {
         DistanceServoWriteAndDelay(tServoDegreeToScan, true);
         tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true);
-
+        if(tCentimeter == DISTANCE_TIMEOUT_RESULT) {
+            tCentimeter = DISTANCE_TIMEOUT_CM_FOLLOWER;
+        }
 #if defined(USE_BLUE_DISPLAY_GUI)
         if (sCurrentPage == PAGE_AUTOMATIC_CONTROL && BlueDisplay1.isConnectionEstablished()) {
             /*
@@ -479,11 +493,9 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
 
             // Clear old line
             BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
-                    sForwardDistancesInfo.RawDistancesArray[tCurrentIndex], tServoDegreeToScan, COLOR16_WHITE, 3);
+                    sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] / 2, tServoDegreeToScan, COLOR16_WHITE, 3);
             // draw new one and store value in distances array for next scan
-            if(tCentimeter != 0) {
-                BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tServoDegreeToScan, tColor, 3);
-            }
+            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter / 2, tServoDegreeToScan, tColor, 3);
             sForwardDistancesInfo.RawDistancesArray[tCurrentIndex] = tCentimeter;
         }
 #else
@@ -493,8 +505,8 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
         Serial.print(tServoDegreeToScan);
         Serial.print(' ');
 #endif
-        if (tCentimeter != 0 && tCentimeter <= aMaximumTargetDistance) {
-            tDegreeFound = tServoDegreeToScan;
+        if (tCentimeter <= aMaximumTargetDistance) {
+            tServoDegreeOfFoundTarget = tServoDegreeToScan;
             break;
         }
         // prepare for next degree
@@ -504,20 +516,23 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
         tServoDegreeToScan += tDeltaDegree;
     }
 
-    if (tDegreeFound != 0) {
+    if (tServoDegreeOfFoundTarget != 0) {
+        int tRotationDegree = tServoDegreeToScan - 90;
         /*
          * Target found -> print turn info
          */
 #if defined(USE_BLUE_DISPLAY_GUI)
-        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tServoDegreeToScan - 90, tCentimeter); // \xB0 is degree character
+        sprintf_P(sStringBuffer, PSTR("rotation:%3d\xB0 min:%2dcm"), tRotationDegree, tCentimeter); // \xB0 is degree character
         BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
                 COLOR16_BLACK, COLOR16_WHITE);
+#else
+        Serial.print(F("rotate "));
+        Serial.println(tRotationDegree);
 #endif
 
-        // reset distance servo direction
-        DistanceServoWriteAndDelay(90, false);
-        return tServoDegreeToScan - 90;
+        return tRotationDegree;
     } else {
+        Serial.println(); // terminate scan result line without rotate info
         return NO_TARGET_FOUND;
     }
 }
@@ -573,7 +588,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             return true;
         }
         unsigned int tCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE, true);
-        if(tCentimeter == 0){
+        if(tCentimeter == DISTANCE_TIMEOUT_RESULT){
             // timeout here
             tCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE;
         }
@@ -626,7 +641,7 @@ void drawForwardDistancesInfos() {
     /*
      * Clear drawing area
      */
-    clearPrintedForwardDistancesInfos();
+    clearPrintedForwardDistancesInfos(true);
     for (int i = 0; i < NUMBER_OF_DISTANCES; ++i) {
         /*
          * Determine color
@@ -940,4 +955,3 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
 #endif // defined(CAR_HAS_DISTANCE_SERVO)
 
 #endif // _ROBOT_CAR_DISTANCE_HPP
-#pragma once

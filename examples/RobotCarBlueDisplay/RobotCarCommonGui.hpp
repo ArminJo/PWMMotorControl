@@ -74,7 +74,7 @@ BDSlider SliderSpeedLeft;
  */
 BDSlider SliderDistanceServoPosition;
 BDSlider SliderUSDistance;
-unsigned int sSliderUSLastCentimeter;
+uint8_t sSliderUSLastCentimeter;
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
 BDSlider SliderIROrTofDistance;
 unsigned int sLastSliderIROrTofCentimeter;
@@ -141,10 +141,10 @@ void loopGUI(void) {
 #if defined(CAR_HAS_DISTANCE_SENSOR)
         if (sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST
 #if defined(CAR_HAS_DISTANCE_SERVO)
-                || (sCurrentPage == PAGE_AUTOMATIC_CONTROL && sDriveMode == MODE_FOLLOWER)
+                || (sCurrentPage == PAGE_AUTOMATIC_CONTROL && sDriveMode == MODE_MANUAL_DRIVE)
 #endif
         ) {
-            readAndShowDistancePeriodically();
+            readAndShowDistancePeriodically(); // show for auto drive page, if idle
         }
 #endif
 
@@ -169,7 +169,7 @@ void readAndShowDistancePeriodically() {
     if (!RobotCarPWMMotorControl.isStateRamp()) {
         if (millis() - sLastDistanceMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
             sLastDistanceMeasurementMillis = millis();
-            getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM, false);
+            getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM, false); // use long distance timeout here
 #  if defined(USE_BLUE_DISPLAY_GUI)
 #    if defined(CAR_HAS_US_DISTANCE_SENSOR)
             showUSDistance();
@@ -221,8 +221,9 @@ void startStopRobotCar(bool aDoStart) {
         /*
          * Stop car
          */
-#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
-        startStopAutomomousDrive(false);  // calls RobotCarPWMMotorControl.stop()
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
+//        startStopAutomomousDrive(false);  // calls RobotCarPWMMotorControl.stop()
+        RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
 #else
         RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
         TouchButtonRobotCarStartStop.setValue(aDoStart, false);
@@ -278,7 +279,7 @@ void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue) {
 }
 //#endif
 
-void calibrateDriveSpeedPWM(){
+void calibrateDriveSpeedPWM() {
 #if defined(MONITOR_VIN_VOLTAGE)
     RobotCarPWMMotorControl.setSpeedPWMAndDirection(MAX_SPEED_PWM / 2);
     delay(400);
@@ -348,7 +349,7 @@ void startCurrentPage() {
     case PAGE_TEST:
         startTestPage();
         break;
-#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
     case PAGE_AUTOMATIC_CONTROL:
         startAutonomousDrivePage();
         break;
@@ -397,7 +398,7 @@ void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue) {
     case PAGE_TEST:
         stopTestPage();
         break;
-#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
     case PAGE_AUTOMATIC_CONTROL:
         stopAutonomousDrivePage();
         break;
@@ -733,8 +734,10 @@ void printMotorValuesPeriodically() {
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCarPWMMotorControl.leftCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage) , 4, 2, tPWMVoltageString);
 #else
                 // we can merely use a constant value here
-                dtostrf(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCarPWMMotorControl.leftCarMotor.CurrentCompensatedSpeedPWM,
-                FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
+                dtostrf(
+                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(
+                                RobotCarPWMMotorControl.leftCarMotor.CurrentCompensatedSpeedPWM,
+                                FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                 tPWMVoltageString[4] = 'V';
                 tPWMVoltageString[5] = '\0';
@@ -744,8 +747,10 @@ void printMotorValuesPeriodically() {
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCarPWMMotorControl.rightCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage), 4, 2, tPWMVoltageString);
 #else
                 // we can merely use a constant value here
-                dtostrf(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCarPWMMotorControl.rightCarMotor.CurrentCompensatedSpeedPWM,
-                FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
+                dtostrf(
+                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(
+                                RobotCarPWMMotorControl.rightCarMotor.CurrentCompensatedSpeedPWM,
+                                FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                 tPWMVoltageString[4] = 'V';
                 BlueDisplay1.drawText((MOTOR_INFO_START_X + (7 * TEXT_SIZE_11_WIDTH)) - 3, MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11),
@@ -850,9 +855,13 @@ void printIMUOffsetValues() {
 
 #if defined(CAR_HAS_US_DISTANCE_SENSOR)
 void showUSDistance() {
-    if (sUSDistanceCentimeter != sSliderUSLastCentimeter) {
+    auto tUSDistanceCentimeter = sUSDistanceCentimeter;
+    if(tUSDistanceCentimeter == DISTANCE_TIMEOUT_RESULT) {
+        tUSDistanceCentimeter = sUSDistanceTimeoutCentimeter;
+    }
+    if (sSliderUSLastCentimeter != tUSDistanceCentimeter) {
         sSliderUSLastCentimeter = sUSDistanceCentimeter;
-        SliderUSDistance.setValueAndDrawBar(sUSDistanceCentimeter);
+        SliderUSDistance.setValueAndDrawBar(tUSDistanceCentimeter);
     }
 }
 #endif
@@ -867,4 +876,3 @@ void showIROrTofDistance() {
 #endif
 
 #endif // _ROBOT_CAR_COMMON_GUI_HPP
-#pragma once

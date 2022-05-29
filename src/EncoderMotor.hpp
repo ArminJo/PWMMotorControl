@@ -39,7 +39,11 @@
 #include "PWMDcMotor.hpp"
 
 //#define TRACE
-//#define DEBUG
+#if defined(DEBUG)
+#define LOCAL_DEBUG
+#else
+//#define LOCAL_DEBUG // This enables debug output only for this file - only for development
+#endif
 
 EncoderMotor *sPointerForInt0ISR;
 EncoderMotor *sPointerForInt1ISR;
@@ -149,7 +153,7 @@ bool EncoderMotor::updateMotor() {
              * Stop now
              */
             stop(STOP_MODE_BRAKE); // this sets MOTOR_STATE_STOPPED;
-#if defined(DEBUG)
+#if defined(LOCAL_DEBUG)
             Serial.print(PWMPin);
             if(tMillis > (LastEncoderInterruptMillis + ENCODER_SENSOR_TIMEOUT_MILLIS)){
                 Serial.print(F(" Encoder timeout: dist="));
@@ -225,7 +229,7 @@ bool EncoderMotor::updateMotor() {
             }
             //  --> RAMP_DOWN
             MotorRampState = MOTOR_STATE_RAMP_DOWN;
-#if defined(DEBUG)
+#if defined(LOCAL_DEBUG)
             Serial.print(PWMPin);
             Serial.print(F(" Speed="));
             Serial.print(getSpeed() * 10);
@@ -271,7 +275,7 @@ bool EncoderMotor::updateMotor() {
      * End of motor state machine, now set speed if changed
      */
     if (tNewSpeedPWM != RequestedSpeedPWM) {
-#if defined(DEBUG)
+#if defined(LOCAL_DEBUG)
         // The speed 0
         Serial.print(PWMPin);
         Serial.print(F(" St="));
@@ -771,6 +775,8 @@ void EncoderMotor::stopAllMotors(uint8_t aStopMode) {
     }
 }
 #endif // #if defined(ENABLE_MOTOR_LIST_FUNCTIONS)
+#if defined(LOCAL_DEBUG)
+#undef LOCAL_DEBUG
+#endif
 #endif // #if defined(USE_ENCODER_MOTOR_CONTROL)
 #endif // _ENCODER_MOTOR_CONTROL_HPP
-#pragma once

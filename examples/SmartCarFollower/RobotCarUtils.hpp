@@ -27,12 +27,19 @@
 
 #include "RobotCarUtils.h"
 #include "CarPWMMotorControl.h"
+#include "digitalWriteFast.h"
 
-#if defined(MONITOR_VIN_VOLTAGE)
+#if !defined(VOLTAGE_DIVIDER_DIVISOR)
+#define VOLTAGE_DIVIDER_DIVISOR   11.0  // VIN/11 by 1MOhm to VIN and 100kOhm to ground.
+#endif
+
+#if !defined(PRINT_VOLTAGE_PERIOD_MILLIS)
+#define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+#endif
+
 #include "ADCUtils.hpp"
 uint16_t sVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
 float sVINVoltage;
-#endif
 
 void printConfigInfo() {
 #if defined(BASIC_CONFIG_NAME)
@@ -78,46 +85,74 @@ unsigned int getDistanceAndPlayTone() {
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_CONTINUOUSLY; // DISTANCE_FEEDBACK_CONTINUOUSLY or DISTANCE_FEEDBACK_PENTATONIC
 #endif
 
-    unsigned int tCentimeter = getDistanceAsCentimeterAndPlayTone(150, true); // timeout at 150 cm
+    unsigned int tCentimeter = getDistanceAsCentimeterAndPlayTone(DISTANCE_TIMEOUT_CM_FOLLOWER, true); // timeout at 150 cm
     return tCentimeter;
 }
 #endif
 
-#if defined(MONITOR_VIN_VOLTAGE)
-#  if (MOTOR_PWM_PIN == 5) || (MOTOR_PWM_PIN == 6)
+/*
+ * For MONITOR_VIN_VOLTAGE
+ */
+/*
+ * @return true, if voltage divider attached
+ */
+bool isVINVoltageDividerAttached(uint8_t aPin) {
+#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+    return true; // if we know it by compile option just return true, this saves 160 bytes program memory
+#else
+    pinModeFast(aPin, OUTPUT);
+    digitalWriteFast(aPin, LOW); // discharge any charge at pin
+    pinModeFast(aPin, INPUT);
+    readVINVoltage();
+    bool tDividerAttached = sVINVoltage > 3.0;
+    Serial.print(F("VIN voltage divider"));
+    if (!tDividerAttached) {
+        sVINVoltage = FULL_BRIDGE_INPUT_MILLIVOLT / 1000; // set default value for later use
+        Serial.print(F("not "));
+    }
+    Serial.println(F(" attached"));
+
+    return tDividerAttached; // if voltage measured > 3 volt, assume that we have a voltage divider attached
+#endif
+}
+
+#if (MOTOR_PWM_PIN == 5) || (MOTOR_PWM_PIN == 6)
 #define NUMBER_OF_VIN_SAMPLES   10 // Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us.
-#  else
+#else
 #define NUMBER_OF_VIN_SAMPLES   20 // Get 20 samples lasting 2060 us, which is almost the PWM period of 2048 us.
-#  endif
+#endif
 /*
  * Read multiple samples during a PWM period
  */
 void readVINVoltage() {
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#if defined(ESP32)
+    // On ESP32 currently not supported
+#else
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
     // Here we have also other channels than VIN, that we convert during the loop
     uint8_t tOldADMUX = checkAndWaitForReferenceAndChannelToSwitch(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL);
-#  endif
+#endif
     /*
      * Here VIN is the only channel we convert.
      * Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us.
      */
     sVINRawSum = readADCChannelWithReferenceMultiSamples(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL, NUMBER_OF_VIN_SAMPLES); // 10 samples
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
     checkAndWaitForReferenceAndChannelToSwitch(tOldADMUX & MASK_FOR_ADC_CHANNELS, tOldADMUX >> SHIFT_VALUE_FOR_REFERENCE);
-#  endif
+#endif
 
 //    BlueDisplay1.debug("VIN Raw=", tVINRaw);
 
 // assume resistor network of 1MOhm / 100kOhm (divider by 11)
 // tVIN * 0,01182795
-#  if defined(VIN_VOLTAGE_CORRECTION)
+#if defined(VIN_VOLTAGE_CORRECTION)
     // we have a diode (requires 0.8 to 0.9 volt) between LIPO and VIN
     sVINVoltage = (sVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023)) + VIN_VOLTAGE_CORRECTION;
-#  else
-    sVINVoltage = sVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023);
-#  endif
-#endif // defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+#else
+    sVINVoltage = sVINRawSum
+            * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023);
+#endif
+#endif // defined(ESP32)
 }
 
 /*
@@ -125,30 +160,27 @@ void readVINVoltage() {
  * Resolution is 10 mV
  */
 void checkVinPeriodicallyAndPrintIfChanged() {
-#  if defined(ESP32)
+#if defined(ESP32)
     // On ESP32 currently not supported
-#  else
+#else
     static uint16_t sLastVINRawSumPrinted;
     static uint32_t sMillisOfLastVCCInfo;
     uint32_t tMillis = millis();
 
     if (tMillis - sMillisOfLastVCCInfo >= PRINT_VOLTAGE_PERIOD_MILLIS) {
         sMillisOfLastVCCInfo = tMillis;
-        readVINVoltage();
+        readVINVoltage(); // sets sVINRawSum
         /*
          * Check if voltage has changed (44 bytes)
          */
-        if(abs(sLastVINRawSumPrinted - sVINRawSum) > NUMBER_OF_VIN_SAMPLES) {
+        if (abs(sLastVINRawSumPrinted - sVINRawSum) > NUMBER_OF_VIN_SAMPLES) {
             sLastVINRawSumPrinted = sVINRawSum;
             Serial.print(F("VIN="));
             Serial.print(sVINVoltage);
             Serial.println(F("V"));
         }
     }
-#  endif // defined(ESP32)
+#endif // defined(ESP32)
 }
 
-#endif // MONITOR_VIN_VOLTAGE
-
 #endif // _ROBOT_CAR_UTILS_HPP
-#pragma once

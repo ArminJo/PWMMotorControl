@@ -4,7 +4,7 @@
  *  Motor control for a car with 2 encoder motors
  *
  *  Created on: 12.05.2019
- *  Copyright (C) 2019-2020  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -41,17 +41,22 @@
  * Values for 20 slot encoder discs. Circumference of the wheel is 22.0 cm
  * Distance between two wheels is around 14 cm -> 360 degree are 82 cm
  */
-#define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT         2.2777
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT         4.1 // Estimated, with slip. Value is smaller for turn in place mode.
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT 2.3 // For turns with 4 wheels. For turn with 2 wheels it must be doubled (*2.2).
+#define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT          2.2777
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_IN_PLACE         2.5 // Estimated, with slip.
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR                  3.5 // Estimated, with slip.
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_IN_PLACE 2.3 // For turns with 4 wheels.
+#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR          4.8 // For turns with 2 wheels.
 
-#if ! defined(FACTOR_DEGREE_TO_MILLIMETER_DEFAULT)
+#if !defined(FACTOR_DEGREE_TO_MILLIMETER)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
-#define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_DEFAULT
+#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_IN_PLACE
+#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR
 #  elif defined(CAR_HAS_4_WHEELS)
-#define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_DEFAULT
+#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_IN_PLACE
+#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR
 #  else
-#define FACTOR_DEGREE_TO_MILLIMETER_DEFAULT  FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
+#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
+#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
 #  endif
 #endif
 
@@ -72,16 +77,10 @@ public:
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     void init();
 #else
-#  if defined(CAR_HAS_4_MECANUM_WHEELS)
-    void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aPWMPin, uint8_t aLeftMotorForwardPin,
-            uint8_t aLeftMotorBackwardPin, uint8_t aBackRightCarMotorForwardPin, uint8_t aBackRightCarMotorBackwardPin,
-            uint8_t aBackLeftCarMotorForwardPin, uint8_t aBackLeftCarMotorBackwardPin);
-#  else
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aLeftMotorForwardPin,
             uint8_t aLeftMotorBackwardPin, uint8_t aLeftMotorPWMPin);
     void init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin, uint8_t aRightInterruptNumber,
             uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin, uint8_t aLeftInterruptNumber);
-#  endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
     void setDefaultsForFixedDistanceDriving();
@@ -89,8 +88,8 @@ public:
     void setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
     void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
-    void setDriveSpeedPWMTo2Volt(uint16_t aBridgeSupplyMillivolt);
-    void setDriveSpeedPWMTo2Volt(float aBridgeSupplyVoltage);
+    void setDriveSpeedPWMTo2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMTo2Volt(float aFullBridgeInputVoltageMillivolt);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
@@ -162,7 +161,7 @@ public:
     unsigned int CarRequestedDistanceMillimeter;
     unsigned int CarDistanceMillimeterFromIMU;
 #else
-    float FactorDegreeToMillimeter;
+//    float FactorDegreeToMillimeter;
 #endif
 
     bool updateMotors();
@@ -193,7 +192,8 @@ public:
 
     void setSpeedPWMAndDirection(int aRequestedSpeedPWM);
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
-    void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, int8_t aSpeedPWMCompensationRightDelta);
+    void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
+            int8_t aSpeedPWMCompensationRightDelta);
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
 
     void stop(uint8_t aStopMode = STOP_MODE_KEEP); // STOP_MODE_KEEP (take previously defined DefaultStopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
@@ -206,13 +206,11 @@ public:
     PWMDcMotor rightCarMotor;
     PWMDcMotor leftCarMotor;
 #endif
-#if defined(CAR_HAS_4_MECANUM_WHEELS) // back motors are always without encoders
-    PWMDcMotor backRightCarMotor;
-    PWMDcMotor backLeftCarMotor;
-#endif
 };
 
+#if !defined(CAR_HAS_4_MECANUM_WHEELS)
 extern CarPWMMotorControl RobotCarPWMMotorControl;
+#endif
 
 #endif // _CAR_PWM_MOTOR_CONTROL_H
 #pragma once

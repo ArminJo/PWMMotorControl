@@ -22,42 +22,36 @@
  */
 
 #include <Arduino.h>
-#define TRACE
+//#define TRACE
 /*
  * Car configuration
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
-//#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
-//#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
-#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
-#include "CarPWMMotorControl.hpp"
-
-#if defined(ESP32)
-#include "ESP32Servo.h"
-#else
 #include "Servo.h"
-#endif
+#include "Distance.hpp"
 #include "HCSR04.h"
+#include "CarPWMMotorControl.hpp"
+#include "RobotCarUtils.hpp"
+
+#define rightMotor RobotCarPWMMotorControl.rightCarMotor
+#define leftMotor   RobotCarPWMMotorControl.leftCarMotor
 
 #define VERSION_EXAMPLE "1.0"
-
-/*
- * Speed compensation to enable driving straight ahead.
- * If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
- * If negative, -value is subtracted from the left speed -> the car turns slightly left.
- */
-#define SPEED_PWM_COMPENSATION_RIGHT    0
-
-Servo DistanceServo;
 
 void simpleObjectAvoidance();
 
@@ -70,59 +64,39 @@ void setup() {
     // Just to know which program is running on my Arduino
     Serial.println("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
 
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    RobotCarPWMMotorControl.init();
-#else
-#  if defined(USE_ENCODER_MOTOR_CONTROL)
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, RIGHT_MOTOR_INTERRUPT,
-    LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN, LEFT_MOTOR_INTERRUPT);
-#  else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
-    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
-#  endif
-#endif
+    initRobotCarPWMMotorControl();
 
     /*
-     * You will need to change these values according to your motor, wheels and motor supply voltage.
+     * Initialize pins for the servo and the HC-SR04 ultrasonic distance measurement
      */
-    RobotCarPWMMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
-#if ! defined(USE_ENCODER_MOTOR_CONTROL)
-    // set factor for converting distance to drive time
-    RobotCarPWMMotorControl.setMillimeterPerSecondForFixedDistanceDriving(DEFAULT_MILLIMETER_PER_SECOND);
-#endif
+    initDistance();
 
     /*
-     * Set US servo to forward position
+     * Move it as signal, that we are booted
      */
-    DistanceServo.attach(PIN_DISTANCE_SERVO);
-    DistanceServo.write(90);
-
-    initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
-
-    tone(PIN_BUZZER, 2200, 100);
-    delay(2000);
-    DistanceServo.write(120);
     delay(500);
-    DistanceServo.write(60);
+    DistanceServo.write(135);
+    delay(500);
+    DistanceServo.write(45);
     delay(500);
     DistanceServo.write(90);
+
+    tone(PIN_BUZZER, 2200, 200);
     delay(1000);
-#if defined(USE_MPU6050_IMU)
+
     /*
-     * Wait after pressing the reset button, or attaching the power
-     * and then take offset values for 1/2 second
+     * Rotate both motors forward, wait a second and then stop
+     * Speed can go from 0 to 255 (MAX_SPEED_PWM)
+     * DEFAULT_DRIVE_SPEED_PWM corresponds to 2 volt motor supply
      */
-    tone(PIN_BUZZER, 2200, 50);
-    delay(100);
-    RobotCarPWMMotorControl.initIMU();
-    RobotCarPWMMotorControl.printIMUOffsets(&Serial);
-    tone(PIN_BUZZER, 2200, 50);
-#endif
+    leftMotor.setSpeedPWMAndDirection(120, DIRECTION_FORWARD);
+    rightMotor.setSpeedPWMAndDirection(120, DIRECTION_FORWARD);
     delay(1000);
-    RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
-    delay(500);
-    RobotCarPWMMotorControl.stop();
-    delay(2000);
+    leftMotor.stop();
+    rightMotor.stop();
+
+    // wait before entering the loop
+    delay(4000);
 }
 
 void loop() {

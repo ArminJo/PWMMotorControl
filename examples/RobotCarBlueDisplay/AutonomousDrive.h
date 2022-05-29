@@ -15,7 +15,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
 #ifndef _AUTONOMOUS_DRIVE_H
 #define _AUTONOMOUS_DRIVE_H
 
@@ -60,5 +60,5 @@ void driveCollisonAvoidingOneStep();
 void driveFollowerModeOneStep();
 
 #endif // _AUTONOMOUS_DRIVE_H
-#endif // defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#endif // defined(ENABLE_AUTONOMOUS_DRIVE)
 #pragma once

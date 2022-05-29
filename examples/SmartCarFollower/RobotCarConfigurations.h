@@ -31,22 +31,23 @@
  * All configurations (except MECANUM_BASIC_CONFIGURATION) include a HC-SR04 ultrasonic distance sensor mounted on a pan servo.
  */
 //////////////////////////////////////////////////////
-//#define TBB6612_BASIC_4WD_4AA_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
 //#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
-//#define TBB6612_FULL_4WD_4AA_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
-//#define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
-//#define TBB6612_FULL_4WD_2LI_ION_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define L298_BASIC_2WD_4AA_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_BASIC_4WD_4AA_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_BASIC_2WD_2LI_ION_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
-//#define L298_VIN_IR_DISTANCE_CONFIGURATION        // L298_Basic_2WD + VIN voltage divider + IR distance
-//#define L298_VIN_IR_IMU_CONFIGURATION             // L298_Basic_2WD + VIN voltage divider + IR distance + MPU6050
-//#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 Li-ion + servo head down
-//#define MOTOR_SHIELD_TOF_CONFIGURATION            // Basic_2WD + VL53L1X TimeOfFlight sensor
-//#define MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION    // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
-//#define MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION // Basic + encoder + 4 Wheels + IR distance
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 Li-ion + VIN voltage divider + servo head down
+//#define MOTOR_SHIELD_2WD_TOF_CONFIGURATION        // Basic_2WD + VL53L1X TimeOfFlight sensor
+//#define MOTOR_SHIELD_2WD_ENCODER_TOF_CONFIGURATION // Basic_2WD + encoder + VL53L1X TimeOfFlight sensor
 //#define MOTOR_SHIELD_2WD_FULL_CONFIGURATION       // Basic + encoder + VL53L1X TimeOfFlight sensor + MPU6050
-//#define BREADBOARD_FULL_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
+//#define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION      // Adafruit Motor Shield using TB6612 mosfet bridge. 2 Li-ion + VIN voltage divider + servo head down
+//#define MOTOR_SHIELD_4WD_FULL_CONFIGURATION       // Motor Shield + encoder + 2 Li-ion + servo head down + IR distance
+//#define BREADBOARD_4WD_FULL_CONFIGURATION         // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
 //#define MECANUM_BASIC_CONFIGURATION               // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
 //#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 //#define CAR_IS_ESP32_CAM_BASED                    // Car controlled by an ESP32-CAM like https://github.com/ArminJo/ESP32-Cam-Sewer-inspection-car
@@ -72,10 +73,9 @@
 //#define CAR_HAS_TILT_SERVO
 //#define CAR_HAS_CAMERA
 //#define CAR_HAS_LASER
-/*
- *
- */
-//#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION of 0.81.
+//
+//#define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
+//#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
 /*
  * Parameters for PWMMotorControl
  */
@@ -89,12 +89,18 @@
 //#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage / motors default speed. Default value is 2.0 volt.
 //#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the encoder function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
+/*
+ * Parameters for CarPWMMotorControl
+ */
 //#define CAR_HAS_4_WHEELS
 //#define CAR_HAS_4_MECANUM_WHEELS
+/**************************
+ * START OF CONFIGURATIONS
+ **************************/
 /*
  * L298 basic + IR distance + MPU6050 + VIN monitoring
  */
-#if defined(L298_VIN_IR_IMU_CONFIGURATION)
+#if defined(L298_2WD_VIN_IR_IMU_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
 #define CAR_HAS_MPU6050_IMU                 // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
@@ -107,10 +113,10 @@
  * L298 basic + IR distance + VIN voltage divider
  * https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Car_TopView_small.jpg
  */
-#if defined(L298_VIN_IR_DISTANCE_CONFIGURATION)
+#if defined(L298_2WD_VIN_IR_DISTANCE_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
-#define L298_BASIC_2WD_2LI_ION_CONFIGURATION
+#define L298_2WD_2LI_ION_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + IR distance + VIN divider"
 #endif
 
@@ -119,7 +125,7 @@
  * Lafvin 2WD model using L298 bridge. Uno board has series diode at power jack connector. + 2 Li-ion.
  * https://de.aliexpress.com/item/32816490316.html
  */
-#if defined(L298_BASIC_2WD_2LI_ION_CONFIGURATION)
+#if defined(L298_2WD_2LI_ION_BASIC_CONFIGURATION)
 #define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
@@ -133,7 +139,7 @@
  * Lafvin 2WD model using L298 bridge. Uno board has series diode at power jack connector + 4 AA batteries.
  * https://de.aliexpress.com/item/32816490316.html
  */
-#if defined(L298_BASIC_4WD_4AA_CONFIGURATION)
+#if defined(L298_4WD_4AA_BASIC_CONFIGURATION)
 #define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
@@ -156,14 +162,14 @@
 
 #if defined(TBB6612_4WD_4AA_VIN_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
-#define TBB6612_BASIC_4WD_4AA_CONFIGURATION
+#define TBB6612_4WD_4AA_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider"
 #endif
 
-#if defined(TBB6612_FULL_4WD_4AA_CONFIGURATION)
+#if defined(TBB6612_4WD_4AA_FULL_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-#define TBB6612_BASIC_4WD_4AA_CONFIGURATION
+#define TBB6612_4WD_4AA_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider + MPU6050"
 #endif
 
@@ -173,25 +179,25 @@
  * Uno board with series diode at VIN connector + 4 AA batteries.
  * https://de.aliexpress.com/item/33015596159.html (Four rounds kit / 4WD KIT1)
  */
-#if defined(TBB6612_BASIC_4WD_4AA_CONFIGURATION)
+#if defined(TBB6612_4WD_4AA_BASIC_CONFIGURATION)
 #define CAR_HAS_4_WHEELS
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define BASIC_CONFIG_NAME   "4WD + TB6612 + 4 AA"
 #endif
 
-#if defined(TBB6612_FULL_4WD_2LI_ION_CONFIGURATION)
+#if defined(TBB6612_4WD_2LI_ION_FULL_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-#define TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION
+#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider"
 #endif
 
 /*
- * TBB6612_BASIC_4WD_4AA_CONFIGURATION with 2 Li-ion instead of 4AA. Connect to UNO power jack!
+ * TBB6612_4WD_4AA_BASIC_CONFIGURATION with 2 Li-ion instead of 4AA. Connect to UNO power jack!
  * Uno board has series diode at power jack connector.
  */
-#if defined(TBB6612_BASIC_4WD_2LI_ION_CONFIGURATION)
+#if defined(TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION)
 #define CAR_HAS_4_WHEELS
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
@@ -200,18 +206,18 @@
 #define BASIC_CONFIG_NAME   "4WD + TB6612 + 2 Li-ion"
 #endif
 /*
- * Basic + VL53L1X TimeOfFlight sensor
+ * Basic 2WD + VL53L1X TimeOfFlight sensor
  */
-#if defined(MOTOR_SHIELD_TOF_CONFIGURATION)
+#if defined(MOTOR_SHIELD_2WD_TOF_CONFIGURATION)
 #define CAR_HAS_TOF_DISTANCE_SENSOR     // Use a VL53L1X TimeOfFlight distance sensor
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + TOF distance"
 #endif
 
 /*
- * Basic + encoder + VL53L1X TimeOfFlight sensor
+ * Basic 2WD + encoder + VL53L1X TimeOfFlight sensor
  */
-#if defined(MOTOR_SHIELD_ENCODER_TOF_CONFIGURATION)
+#if defined(MOTOR_SHIELD_2WD_ENCODER_TOF_CONFIGURATION)
 #define CAR_HAS_ENCODERS                // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_TOF_DISTANCE_SENSOR     // Use a VL53L1X TimeOfFlight distance sensor
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
@@ -219,31 +225,21 @@
 #endif
 
 /*
- * The maximum layout of my smart 2wd robot car
+ * The maximum layout of my smart 2WD robot car
  * Basic + VL53L1X TimeOfFlight + encoder + MPU6050
  */
 #if defined(MOTOR_SHIELD_2WD_FULL_CONFIGURATION)
 #define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_TOF_DISTANCE_SENSOR     // Use a VL53L1X TimeOfFlight distance sensor
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
+#define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + encoder + TOF distance + MPU6050"
 #endif
 
 /*
- * Basic + 4 Wheels + IR distance + encoder
- */
-#if defined(MOTOR_SHIELD_ENCODER_4WD_IR_CONFIGURATION)
-#define CAR_HAS_4_WHEELS
-#define CAR_HAS_ENCODERS                // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
-#define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
-#define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
-#define CONFIG_NAME         " + encoder + 4WD + IR distance"
-#endif
-
-/*
  * BASIC CONFIGURATION
- * The basic layout of my smart 2wd robot car with 2 LiPo's instead of 4 AA
+ * The basic layout of my smart 2WD robot car with 2 LiPo's instead of 4 AA
  * Shield + 2 LiPo's + VIN voltage divider + servo head down
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg
  */
@@ -258,11 +254,38 @@
 #endif
 
 /*
+ * The maximum layout of my red smart 4WD robot car
+ * Basic + IR distance + encoder
+ */
+#if defined(MOTOR_SHIELD_4WD_FULL_CONFIGURATION)
+#define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+#define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
+#define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION
+#define CONFIG_NAME         " + encoder + IR distance"
+#endif
+
+/*
+ * BASIC CONFIGURATION
+ * The basic layout of my red smart 4WD robot car with 2 LiPo's instead of 4 AA
+ * Shield + 2 LiPo's + VIN voltage divider + servo head down
+ */
+#if defined(MOTOR_SHIELD_4WD_BASIC_CONFIGURATION)
+#define CAR_HAS_4_WHEELS
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define USE_ADAFRUIT_MOTOR_SHIELD       // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
+#define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
+#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
+#define BASIC_CONFIG_NAME   "4WD + Motor shield,TB6612  + 2 Li-ion + VIN divider + servo head down"
+#endif
+
+/*
  * BASIC CONFIGURATION
  * Nano Breadboard version with Arduino NANO, without shield and with pan/tilt servo and MPU camera and laser
  */
-#if defined(BREADBOARD_FULL_CONFIGURATION)
-#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION of 0.81.
+#if defined(BREADBOARD_4WD_FULL_CONFIGURATION)
+#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
 #define CAR_HAS_4_WHEELS
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
@@ -295,7 +318,7 @@
  * Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
  */
 #if defined(MECANUM_BASIC_CONFIGURATION)
-#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION of 0.81.
+#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
 #define CAR_HAS_4_MECANUM_WHEELS
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
@@ -313,27 +336,25 @@
 #endif
 
 /*
- * Some rules
+ * Default BASIC CONFIGURATION
  */
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER) && !defined(VOLTAGE_DIVIDER_DIVISOR)
-#define VOLTAGE_DIVIDER_DIVISOR   11.0  // VIN/11 by 1MOhm to VIN and 100kOhm to ground.
+#if !defined(BASIC_CONFIG_NAME)         // use L298_2WD_4AA_BASIC_CONFIGURATION as default
+#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define BASIC_CONFIG_NAME   "2WD + L298 + 4 AA"
 #endif
 
+/*
+ * Some rules
+ */
 #if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #define CAR_HAS_DISTANCE_SENSOR         // At least one distance sensor mounted on a pan servo is available
 #endif
 
 #if defined(CAR_HAS_DISTANCE_SERVO) || defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 #define CAR_HAS_SERVO                   // At least one servo is mounted on the car
-#endif
-
-/*
- * Default BASIC CONFIGURATION
- */
-#if !defined(BASIC_CONFIG_NAME)         // use L298_BASIC_2WD_4AA_CONFIGURATION as default
-#define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
-#define BASIC_CONFIG_NAME   "2WD + L298 + 4 AA"
 #endif
 
 #endif // _ROBOT_CAR_CONFIGURATIONS_H

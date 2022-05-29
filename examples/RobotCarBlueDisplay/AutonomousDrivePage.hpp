@@ -22,7 +22,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
 
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
@@ -39,6 +39,13 @@ const char sStepModeButtonStringStepToTurnSingleStep[] PROGMEM = "Step to turn\n
 const char sStepModeButtonStringSingleStepContinuous[] PROGMEM = "Single step\n->\nContinuous";
 const char *const sStepModeButtonCaptionStringArray[] PROGMEM = { sStepModeButtonStringContinuousStepToTurn,
         sStepModeButtonStringStepToTurnSingleStep, sStepModeButtonStringSingleStepContinuous };
+
+BDButton TouchButtonDistanceFeedbackMode;
+const char sDistanceFeedbackModeNoTone[] PROGMEM = "No tone";
+const char sDistanceFeedbackModePentatonic[] PROGMEM = "Pentatonic";
+const char sDistanceFeedbackModeContinuous[] PROGMEM = "Continuous";
+const char *const sDistanceFeedbackModeButtonCaptionStringArray[] PROGMEM = { sDistanceFeedbackModeNoTone,
+        sDistanceFeedbackModePentatonic, sDistanceFeedbackModeContinuous };
 
 BDButton TouchButtonStep;
 BDButton TouchButtonSingleScan;
@@ -69,7 +76,24 @@ BDButton TouchButtonStartStopUserAutonomousDrive;
 BDButton TouchButtonStartStopBuiltInAutonomousDrive;
 BDButton TouchButtonFollower;
 
-void setStepModeButtonCaption();
+void setDistanceFeedbackModeButtonCaption() {
+    TouchButtonDistanceFeedbackMode.setCaptionFromStringArrayPGM(sDistanceFeedbackModeButtonCaptionStringArray, sDistanceFeedbackMode, true);
+}
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+void doNextDistanceFeedbackMode(BDButton *aTheTouchedButton, int16_t aValue) {
+    sDistanceFeedbackMode++;
+    if (sDistanceFeedbackMode > DISTANCE_FEEDBACK_MAX) {
+        sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
+        noTone(PIN_BUZZER);
+    }
+    setDistanceFeedbackModeButtonCaption();
+}
+
+void setStepModeButtonCaption() {
+    TouchButtonStepMode.setCaptionFromStringArrayPGM(sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
+}
+
 /*
  * Switches modes MODE_CONTINUOUS -> MODE_STEP_TO_NEXT_TURN -> MODE_SINGLE_STEP
  */
@@ -78,12 +102,10 @@ void setStepMode(uint8_t aStepMode) {
         RobotCarPWMMotorControl.stopAndWaitForIt();
     } else if (aStepMode > MODE_SINGLE_STEP) {
         aStepMode = MODE_CONTINUOUS;
+        sDoStep = true;
     }
     sStepMode = aStepMode;
     setStepModeButtonCaption();
-    if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-        TouchButtonStepMode.drawButton();
-    }
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -104,13 +126,11 @@ void doStep(BDButton *aTheTouchedButton, int16_t aValue) {
     /*
      * Start if not yet done
      */
-    if (sDriveMode != MODE_MANUAL_DRIVE) {
+    if (sDriveMode == MODE_FOLLOWER) {
+        sDoStep = true;
+    } else if (sDriveMode != MODE_MANUAL_DRIVE) {
         startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
     }
-}
-
-void setStepModeButtonCaption() {
-    TouchButtonStepMode.setCaptionFromStringArrayPGM(sStepModeButtonCaptionStringArray, sStepMode);
 }
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -137,9 +157,7 @@ void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sDriveMode == MODE_FOLLOWER) {
         scanForTarget(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER);
     } else {
-#if defined(CAR_HAS_DISTANCE_SERVO)
-        clearPrintedForwardDistancesInfos();
-#endif
+        clearPrintedForwardDistancesInfos(true);
         fillAndShowForwardDistancesInfo(true, true);
         postProcessAndCollisionDetection();
     }
@@ -173,16 +191,20 @@ void initAutonomousDrivePage(void) {
     // left button column
     TouchButtonStepMode.init(0, 0, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6 + 1, COLOR16_BLUE,
             reinterpret_cast<const __FlashStringHelper*>(sStepModeButtonStringContinuousStepToTurn), TEXT_SIZE_9,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doNextStepMode);
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, MODE_CONTINUOUS, &doNextStepMode);
 
-    TouchButtonSingleScan.init(0, BUTTON_HEIGHT_6_LINE_2, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Scan"),
-    TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doSingleScan);
-
-    TouchButtonStep.init(0, BUTTON_HEIGHT_6_LINE_3, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Step"),
+    TouchButtonStep.init(0, BUTTON_HEIGHT_6_LINE_2, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Step"),
     TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doStep);
 
+    TouchButtonSingleScan.init(0, BUTTON_HEIGHT_6_LINE_3, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_BLUE, F("Scan"), TEXT_SIZE_22,
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doSingleScan);
+
+    TouchButtonScanSpeed.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Scan slow"), TEXT_SIZE_14,
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
+    TouchButtonScanSpeed.setCaptionForValueTrue("Scan fast");
+
 #if defined(ENABLE_PATH_INFO_PAGE)
-    TouchButtonPathInfoPage.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_6, COLOR16_RED, F("Show\nPath"), TEXT_SIZE_11,
+    TouchButtonPathInfoPage.init(BUTTON_WIDTH_3_POS_3, 0, BUTTON_WIDTH_3, BUTTON_HEIGHT_6, COLOR16_RED, F("Show Path"), TEXT_SIZE_11,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_SHOW_PATH, &GUISwitchPages);
 #endif
 
@@ -194,13 +216,12 @@ void initAutonomousDrivePage(void) {
             &doStartStopTestUser);
     TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop User"));
 
-    TouchButtonScanSpeed.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
-    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Scan slow"), TEXT_SIZE_16,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
-    TouchButtonScanSpeed.setCaptionForValueTrue("Scan fast");
+    TouchButtonDistanceFeedbackMode.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
+    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, reinterpret_cast<const __FlashStringHelper*>(sDistanceFeedbackModeNoTone), TEXT_SIZE_14,
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, DISTANCE_FEEDBACK_NO_TONE, &doNextDistanceFeedbackMode);
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
-    TouchButtonScanMode.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
+    TouchButtonScanMode.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED,
             reinterpret_cast<const __FlashStringHelper*>(sDistanceSourceModeButtonStringMinMax),
             TEXT_SIZE_16, FLAG_BUTTON_DO_BEEP_ON_TOUCH, DISTANCE_SOURCE_MODE_MINIMUM, &doDistanceSourceMode);
@@ -225,25 +246,27 @@ void drawAutonomousDrivePage(void) {
     // - (TEXT_SIZE_22_WIDTH / 2) since we have one character more
     BlueDisplay1.drawText(HEADER_X - (TEXT_SIZE_22_WIDTH / 2), (2 * TEXT_SIZE_22_HEIGHT), F("Auto drive"));
 
+#if defined(ENABLE_PATH_INFO_PAGE)
+    TouchButtonPathInfoPage.drawButton();
+#endif
+
     // left button column
     TouchButtonStepMode.drawButton();
-    TouchButtonSingleScan.drawButton();
     TouchButtonStep.drawButton();
+    TouchButtonSingleScan.drawButton();
+    TouchButtonScanSpeed.drawButton();
 
     // small buttons
     TouchButtonStartStopUserAutonomousDrive.drawButton();
+//    TouchButtonDistanceFeedbackMode.drawButton();
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.drawButton();
 #endif
-    TouchButtonScanSpeed.drawButton();
 
     // bottom buttons line
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
     TouchButtonFollower.drawButton();
     TouchButtonBack.drawButton();
-#if defined(ENABLE_PATH_INFO_PAGE)
-    TouchButtonPathInfoPage.drawButton();
-#endif
 }
 
 void startAutonomousDrivePage(void) {
@@ -255,6 +278,7 @@ void startAutonomousDrivePage(void) {
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
     setScanModeButtonCaption();
 #endif
+    setDistanceFeedbackModeButtonCaption();
 
     drawAutonomousDrivePage();
     if(!isCalibrated) {
@@ -264,7 +288,7 @@ void startAutonomousDrivePage(void) {
 
 // currently not used
 void loopAutonomousDrivePage(void) {
-// Autonomous driving is done in an extra loop in AutonomousDrive.cpp driveAutonomousOneStep(), since it is independent of the display.
+// Autonomous driving is done in main loop by calling driveAutonomousOneStep() (in AutonomousDrive.cpp), since it is independent of the display.
 }
 
 void stopAutonomousDrivePage(void) {
@@ -276,9 +300,14 @@ void stopAutonomousDrivePage(void) {
  * X from TouchButtonStep to end of display
  * Y from TouchButtonBackSmall to TouchButtonScanSpeed
  */
-void clearPrintedForwardDistancesInfos() {
-    BlueDisplay1.fillRect(BUTTON_WIDTH_3_5 + 1, BUTTON_HEIGHT_4 + 1, LAYOUT_320_WIDTH,
-    BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR16_WHITE);
+void clearPrintedForwardDistancesInfos(bool aDoFullClear) {
+    if(aDoFullClear) {
+        BlueDisplay1.fillRect(BUTTON_WIDTH_3_5 + 1, BUTTON_HEIGHT_4 + 1, LAYOUT_320_WIDTH,
+                BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR16_WHITE);
+    } else{
+        BlueDisplay1.fillRect(BUTTON_WIDTH_3_5 + 1, BUTTON_HEIGHT_4 + 1, POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_8,
+                BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - 1, COLOR16_WHITE);
+    }
 }
 
 /*
@@ -309,5 +338,4 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
     }
 }
 #endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
-#endif // defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
-#pragma once
+#endif // defined(ENABLE_AUTONOMOUS_DRIVE)

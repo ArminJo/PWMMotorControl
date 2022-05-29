@@ -1,4 +1,5 @@
 /* Arduino SoftI2C library.
+ * SoftI2CMaster.h
  *
  * Version 2.1.8
  *
@@ -96,10 +97,11 @@
 #ifndef __AVR_ARCH__
 #error "Not an AVR MCU! Use 'SlowSoftI2CMaster' library instead of 'SoftI2CMaster'!"
 #else
-
-#ifndef _SOFTI2C_H
-#define _SOFTI2C_H   1
-
+/*
+ * No Guard here!
+ * If we include it with USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE defined,
+ * we must allow, that it can be included again without USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE defined
+ */
 #include <avr/io.h>
 #include <Arduino.h>
 #include <util/twi.h>
@@ -159,6 +161,8 @@ void i2c_write_byte_to_register(uint8_t addr, uint8_t register_number, uint8_t b
 #define I2C_WRITE   0
 
 #if !defined(USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE)
+#ifndef _SOFTI2C_H
+#define _SOFTI2C_H   1
 /*
  * The implementation part of the header only library starts here
  */
@@ -1151,7 +1155,6 @@ uint16_t i2c_read_word_swapped_from_register(uint8_t addr, uint8_t register_numb
     return tWord.UWord;
 }
 
-#endif // !defined(USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE)
 #endif // #ifndef _SOFTI2C_H
+#endif // !defined(USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE)
 #endif // #ifndef __AVR_ARCH__
-#pragma once

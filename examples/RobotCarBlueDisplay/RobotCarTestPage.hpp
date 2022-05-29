@@ -250,4 +250,3 @@ void loopTestPage(void) {
 void stopTestPage(void) {
 }
 #endif // _ROBOT_CAR_TEST_PAGE_HPP
-#pragma once

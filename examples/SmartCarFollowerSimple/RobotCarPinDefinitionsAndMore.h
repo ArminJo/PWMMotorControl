@@ -98,7 +98,7 @@
 #endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
 //Servo pins
-#define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield - can be controlled by LightweightServo library
+#define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield - if pin 10 can be controlled by Distance.hpp and LightweightServo library
 #if defined(CAR_HAS_PAN_SERVO)
 #define PIN_PAN_SERVO              11
 #endif
@@ -138,22 +138,20 @@
 #define IR_INPUT_PIN                   A2
 
 #define PIN_DISTANCE_SERVO             13
-#define USE_STANDARD_SERVO_LIBRARY // Pin 13 is only supported by standard servo library
 
 // Temporarily definition for convenience
-#define CAR_IS_NANO_BASED           // We have an Arduino NANO instead of an UNO. This implies VIN_VOLTAGE_CORRECTION.
+#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 
 #if defined(CAR_IS_NANO_BASED)
 #define PIN_BUZZER                     A3
 #define PIN_IR_DISTANCE_SENSOR         A6 // Sharp IR distance sensor
 
-#  if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 // Pin A0 for VCC monitoring - ADC channel 7
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_ATTENUATED_INPUT_CHANNEL    7 // = A7
 #define PIN_VIN_ATTENUATED_INPUT       A7
-#  endif
+
 #  if defined(CAR_HAS_CAMERA)
 #define PIN_CAMERA_SUPPLY_CONTROL      A2
 #  endif
@@ -196,12 +194,11 @@ void noTone(uint8_t _pin){
 }
 #else // NANO_BASED
 // UNO based
-#  if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
 // Pin A0 for VCC monitoring - ADC channel 2
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_ATTENUATED_INPUT_CHANNEL    2 // = A2
 #define PIN_VIN_ATTENUATED_INPUT       A2
-#  endif
+
 #define PIN_BUZZER                     12
 #define PIN_IR_DISTANCE_SENSOR         A3 // Sharp IR distance sensor
 #endif // CAR_IS_NANO_BASED
