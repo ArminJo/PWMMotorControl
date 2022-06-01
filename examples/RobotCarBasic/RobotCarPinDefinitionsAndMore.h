@@ -77,6 +77,8 @@
 #else
 #  if defined(CAR_HAS_US_DISTANCE_SENSOR) && defined(CAR_HAS_IR_DISTANCE_SENSOR)
 #define US_DISTANCE_SENSOR_ENABLE_PIN   3 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+#  else
+#define DISTANCE_TONE_FEEDBACK_ENABLE_PIN   3 // If this pin is connected to ground, enable distance feedback
 #  endif
 #endif // defined(USE_ENCODER_MOTOR_CONTROL)
 
@@ -132,12 +134,22 @@
 #define FRONT_LEFT_MOTOR_FORWARD_PIN   11 // AIN1
 #define FRONT_LEFT_MOTOR_BACKWARD_PIN  12 // AIN2
 
+#if defined(CAR_HAS_PAN_SERVO)
+#undef CAR_HAS_PAN_SERVO                  // pin 11 is already in use
+#endif
+#if defined(CAR_HAS_TILT_SERVO)
+#undef CAR_HAS_TILT_SERVO                 // pin 12 is already in use
+#endif
+
 #define PIN_TRIGGER_OUT                A0 // can we see the trigger signal?
 #define PIN_ECHO_IN                    A1
 
 #define IR_INPUT_PIN                   A2
 
 #define PIN_DISTANCE_SERVO             13
+#if defined(CAR_HAS_LASER)
+#undef CAR_HAS_LASER                      // pin 13 is used by distance servo
+#endif
 
 // Temporarily definition for convenience
 #define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
@@ -155,6 +167,7 @@
 #  if defined(CAR_HAS_CAMERA)
 #define PIN_CAMERA_SUPPLY_CONTROL      A2
 #  endif
+
 #elif defined(CAR_IS_ESP32_CAM_BASED)
 #define RIGHT_MOTOR_FORWARD_PIN    17 // IN4 <- Label on the L298N board
 #define RIGHT_MOTOR_BACKWARD_PIN   18 // IN3

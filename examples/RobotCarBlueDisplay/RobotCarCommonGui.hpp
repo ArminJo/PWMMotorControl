@@ -257,14 +257,18 @@ void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart) {
     startStopRobotCar(aDoStart);
 }
 
-//#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
-/*
- * Start motors direction forward, get voltage after 200 ms and call setDriveSpeedPWMTo2Volt()
- */
-void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue) {
+void calibrateAndPrint(){
 #if defined(MONITOR_VIN_VOLTAGE)
+    uint8_t tOldDriveSpeedPWM = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt;
     calibrateDriveSpeedPWM();
+    sprintf_P(sStringBuffer, PSTR("DrivePWM2V %3d -> %3d"), tOldDriveSpeedPWM, RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt);
+    BlueDisplay1.debug(sStringBuffer);
+    isCalibrated = true;
 #endif
+}
+
+void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue) {
+    calibrateAndPrint();
 
 //    TouchButtonRobotCarStartStop.setValueAndDraw(RobotCarPWMMotorControl.isStopped());
 //    if (RobotCarPWMMotorControl.isStopped()) {
@@ -276,21 +280,6 @@ void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue) {
 //        // second / recursive call of doCalibrate()
 //        RobotCarPWMMotorControl.stop();
 //    }
-}
-//#endif
-
-void calibrateDriveSpeedPWM() {
-#if defined(MONITOR_VIN_VOLTAGE)
-    RobotCarPWMMotorControl.setSpeedPWMAndDirection(MAX_SPEED_PWM / 2);
-    delay(400);
-    readVINVoltage();
-    uint8_t tOldDriveSpeedPWM = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt;
-    RobotCarPWMMotorControl.setDriveSpeedPWMTo2Volt(sVINVoltage);
-    sprintf_P(sStringBuffer, PSTR("DrivePWM2V %3d -> %3d"), tOldDriveSpeedPWM, RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt);
-    BlueDisplay1.debug(sStringBuffer);
-    RobotCarPWMMotorControl.setSpeedPWM(0);
-    isCalibrated = true;
-#endif
 }
 
 /*
@@ -615,7 +604,7 @@ void drawCommonGui(void) {
 void readAndPrintVin() {
     char tDataBuffer[18];
     char tVCCString[5];
-    readVINVoltage();
+    readVINVoltageAndAdjustDriveSpeed();
     dtostrf(sVINVoltage, 4, 2, tVCCString);
     sprintf_P(tDataBuffer, PSTR("%s volt"), tVCCString);
 
@@ -673,7 +662,7 @@ void checkForLowVoltage() {
                 readAndPrintVin(); // print current voltage
                 delayMillisWithCheckAndHandleEvents(500); // and wait
                 tLoopCount--;
-                readVINVoltage(); // read new VCC value
+                readVINVoltageAndAdjustDriveSpeed(); // read new VCC value
             } while (tLoopCount > 0 || (sVINVoltage < VOLTAGE_LIPO_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD));
             // refresh current page
             GUISwitchPages(NULL, 0);

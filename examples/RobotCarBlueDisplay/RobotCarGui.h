@@ -165,9 +165,9 @@ extern BDButton TouchButtonInfo;
 //#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
 extern bool isCalibrated;
-void calibrateDriveSpeedPWM();
+void calibrateAndPrint();
 void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
-//#endif
+
 extern BDButton TouchButtonCompensationRight;
 extern BDButton TouchButtonCompensationLeft;
 #if defined(ENABLE_EEPROM_STORAGE)

@@ -67,7 +67,7 @@
 #endif
 
 char sDirectionCharArray[3] = { 'S', 'F', 'B' };
-const char *sDirectionStringArray[3] = { "stop", "forward", "backward" };
+const char *sDirectionStringArray[4] = { "stop", "forward", "backward", "unknown" };
 
 // Flags e.g. for display update control
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
@@ -294,6 +294,9 @@ float PWMDcMotor::getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInpu
 }
 
 void PWMDcMotor::printDirectionString(Print *aSerial, uint8_t aDirection) {
+    if(aDirection > 3) {
+        aDirection = 3;
+    }
     aSerial->print(sDirectionStringArray[aDirection]);
 }
 
@@ -511,7 +514,7 @@ void PWMDcMotor::setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltage) {
 }
 
 /*
- * Can be used to get real value for DEFAULT_START_SPEED_PWM
+ * Can be used to get real value for DEFAULT_START_SPEED_PWM, etc. which are computed using the value FULL_BRIDGE_OUTPUT_MILLIVOLT
  */
 uint8_t PWMDcMotor::getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, uint16_t aFullBridgeInputVoltageMillivolt) {
     uint16_t tSpeedPWM = ((uint32_t) (aSpeedPWM * FULL_BRIDGE_OUTPUT_MILLIVOLT))
@@ -522,8 +525,8 @@ uint8_t PWMDcMotor::getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, uint16_t aFull
     return tSpeedPWM;
 }
 uint8_t PWMDcMotor::getVoltageAdjustedSpeedPWM(uint8_t aSpeedPWM, float aFullBridgeInputVoltage) {
-    uint16_t tSpeedPWM = ((uint32_t) (aSpeedPWM * FULL_BRIDGE_OUTPUT_MILLIVOLT))
-            / (1000.0 * (aFullBridgeInputVoltage - FULL_BRIDGE_LOSS_MILLIVOLT));
+    uint16_t tSpeedPWM = (aSpeedPWM * (FULL_BRIDGE_OUTPUT_MILLIVOLT / 1000.0))
+            / (aFullBridgeInputVoltage - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0));
     if (tSpeedPWM > MAX_SPEED_PWM) {
         return MAX_SPEED_PWM;
     }

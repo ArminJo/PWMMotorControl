@@ -83,7 +83,7 @@ void setup() {
     printConfigInfo();
 
     initRobotCarPWMMotorControl();
-    RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set compensation
+    RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
 
     /*
      * Set US servo to forward position and set US distance sensor pins

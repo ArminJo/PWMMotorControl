@@ -240,7 +240,7 @@ void startTestPage(void) {
     doReset(NULL, 0);
     drawTestPage();
     if (!isCalibrated) {
-        calibrateDriveSpeedPWM();
+        calibrateAndPrint();
     }
 }
 

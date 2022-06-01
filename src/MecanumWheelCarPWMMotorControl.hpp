@@ -597,51 +597,121 @@ void MecanumWheelCarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDrivi
 }
 #endif // USE_ENCODER_MOTOR_CONTROL
 
+#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 62.0)
+#define MECANUM_FORWARD_TO_DIAGONAL_FACTOR   (82.0 / 50.0)
+#define MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL   (82.0 * M_SQRT2 / 50.0)
+
 /*
- * \ /
+ *  ->-
+ *  | /
+ *  |/
  *  o
- * / \
+ * Forward  82 cm
+ * Right    62 cm
+ * Diagonal 50 cm
  */
-void MecanumWheelCarPWMMotorControl::moveStar(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
+void MecanumWheelCarPWMMotorControl::moveTestDistances(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
 }
 
 /*
+ * The compensated moveTestDistances in order to go back to the origin
+ * The triangle base is at 45 degree
+ *  ->-
+ *  | /
+ *  |/
+ *  o
+ */
+void MecanumWheelCarPWMMotorControl::moveTriangle45(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL);
+}
+/**
+ * o is origin of movement. The star starts with left forward and goes clockwise.
+ *
+ * \ /
+ *  o
+ * / \
+ * @param aRequestedSpeedPWM    Any value between 0 and MAX_SPEED_PWM (255)
+ * @param aMillisforOneMove     The time used for a sub-move / a move in one direction
+ * @param aDelayBetweenMoves    The delay between sub-moves of the move
+ */
+void MecanumWheelCarPWMMotorControl::moveStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+}
+
+/*
+ * o is origin of movement. The full star starts with forward and goes clockwise.
+ *
  * \|/
  * -o-
  * /|\
  */
-void MecanumWheelCarPWMMotorControl::moveFullStar(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
+void MecanumWheelCarPWMMotorControl::moveFullStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
 
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aMillisforOneMove);
 }
 
 /*
@@ -649,11 +719,15 @@ void MecanumWheelCarPWMMotorControl::moveFullStar(int aRequestedSpeedPWM, int aD
  *  | |
  *  o<-
  */
-void MecanumWheelCarPWMMotorControl::moveSqare(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
+void MecanumWheelCarPWMMotorControl::moveSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
 }
 
 /*
@@ -661,28 +735,37 @@ void MecanumWheelCarPWMMotorControl::moveSqare(int aRequestedSpeedPWM, int aDela
  *  |  |
  *  o\/
  */
-void MecanumWheelCarPWMMotorControl::moveHexagon(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-
+void MecanumWheelCarPWMMotorControl::moveHexagon(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR);
 }
 
 /*
- *
+ * The triangle base is at 0 degree
  *   / \
  *  o->-
  */
-void MecanumWheelCarPWMMotorControl::moveTriangle(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
+void MecanumWheelCarPWMMotorControl::moveTriangle0(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
 }
 
 /*
@@ -694,19 +777,31 @@ void MecanumWheelCarPWMMotorControl::moveTriangle(int aRequestedSpeedPWM, int aD
  *     |   |
  *     o->-
  */
-void MecanumWheelCarPWMMotorControl::moveBigPlus(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aDelay);
+void MecanumWheelCarPWMMotorControl::moveBigPlus(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
 }
 
 /*
@@ -714,15 +809,15 @@ void MecanumWheelCarPWMMotorControl::moveBigPlus(int aRequestedSpeedPWM, int aDe
  *  \/
  *  o
  */
-void MecanumWheelCarPWMMotorControl::moveRhombus(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
+void MecanumWheelCarPWMMotorControl::moveRhombus(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aMillisforOneMove);
 }
 
 /*
@@ -730,15 +825,17 @@ void MecanumWheelCarPWMMotorControl::moveRhombus(int aRequestedSpeedPWM, int aDe
  *   / \
  *  o->-
  */
-void MecanumWheelCarPWMMotorControl::moveTrapezium(int aRequestedSpeedPWM, int aDelay) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD, aDelay);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay / 2);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aDelay / 2);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_BACKWARD, aDelay);
-//    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aDelay);
+void MecanumWheelCarPWMMotorControl::moveTrapezium(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove + (aMillisforOneMove / 2));
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove / 2);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD,
+            aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL);
 }
 
 #if defined(LOCAL_DEBUG)

@@ -282,7 +282,7 @@ void startAutonomousDrivePage(void) {
 
     drawAutonomousDrivePage();
     if(!isCalibrated) {
-        calibrateDriveSpeedPWM();
+        calibrateAndPrint();
     }
 }
 

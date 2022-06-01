@@ -138,7 +138,7 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
     CarRequestedDistanceMillimeter = 0;
     IMUData.initMPU6050FifoForCarData();
 #    else
-    FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER;
+//    FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER;
 #    endif
 }
 #  endif // USE_ENCODER_MOTOR_CONTROL
@@ -312,13 +312,26 @@ void CarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
 }
 
 void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
+    if (aRequestedSpeedPWM == 0) {
+        CarDirection = DIRECTION_STOP;
+    }
     rightCarMotor.setSpeedPWM(aRequestedSpeedPWM);
     leftCarMotor.setSpeedPWM(aRequestedSpeedPWM);
 }
 
 void CarPWMMotorControl::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
-    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM);
-    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM);
+    uint8_t tDirection;
+    if (aRequestedSpeedPWM == 0) {
+        tDirection = DIRECTION_STOP;
+    } else if (aRequestedSpeedPWM < 0) {
+        aRequestedSpeedPWM = -aRequestedSpeedPWM;
+        tDirection = DIRECTION_BACKWARD;
+    } else {
+        tDirection = DIRECTION_FORWARD;
+    }
+    checkAndHandleDirectionChange(tDirection); // this sets CarDirection.
+    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
+    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
 }
 
 uint8_t CarPWMMotorControl::getCarDirection() {
@@ -355,34 +368,34 @@ void CarPWMMotorControl::setStopMode(uint8_t aStopMode) {
 
 void CarPWMMotorControl::resetEncoderControlValues() {
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-    rightCarMotor.resetEncoderControlValues();
-    leftCarMotor.resetEncoderControlValues();
+            rightCarMotor.resetEncoderControlValues();
+            leftCarMotor.resetEncoderControlValues();
 #endif
 }
 
 #if defined(USE_MPU6050_IMU)
-void CarPWMMotorControl::updateIMUData() {
-    if (IMUData.readCarDataFromMPU6050Fifo()) {
-        if (IMUData.AcceleratorForwardOffset != 0) {
-            if (CarTurn2DegreesPerSecondFromIMU != IMUData.getGyroscopePan2DegreePerSecond()) {
-                CarTurn2DegreesPerSecondFromIMU = IMUData.getGyroscopePan2DegreePerSecond();
+        void CarPWMMotorControl::updateIMUData() {
+            if (IMUData.readCarDataFromMPU6050Fifo()) {
+                if (IMUData.AcceleratorForwardOffset != 0) {
+                    if (CarTurn2DegreesPerSecondFromIMU != IMUData.getGyroscopePan2DegreePerSecond()) {
+                        CarTurn2DegreesPerSecondFromIMU = IMUData.getGyroscopePan2DegreePerSecond();
 //                PWMDcMotor::SensorValuesHaveChanged = true; is not displayed
-            }
-            if (CarTurnAngleHalfDegreesFromIMU != IMUData.getTurnAngleHalfDegree()) {
-                CarTurnAngleHalfDegreesFromIMU = IMUData.getTurnAngleHalfDegree();
-                PWMDcMotor::SensorValuesHaveChanged = true;
-            }
-            if (CarSpeedCmPerSecondFromIMU != (unsigned int) abs(IMUData.getSpeedCmPerSecond())) {
-                CarSpeedCmPerSecondFromIMU = abs(IMUData.getSpeedCmPerSecond());
-                PWMDcMotor::SensorValuesHaveChanged = true;
-            }
-            if (CarDistanceMillimeterFromIMU != (unsigned int) abs(IMUData.getDistanceMillimeter())) {
-                CarDistanceMillimeterFromIMU = abs(IMUData.getDistanceMillimeter());
-                PWMDcMotor::SensorValuesHaveChanged = true;
+                    }
+                    if (CarTurnAngleHalfDegreesFromIMU != IMUData.getTurnAngleHalfDegree()) {
+                        CarTurnAngleHalfDegreesFromIMU = IMUData.getTurnAngleHalfDegree();
+                        PWMDcMotor::SensorValuesHaveChanged = true;
+                    }
+                    if (CarSpeedCmPerSecondFromIMU != (unsigned int) abs(IMUData.getSpeedCmPerSecond())) {
+                        CarSpeedCmPerSecondFromIMU = abs(IMUData.getSpeedCmPerSecond());
+                        PWMDcMotor::SensorValuesHaveChanged = true;
+                    }
+                    if (CarDistanceMillimeterFromIMU != (unsigned int) abs(IMUData.getDistanceMillimeter())) {
+                        CarDistanceMillimeterFromIMU = abs(IMUData.getDistanceMillimeter());
+                        PWMDcMotor::SensorValuesHaveChanged = true;
+                    }
+                }
             }
         }
-    }
-}
 #endif
 
 /*
@@ -399,82 +412,82 @@ void CarPWMMotorControl::updateIMUData() {
  */
 bool CarPWMMotorControl::updateMotors() {
 #if defined(USE_MPU6050_IMU)
-    bool tReturnValue = !isStopped();
-    updateIMUData();
-    if (CarRequestedRotationDegrees != 0) {
-        /*
-         * Rotation here. Using ramps for the rotation SpeedPWMs used makes no sense
-         */
+            bool tReturnValue = !isStopped();
+            updateIMUData();
+            if (CarRequestedRotationDegrees != 0) {
+                /*
+                 * Rotation here. Using ramps for the rotation SpeedPWMs used makes no sense
+                 */
 #  if defined(TRACE)
-        Serial.println(CarTurnAngleHalfDegreesFromIMU);
-        delay(10);
+                Serial.println(CarTurnAngleHalfDegreesFromIMU);
+                delay(10);
 #  endif
-        // putting abs(CarTurnAngleHalfDegreesFromIMU) also into a variable increases code size by 8
-        int tRequestedRotationDegreesForCompare = abs(CarRequestedRotationDegrees * 2);
-        int tCarTurnAngleHalfDegreesFromIMUForCompare = abs(CarTurnAngleHalfDegreesFromIMU);
-        if ((tCarTurnAngleHalfDegreesFromIMUForCompare + TURN_OVERRUN_HALF_ANGLE) >= tRequestedRotationDegreesForCompare) {
-            /*
-             * End of rotation detected
-             */
-            stop(STOP_MODE_BRAKE);
-            CarRequestedRotationDegrees = 0;
-            tReturnValue = false;
-        } else if ((tCarTurnAngleHalfDegreesFromIMUForCompare + getTurnDistanceHalfDegree())
-                >= tRequestedRotationDegreesForCompare) {
+                // putting abs(CarTurnAngleHalfDegreesFromIMU) also into a variable increases code size by 8
+                int tRequestedRotationDegreesForCompare = abs(CarRequestedRotationDegrees * 2);
+                int tCarTurnAngleHalfDegreesFromIMUForCompare = abs(CarTurnAngleHalfDegreesFromIMU);
+                if ((tCarTurnAngleHalfDegreesFromIMUForCompare + TURN_OVERRUN_HALF_ANGLE) >= tRequestedRotationDegreesForCompare) {
+                    /*
+                     * End of rotation detected
+                     */
+                    stop(STOP_MODE_BRAKE);
+                    CarRequestedRotationDegrees = 0;
+                    tReturnValue = false;
+                } else if ((tCarTurnAngleHalfDegreesFromIMUForCompare + getTurnDistanceHalfDegree())
+                        >= tRequestedRotationDegreesForCompare) {
 //            Serial.print(getTurnDistanceHalfDegree());
-            /*
-             * Reduce SpeedPWM just before target angle is reached. If motors are not stopped, we run for extra 2 to 4 degree
-             */
-            changeSpeedPWM(rightCarMotor.DriveSpeedPWM / 2);
-        }
-    } else {
-        /*
-         * Straight driving here
-         */
-        if (CarRequestedDistanceMillimeter != 0) {
+                    /*
+                     * Reduce SpeedPWM just before target angle is reached. If motors are not stopped, we run for extra 2 to 4 degree
+                     */
+                    changeSpeedPWM(rightCarMotor.DriveSpeedPWM / 2);
+                }
+            } else {
+                /*
+                 * Straight driving here
+                 */
+                if (CarRequestedDistanceMillimeter != 0) {
 #  if !defined(USE_ENCODER_MOTOR_CONTROL)
 #    if !defined(DO_NOT_SUPPORT_RAMP)
-            if (rightCarMotor.MotorRampState >= MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
-                    || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) // no START and STOPPED handled here
+                    if (rightCarMotor.MotorRampState >= MOTOR_STATE_RAMP_UP || rightCarMotor.MotorRampState == MOTOR_STATE_DRIVE
+                            || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN) // no START and STOPPED handled here
 #    endif
-            {
-                unsigned int tBrakingDistanceMillimeter = getBrakingDistanceMillimeter();
+                    {
+                        unsigned int tBrakingDistanceMillimeter = getBrakingDistanceMillimeter();
 #if defined(LOCAL_DEBUG)
-                Serial.print(F("Dist="));
-                Serial.print(CarDistanceMillimeterFromIMU);
-                Serial.print(F(" Breakdist="));
-                Serial.print(tBrakingDistanceMillimeter);
-                Serial.print(F(" St="));
-                Serial.print(rightCarMotor.MotorRampState);
-                Serial.print(F(" Ns="));
-                Serial.println(rightCarMotor.CurrentCompensatedSpeedPWM);
+                        Serial.print(F("Dist="));
+                        Serial.print(CarDistanceMillimeterFromIMU);
+                        Serial.print(F(" Breakdist="));
+                        Serial.print(tBrakingDistanceMillimeter);
+                        Serial.print(F(" St="));
+                        Serial.print(rightCarMotor.MotorRampState);
+                        Serial.print(F(" Ns="));
+                        Serial.println(rightCarMotor.CurrentCompensatedSpeedPWM);
 #endif
-                if (CarDistanceMillimeterFromIMU >= CarRequestedDistanceMillimeter) {
-                    CarRequestedDistanceMillimeter = 0;
-                    stop(STOP_MODE_BRAKE);
-                }
+                        if (CarDistanceMillimeterFromIMU >= CarRequestedDistanceMillimeter) {
+                            CarRequestedDistanceMillimeter = 0;
+                            stop(STOP_MODE_BRAKE);
+                        }
 
-                /*
-                 * Transition criteria to brake/ramp down is: Target distance - braking distance reached
-                 */
-                if ((CarDistanceMillimeterFromIMU + tBrakingDistanceMillimeter) >= CarRequestedDistanceMillimeter
+                        /*
+                         * Transition criteria to brake/ramp down is: Target distance - braking distance reached
+                         */
+                        if ((CarDistanceMillimeterFromIMU + tBrakingDistanceMillimeter) >= CarRequestedDistanceMillimeter
 #    if !defined(DO_NOT_SUPPORT_RAMP)
-                        && rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN
+                                && rightCarMotor.MotorRampState != MOTOR_STATE_RAMP_DOWN
 #    endif
-                ) {
-                    // Start braking
-                    startRampDown();
-                }
-            }
+                        ) {
+                            // Start braking
+                            startRampDown();
+                        }
+                    }
 #  endif // !defined(USE_ENCODER_MOTOR_CONTROL)
-        }
-        /*
-         * In case of IMU distance driving only ramp up and down are managed by these calls
-         */
-        tReturnValue = rightCarMotor.updateMotor();
-        tReturnValue |= leftCarMotor.updateMotor();
-        rightCarMotor.synchronizeRampDown(&leftCarMotor);
-    }
+                }
+                /*
+                 * In case of IMU distance driving only ramp up and down are managed by these calls
+                 */
+                tReturnValue = rightCarMotor.updateMotor();
+                tReturnValue |= leftCarMotor.updateMotor();
+                rightCarMotor.synchronizeRampDown(&leftCarMotor);
+            }
 
 #else // USE_MPU6050_IMU
     bool tReturnValue = rightCarMotor.updateMotor();
@@ -524,7 +537,7 @@ void CarPWMMotorControl::waitForDriveSpeedPWM(void (*aLoopCallback)(void)) {
         ;
     }
 #else
-    (void) aLoopCallback;
+            (void) aLoopCallback;
 #endif
 }
 
@@ -554,13 +567,13 @@ void CarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, u
         uint8_t aRequestedDirection) {
 
 #if defined(USE_MPU6050_IMU)
-    IMUData.resetAllIMUCarOffsetAdjustedValues();
-    CarRequestedDistanceMillimeter = aRequestedDistanceMillimeter;
+            IMUData.resetAllIMUCarOffsetAdjustedValues();
+            CarRequestedDistanceMillimeter = aRequestedDistanceMillimeter;
 #endif
 
 #if defined(USE_MPU6050_IMU) && !defined(USE_ENCODER_MOTOR_CONTROL)
-    // for non encoder motor we use the IMU distance, and require only the ramp up
-    setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
+            // for non encoder motor we use the IMU distance, and require only the ramp up
+            setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 #else
     checkAndHandleDirectionChange(aRequestedDirection);
     rightCarMotor.startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
@@ -612,7 +625,7 @@ void CarPWMMotorControl::startRampDown() {
         return;
     }
 #if defined(DO_NOT_SUPPORT_RAMP)
-    stop(STOP_MODE_KEEP);
+            stop(STOP_MODE_KEEP);
 #else
     /*
      * Set NextChangeMaxTargetCount to change state from MOTOR_STATE_DRIVE to MOTOR_STATE_RAMP_DOWN
@@ -633,8 +646,8 @@ void CarPWMMotorControl::waitUntilStopped(void (*aLoopCallback)(void)) {
 
 bool CarPWMMotorControl::isState(uint8_t aState) {
 #if defined(DO_NOT_SUPPORT_RAMP)
-    (void) aState;
-    return true;
+            (void) aState;
+            return true;
 #else
     return (rightCarMotor.MotorRampState == aState && leftCarMotor.MotorRampState == aState);
 #endif
@@ -650,7 +663,7 @@ bool CarPWMMotorControl::isStopped() {
  */
 bool CarPWMMotorControl::isStateRamp() {
 #if defined(DO_NOT_SUPPORT_RAMP)
-    return false;
+            return false;
 #else
     return (rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || rightCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP
             || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_DOWN || leftCarMotor.MotorRampState == MOTOR_STATE_RAMP_UP);
@@ -662,7 +675,7 @@ bool CarPWMMotorControl::isStateRamp() {
  */
 void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter) {
 #if defined(USE_MPU6050_IMU)
-    (void) aFactorDegreeToMillimeter;
+            (void) aFactorDegreeToMillimeter;
 #else
     (void) aFactorDegreeToMillimeter;
 //    FactorDegreeToMillimeter = aFactorDegreeToMillimeter;
@@ -686,24 +699,24 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
      */
 
 #if defined(LOCAL_DEBUG)
-    Serial.print(F("RotationDegrees="));
-    Serial.print(aRotationDegrees);
-    Serial.print(F(" TurnDirection="));
-    Serial.println(sTurnDirectionCharArray[aTurnDirection]);
-    Serial.flush();
+        Serial.print(F("RotationDegrees="));
+        Serial.print(aRotationDegrees);
+        Serial.print(F(" TurnDirection="));
+        Serial.println(sTurnDirectionCharArray[aTurnDirection]);
+        Serial.flush();
 #endif
 
 #if defined(USE_MPU6050_IMU)
-    IMUData.resetAllIMUCarOffsetAdjustedValues();
-    CarRequestedRotationDegrees = aRotationDegrees;
+        IMUData.resetAllIMUCarOffsetAdjustedValues();
+        CarRequestedRotationDegrees = aRotationDegrees;
 #endif
 
     /*
      * Handle positive and negative rotation degrees
      */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-    EncoderMotor *tRightMotorIfPositiveTurn;
-    EncoderMotor *tLeftMotorIfPositiveTurn;
+        EncoderMotor *tRightMotorIfPositiveTurn;
+        EncoderMotor *tLeftMotorIfPositiveTurn;
 #else
     PWMDcMotor *tRightMotorIfPositiveTurn;
     PWMDcMotor *tLeftMotorIfPositiveTurn;
@@ -743,9 +756,9 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
     uint8_t tTurnSpeedPWMLeft = tLeftMotorIfPositiveTurn->DriveSpeedPWM;
     if (aUseSlowSpeed) {
 #if defined(CAR_HAS_4_WHEELS)
-        // DEFAULT_START_SPEED_PWM does not really work for 4 WD cars
-        tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
-        tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
+            // DEFAULT_START_SPEED_PWM does not really work for 4 WD cars
+            tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
+            tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
 #else
         tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM;
         tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM;
@@ -753,23 +766,23 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
     }
 
 #if defined(LOCAL_DEBUG)
-    Serial.print(F("TurnSpeedPWMRight="));
-    Serial.print(tTurnSpeedPWMRight);
+        Serial.print(F("TurnSpeedPWMRight="));
+        Serial.print(tTurnSpeedPWMRight);
 #  if !defined(USE_MPU6050_IMU)
-    Serial.print(F(" DistanceMillimeterRight="));
-    Serial.print(tDistanceMillimeterRight);
+        Serial.print(F(" DistanceMillimeterRight="));
+        Serial.print(tDistanceMillimeterRight);
 #  endif
-    Serial.println();
+        Serial.println();
 #endif
 
 #if defined(USE_MPU6050_IMU)
-    // We do not really have ramps for turn speed
-    if (tDistanceMillimeterRight > 0) {
-        tRightMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMRight, DIRECTION_FORWARD);
-    }
-    if (tDistanceMillimeterLeft > 0) {
-        tLeftMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMLeft, DIRECTION_BACKWARD);
-    }
+        // We do not really have ramps for turn speed
+        if (tDistanceMillimeterRight > 0) {
+            tRightMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMRight, DIRECTION_FORWARD);
+        }
+        if (tDistanceMillimeterLeft > 0) {
+            tLeftMotorIfPositiveTurn->setSpeedPWMAndDirection(tTurnSpeedPWMLeft, DIRECTION_BACKWARD);
+        }
 #else
     tRightMotorIfPositiveTurn->startGoDistanceMillimeter(tTurnSpeedPWMRight, tDistanceMillimeterRight, DIRECTION_FORWARD);
     tLeftMotorIfPositiveTurn->startGoDistanceMillimeter(tTurnSpeedPWMLeft, tDistanceMillimeterLeft, DIRECTION_BACKWARD);
@@ -792,16 +805,16 @@ void CarPWMMotorControl::rotate(int aRotationDegrees, turn_direction_t aTurnDire
 }
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-/*
- * Get count / distance value from right motor
- */
-unsigned int CarPWMMotorControl::getDistanceCount() {
-    return (rightCarMotor.EncoderCount);
-}
+    /*
+     * Get count / distance value from right motor
+     */
+    unsigned int CarPWMMotorControl::getDistanceCount() {
+        return (rightCarMotor.EncoderCount);
+    }
 
-unsigned int CarPWMMotorControl::getDistanceMillimeter() {
-    return (rightCarMotor.getDistanceMillimeter());
-}
+    unsigned int CarPWMMotorControl::getDistanceMillimeter() {
+        return (rightCarMotor.getDistanceMillimeter());
+    }
 
 #else
 void CarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDriving(uint16_t aMillimeterPerSecond) {

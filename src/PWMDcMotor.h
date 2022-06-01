@@ -252,7 +252,7 @@
 #if defined(DEBUG)
 extern char sDirectionCharArray[3];
 #endif
-extern const char *sDirectionStringArray[3];
+extern const char *sDirectionStringArray[4];
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #  if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)

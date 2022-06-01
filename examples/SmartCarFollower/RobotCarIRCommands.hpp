@@ -27,6 +27,7 @@
 #define _ROBOT_CAR_IR_COMMANDS_HPP
 
 #include <Arduino.h>
+#include "IRCommandDispatcher.h" // for RETURN_IF_STOP
 
 /*
  * Basic IR functions
@@ -61,7 +62,7 @@ bool sEnableKeepDistance; // Follower mode without a turn
 void doStop() {
     RobotCarPWMMotorControl.stop();
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-    DistanceServo.write(90);
+    DistanceServoWriteAndDelay(90);
     sEnableFollower = false;
     sEnableKeepDistance = false;
 #endif
@@ -239,6 +240,8 @@ void stepDistanceFeedbackMode() {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
         noTone(PIN_BUZZER);
     }
+    Serial.print(F("DistanceFeedbackMode="));
+    Serial.println(sDistanceFeedbackMode);
 }
 
 #if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))

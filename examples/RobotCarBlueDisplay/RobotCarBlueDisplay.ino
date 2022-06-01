@@ -56,6 +56,8 @@
  * For moving exact distances and turns you may modify this values according to your actual car configuration
  */
 //#define DEFAULT_CIRCUMFERENCE_MILLIMETER     220  // The circumference of your wheel in millimeter
+#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
+#define CAR_HAS_4_MECANUM_WHEELS
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
@@ -80,10 +82,9 @@
 #if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
 #define ENABLE_AUTONOMOUS_DRIVE
 #endif
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-#define MONITOR_VIN_VOLTAGE         // Enable if by default, if available
+
+#define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
-#endif
 
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be before #include "BlueDisplay.hpp"
@@ -96,29 +97,22 @@
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
 #define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
 
-#define SUPPRESS_HPP_WARNING    // Suppress warnings we get because of helper includes for eclipse indexer
-#include "RobotCarGui.h"        // This helps the eclipse indexer
-#include "RobotCarBlueDisplay.h" // This helps the eclipse indexer
-
-#include "RobotCarUtils.hpp"
-#include "BlueDisplay.hpp"      // include source of library
-
-#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
-#include "CarPWMMotorControl.hpp" // include source of library
+#define SUPPRESS_HPP_WARNING        // Suppress warnings we get because of helper includes for eclipse indexer
+#include "CarPWMMotorControl.hpp"   // include source of library
+#include "RobotCarUtils.hpp"        // include source of library
+#include "BlueDisplay.hpp"          // include source of library
 
 #if defined(USE_MPU6050_IMU)
-#include "IMUCarData.hpp"       // include source of library
+#include "IMUCarData.hpp"           // include source of library
 #endif
 #include "RobotCarGui.hpp"
 
 #if defined(CAR_HAS_DISTANCE_SENSOR)
-#include "Distance.h"           // This helps the eclipse indexer
-#include "Distance.hpp"         // requires definitions from RobotCarGui.h
+#include "Distance.hpp"             // requires definitions from RobotCarGui.h
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
-#define USE_NO_RTX_EXTENSIONS   // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
-#include <PlayRtttl.h>
+#define USE_NO_RTX_EXTENSIONS       // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
 #include <PlayRtttl.hpp>
 #endif
 
@@ -244,7 +238,6 @@ void setup() {
 #endif
 
 #if defined(MONITOR_VIN_VOLTAGE)
-    readVINVoltage(); // The value might not correct, but it sets the channel and reference for VIN initially
     randomSeed(sVINVoltage * 100);
 #endif
 
