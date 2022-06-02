@@ -209,7 +209,7 @@ public:
 };
 
 #if !defined(CAR_HAS_4_MECANUM_WHEELS)
-extern CarPWMMotorControl RobotCarPWMMotorControl;
+extern CarPWMMotorControl RobotCar;
 #endif
 
 #endif // _CAR_PWM_MOTOR_CONTROL_H

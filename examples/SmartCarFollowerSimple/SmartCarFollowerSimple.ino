@@ -83,7 +83,7 @@ void setup() {
     printConfigInfo();
 
     initRobotCarPWMMotorControl();
-    RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
+    RobotCar.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
 
     /*
      * Set US servo to forward position and set US distance sensor pins
@@ -125,10 +125,10 @@ void loop() {
             /*
              * Target too far -> drive forward
              */
-            if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_FORWARD) {
+            if (RobotCar.getCarDirection() != DIRECTION_FORWARD) {
                 Serial.print(F(" -> go forward")); // print only once at direction change
             }
-            RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+            RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
             tone(PIN_BUZZER, 1500);
 
             // tCentimeter == 0 is timeout
@@ -136,19 +136,19 @@ void loop() {
             /*
              * Target too close -> drive backwards
              */
-            if (RobotCarPWMMotorControl.getCarDirection() != DIRECTION_BACKWARD) {
+            if (RobotCar.getCarDirection() != DIRECTION_BACKWARD) {
                 Serial.print(F(" -> go backward")); // print only once at direction change
             }
-            RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+            RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
             tone(PIN_BUZZER, 666);
 
         } else {
             /*
              * Target is in the right distance -> stop
              */
-            if (!RobotCarPWMMotorControl.isStopped()) {
+            if (!RobotCar.isStopped()) {
                 Serial.print(F(" -> now stop")); // stop only once
-                RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+                RobotCar.stop(STOP_MODE_RELEASE);
             }
             if (tCentimeter == 0) {
                 // distance timeout here
@@ -164,17 +164,17 @@ void loop() {
 }
 
 /*
- * Call RobotCarPWMMotorControl.init() with different sets of parameters
+ * Call RobotCar.init() with different sets of parameters
  */
 void initRobotCarPWMMotorControl() {
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    RobotCarPWMMotorControl.init();
+    RobotCar.init();
 #elif defined(CAR_HAS_4_MECANUM_WHEELS)
-    RobotCarPWMMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
+    RobotCar.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
     FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
     BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
 #else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 }

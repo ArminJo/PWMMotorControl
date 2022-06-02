@@ -170,14 +170,14 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
             tDirection |= DIRECTION_TURN;
         }
         tSpeedPWMValue = max(tSpeedPWMValue, tLeftRightValue);
-        RobotCarPWMMotorControl.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
+        RobotCar.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
 #else
         if(tSpeedPWMValue < 0){
             tLeftRightValue = -tLeftRightValue;
         }
-        RobotCarPWMMotorControl.rightCarMotor.setSpeedPWMAndDirection(
+        RobotCar.rightCarMotor.setSpeedPWMAndDirection(
                 speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue));
-        RobotCarPWMMotorControl.leftCarMotor.setSpeedPWMAndDirection(
+        RobotCar.leftCarMotor.setSpeedPWMAndDirection(
                 speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue));
 #endif
     }

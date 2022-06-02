@@ -44,7 +44,7 @@
 
 #if defined (USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
 #include "CarPWMMotorControl.hpp"
-#define MotorUnderTest RobotCarPWMMotorControl.rightCarMotor
+#define MotorUnderTest RobotCar.rightCarMotor
 #else
 #include "EncoderMotor.hpp"
 EncoderMotor MotorUnderTest;
@@ -73,9 +73,9 @@ void setup() {
 
 #if defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)
 #  if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    RobotCarPWMMotorControl.init();
+    RobotCar.init();
 #  else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #  endif
 #else // defined(USE_CAR_PWM_CONTROL_INSTEAD_OF_ENCODER_MOTOR)

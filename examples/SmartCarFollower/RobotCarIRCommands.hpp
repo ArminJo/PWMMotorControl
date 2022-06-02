@@ -60,7 +60,7 @@ bool sEnableKeepDistance; // Follower mode without a turn
 #endif
 
 void doStop() {
-    RobotCarPWMMotorControl.stop();
+    RobotCar.stop();
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
     DistanceServoWriteAndDelay(90);
     sEnableFollower = false;
@@ -70,7 +70,7 @@ void doStop() {
 
 void doReset() {
     doStop();
-    RobotCarPWMMotorControl.setDefaultsForFixedDistanceDriving();
+    RobotCar.setDefaultsForFixedDistanceDriving();
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -79,54 +79,54 @@ void doReset() {
     sDoSlowScan = false;
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #endif
-    noTone (PIN_BUZZER);
+    noTone(PIN_BUZZER);
 }
 
 void goForward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
         // if repeat was pressed, we enable a "fast" stop
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
+        RobotCar.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
     } else {
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
     }
 }
 void goBackward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
+        RobotCar.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
     } else {
-        RobotCarPWMMotorControl.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
     }
 }
 
 void turnLeft() {
-    RobotCarPWMMotorControl.startRotate(45, TURN_IN_PLACE, false);
+    RobotCar.startRotate(45, TURN_IN_PLACE, false);
 }
 void turnRight() {
-    RobotCarPWMMotorControl.startRotate(-45, TURN_IN_PLACE, false);
+    RobotCar.startRotate(-45, TURN_IN_PLACE, false);
 }
 
 void doDefaultSpeed() {
-    RobotCarPWMMotorControl.setDefaultsForFixedDistanceDriving();
-    RobotCarPWMMotorControl.rightCarMotor.printValues(&Serial);
+    RobotCar.setDefaultsForFixedDistanceDriving();
+    RobotCar.rightCarMotor.printValues(&Serial);
 }
 
 void doIncreaseSpeed() {
-    uint8_t tNewSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM + SPEED_PWM_CHANGE_VALUE;
+    uint8_t tNewSpeed = RobotCar.rightCarMotor.DriveSpeedPWM + SPEED_PWM_CHANGE_VALUE;
     if (tNewSpeed < SPEED_PWM_CHANGE_VALUE) {
         // overflow happened here
         tNewSpeed = MAX_SPEED_PWM;
     }
-    RobotCarPWMMotorControl.setDriveSpeedPWM(tNewSpeed);
-    RobotCarPWMMotorControl.rightCarMotor.printValues(&Serial);
+    RobotCar.setDriveSpeedPWM(tNewSpeed);
+    RobotCar.rightCarMotor.printValues(&Serial);
 }
 
 void doDecreaseSpeed() {
-    uint8_t tNewSpeed = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWM - SPEED_PWM_CHANGE_VALUE;
+    uint8_t tNewSpeed = RobotCar.rightCarMotor.DriveSpeedPWM - SPEED_PWM_CHANGE_VALUE;
     if (tNewSpeed < DEFAULT_START_SPEED_PWM) {
         tNewSpeed = DEFAULT_START_SPEED_PWM;
     }
-    RobotCarPWMMotorControl.setDriveSpeedPWM(tNewSpeed);
-    RobotCarPWMMotorControl.rightCarMotor.printValues(&Serial);
+    RobotCar.setDriveSpeedPWM(tNewSpeed);
+    RobotCar.rightCarMotor.printValues(&Serial);
 }
 
 /*
@@ -137,41 +137,41 @@ void testRotation() {
 #define NUMBER_OF_TEST_ROTATIONS    9 // to have 90 degree at 9 times 10 degree rotation
     Serial.println(F("Rotate 9 times for 10 degree"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
+        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
     Serial.println(F("Rotate back for 90 degree"));
-    RobotCarPWMMotorControl.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
+    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
     DELAY_AND_RETURN_IF_STOP(2000);
 
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(-DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
+        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCarPWMMotorControl.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
+    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
     DELAY_AND_RETURN_IF_STOP(2000);
 
     Serial.println(F("Now rotate in place and use slow speed"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
+        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCarPWMMotorControl.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
+    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
     DELAY_AND_RETURN_IF_STOP(2000);
 
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCarPWMMotorControl.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
+        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCarPWMMotorControl.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
+    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
     DELAY_AND_RETURN_IF_STOP(2000);
 }
 
@@ -182,13 +182,13 @@ void testDrive() {
     Serial.println(F(" mm"));
 
     for (int i = 0; i < NUMBER_OF_TEST_DRIVES; ++i) {
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     DELAY_AND_RETURN_IF_STOP(2000);
 
     for (int i = 0; i < NUMBER_OF_TEST_DRIVES; ++i) {
-        RobotCarPWMMotorControl.goDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.goDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
         DELAY_AND_RETURN_IF_STOP(500);
     }
 }
@@ -196,15 +196,15 @@ void testDrive() {
 void testCommand() {
     uint8_t tDirection = DIRECTION_FORWARD;
     for (int i = 0; i < 2; ++i) {
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
         DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
         DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4, tDirection);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4, tDirection);
         DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 2, tDirection);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 2, tDirection);
         DELAY_AND_RETURN_IF_STOP(1000);
-        RobotCarPWMMotorControl.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, tDirection);
+        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, tDirection);
 
         DELAY_AND_RETURN_IF_STOP(2000);
         tDirection = DIRECTION_BACKWARD;
@@ -249,11 +249,8 @@ void stepDistanceSourceMode() {
     sDistanceSourceMode++;
     Serial.print(F("DistanceSourceMode="));
     Serial.print(sDistanceSourceMode);
-    Serial.print(F(" / "));
+    Serial.print(F(" | "));
     switch (sDistanceSourceMode) {
-    case DISTANCE_SOURCE_MODE_MINIMUM:
-        Serial.println(F("Min"));
-        break;
     case DISTANCE_SOURCE_MODE_MAXIMUM:
         Serial.println(F("Max"));
         break;
@@ -265,6 +262,7 @@ void stepDistanceSourceMode() {
         break;
     default:
         sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
+        Serial.println(F("Min"));
         break;
     }
 }

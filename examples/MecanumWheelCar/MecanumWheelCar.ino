@@ -70,7 +70,7 @@ void setup() {
      * Tone feedback for end of boot
      */
     tone(PIN_BUZZER, 2200, 100);
-    RobotCarPWMMotorControl.setSpeedPWMAndDirection(0);
+    RobotCar.setSpeedPWMAndDirection(0);
     delay(2000);
 
     /*
@@ -81,9 +81,9 @@ void setup() {
     delay(2000);
 
     // Test distances
-//    RobotCarPWMMotorControl.moveTriangle45(DEMO_SPEED, 4000, 2000);
+//    RobotCar.moveTriangle45(DEMO_SPEED, 4000, 2000);
 //    delay(10000);
-//    RobotCarPWMMotorControl.moveTestDistances(DEMO_SPEED, 4000, 5000);
+//    RobotCar.moveTestDistances(DEMO_SPEED, 4000, 5000);
 //    delay(5000);
 
     Serial.println(F("End of setup"));
@@ -98,17 +98,17 @@ void loop() {
     Serial.println(F("Start demo"));
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    RobotCarPWMMotorControl.moveSqare(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    RobotCar.moveSqare(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_MOVES_MILLIS);
 
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    RobotCarPWMMotorControl.moveStar(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    RobotCar.moveStar(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_MOVES_MILLIS);
 
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    RobotCarPWMMotorControl.moveTrapezium(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    RobotCar.moveTrapezium(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_MOVES_MILLIS);
 
     /*
@@ -117,38 +117,38 @@ void loop() {
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
     Serial.println(F("Turn right"));
-    RobotCarPWMMotorControl.rotate(-180, TURN_IN_PLACE);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(-180, TURN_IN_PLACE);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_STOP | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     Serial.println(F("Turn left"));
-    RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(180, TURN_IN_PLACE);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_STOP | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     Serial.println(F("Turn front right"));
-    RobotCarPWMMotorControl.rotate(-90, TURN_FORWARD);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(-90, TURN_FORWARD);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_FORWARD | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     Serial.println(F("Turn front left"));
-    RobotCarPWMMotorControl.rotate(90, TURN_FORWARD);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(90, TURN_FORWARD);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_FORWARD | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     Serial.println(F("Turn back left"));
-    RobotCarPWMMotorControl.rotate(90, TURN_BACKWARD);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(90, TURN_BACKWARD);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_BACKWARD | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     Serial.println(F("Turn back right"));
-    RobotCarPWMMotorControl.rotate(-90, TURN_BACKWARD);
-//    RobotCarPWMMotorControl.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
+    RobotCar.rotate(-90, TURN_BACKWARD);
+//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
 //    DIRECTION_BACKWARD | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
     delay(DELAY_BETWEEN_MOVES_MILLIS);
 

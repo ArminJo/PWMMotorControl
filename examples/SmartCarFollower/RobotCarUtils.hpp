@@ -65,17 +65,17 @@ void printConfigInfo() {
 }
 
 /*
- * Call RobotCarPWMMotorControl.init() with different sets of parameters
+ * Call RobotCar.init() with different sets of parameters
  */
 void initRobotCarPWMMotorControl() {
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    RobotCarPWMMotorControl.init();
+    RobotCar.init();
 #elif defined(CAR_HAS_4_MECANUM_WHEELS)
-    RobotCarPWMMotorControl.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
+    RobotCar.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
     FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
     BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
 #else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
             LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 
@@ -191,7 +191,7 @@ void readVINVoltageAndAdjustDriveSpeed() {
         /*
          * Adjust DriveSpeedPWMFor2Volt according to voltage
          */
-        RobotCarPWMMotorControl.rightCarMotor.setDriveSpeedPWMFor2Volt(sVINVoltage);
+        RobotCar.rightCarMotor.setDriveSpeedPWMFor2Volt(sVINVoltage);
     }
 #endif // defined(ESP32)
 #endif // defined(MONITOR_VIN_VOLTAGE)
@@ -203,10 +203,10 @@ void readVINVoltageAndAdjustDriveSpeed() {
 void calibrateDriveSpeedPWM() {
 #if defined(MONITOR_VIN_VOLTAGE)
     if (sVINVoltageDividerIsAttached) { // sVINVoltageDividerIsAttached is constant true if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-        RobotCarPWMMotorControl.setSpeedPWMAndDirection(MAX_SPEED_PWM / 2);
+        RobotCar.setSpeedPWMAndDirection(MAX_SPEED_PWM / 2);
         delay(400);
         readVINVoltageAndAdjustDriveSpeed();
-        RobotCarPWMMotorControl.stop();
+        RobotCar.stop();
     }
 #endif
 }

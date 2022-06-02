@@ -169,10 +169,10 @@
 #if !defined(DEFAULT_MILLIMETER_PER_SECOND)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
 #define DEFAULT_MILLIMETER_PER_SECOND            200 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  75 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
+#define DEFAULT_MILLIS_FOR_FIRST_CENTIMETER       75 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #  else
 #define DEFAULT_MILLIMETER_PER_SECOND            190 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#define DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER  85  // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
+#define DEFAULT_MILLIS_FOR_FIRST_CENTIMETER       85  // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #define SPEED_PER_VOLT                           130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
 #  endif
 #endif
@@ -182,7 +182,7 @@
 #define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND)
 /*
  * Currently formula used to convert distance in mm to motor on time in milliseconds is:
- * computedMillisOfMotorStopForDistance = DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER + ((((aRequestedDistanceMillimeter - 10) * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
+ * computedMillisOfMotorStopForDistance = DEFAULT_MILLIS_FOR_FIRST_CENTIMETER + ((((aRequestedDistanceMillimeter - 10) * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
  */
 
 /*******************************************************
@@ -443,6 +443,7 @@ public:
  * Version 1.9.1 - 05/2022
  * - MecanumWheelCar support.
  * - IMUCarData improved.
+ * - Renamed instance from RobotCarPWMMotorControl to RobotCar
  *
  * Version 1.9.0 - 04/2022
  * - Removed all *Compensated functions, compensation now is always active.

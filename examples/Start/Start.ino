@@ -119,7 +119,7 @@ void loop() {
     rightMotor.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, sMotorDirection);
     Serial.print(rightMotor.computedMillisOfMotorStopForDistance - tMillis);
     Serial.print(F(" ms including time for 1. cm of "));
-    Serial.print(DEFAULT_TIME_MILLIS_FOR_FIRST_CENTIMETER);
+    Serial.print(DEFAULT_MILLIS_FOR_FIRST_CENTIMETER);
     Serial.println(F(" ms."));
     delay(4000);
 

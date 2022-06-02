@@ -37,7 +37,7 @@
 /*
  * The Car Control instance to be used by the main program
  */
-MecanumWheelCarPWMMotorControl RobotCarPWMMotorControl;
+MecanumWheelCarPWMMotorControl RobotCar;
 
 #if defined(DEBUG)
 #define LOCAL_DEBUG

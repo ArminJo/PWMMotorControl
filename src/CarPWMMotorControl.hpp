@@ -48,7 +48,7 @@
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 #include "MecanumWheelCarPWMMotorControl.hpp"
 #else
-CarPWMMotorControl RobotCarPWMMotorControl;
+CarPWMMotorControl RobotCar;
 #endif
 
 #if defined(DEBUG)

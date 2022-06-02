@@ -1,7 +1,7 @@
 /*
  * RobotCarTestPage.hpp
  *
- *  Contains all GUI elements for test controlling the RobotCarPWMMotorControl.
+ *  Contains all GUI elements for test controlling the RobotCar.
  *
  *  Requires BlueDisplay library.
  *
@@ -53,10 +53,10 @@ bool sShowInfo = true;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
-    RobotCarPWMMotorControl.startGoDistanceMillimeter(aValue, sRobotCarDirection);
+    RobotCar.startGoDistanceMillimeter(aValue, sRobotCarDirection);
 #if !defined(USE_ENCODER_MOTOR_CONTROL)
     BlueDisplay1.debug("Millis=",
-            (uint16_t) (RobotCarPWMMotorControl.rightCarMotor.computedMillisOfMotorStopForDistance - millis()));
+            (uint16_t) (RobotCar.rightCarMotor.computedMillisOfMotorStopForDistance - millis()));
 #endif
 }
 
@@ -66,7 +66,7 @@ void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
  */
 void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
-    RobotCarPWMMotorControl.resetEncoderControlValues();
+    RobotCar.resetEncoderControlValues();
     sLastSpeedSliderValue = 0;
 }
 
@@ -83,9 +83,9 @@ void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
         if (sRobotCarDirection != DIRECTION_FORWARD) {
             aValue = -aValue;
         }
-        RobotCarPWMMotorControl.startRotate(aValue, TURN_IN_PLACE);
+        RobotCar.startRotate(aValue, TURN_IN_PLACE);
     } else {
-        RobotCarPWMMotorControl.startRotate(aValue, (turn_direction_t) sRobotCarDirection);
+        RobotCar.startRotate(aValue, (turn_direction_t) sRobotCarDirection);
     }
 }
 
@@ -98,10 +98,10 @@ void doStoreSpeed(float aValue) {
     uint16_t tValue = aValue;
     if (tValue > 10 && tValue < 256) {
         // must use value for compensation not compensated value
-        RobotCarPWMMotorControl.rightCarMotor.DriveSpeed = tValue;
+        RobotCar.rightCarMotor.DriveSpeed = tValue;
         // use the same value here !
-        RobotCarPWMMotorControl.leftCarMotor.DriveSpeed = tValue;
-        RobotCarPWMMotorControl.writeMotorValuesToEeprom();
+        RobotCar.leftCarMotor.DriveSpeed = tValue;
+        RobotCar.writeMotorValuesToEeprom();
     }
     printMotorValues();
 }

@@ -1,7 +1,7 @@
 /*
  * RobotCarHomePage.hpp
  *
- *  Contains the GUI elements of the home page of RobotCarPWMMotorControl.
+ *  Contains the GUI elements of the home page of RobotCar.
  *
  *  Requires BlueDisplay library.
  *

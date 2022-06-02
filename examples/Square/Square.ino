@@ -66,17 +66,17 @@ void setup() {
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
     // For Adafruit Motor Shield v2
-    RobotCarPWMMotorControl.init();
+    RobotCar.init();
 #else
-    RobotCarPWMMotorControl.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
+    RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 
     /*
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
-    RobotCarPWMMotorControl.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
-    RobotCarPWMMotorControl.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER);
+    RobotCar.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
+    RobotCar.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER);
 
     // Print info
     PWMDcMotor::printCompileOptions(&Serial);
@@ -93,19 +93,19 @@ void loop() {
          * You can adjust the speed as well as the distance to time factor above, to get better results.
          * You require no factor, if you have have slot type photo interrupters connected and defined USE_ENCODER_MOTOR_CONTROL above.
          */
-        RobotCarPWMMotorControl.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
+        RobotCar.goDistanceMillimeter(SIZE_OF_SQUARE_MILLIMETER, sMotorDirection);
         delay(400);
         /*
          * Try to turn by 90 degree.
          */
-        RobotCarPWMMotorControl.rotate(90, TURN_FORWARD, true, NULL);
+        RobotCar.rotate(90, TURN_FORWARD, true, NULL);
         delay(400);
     }
 
     /*
      * Turn car around and switch direction.
      */
-    RobotCarPWMMotorControl.rotate(180, TURN_IN_PLACE, NULL);
+    RobotCar.rotate(180, TURN_IN_PLACE, NULL);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

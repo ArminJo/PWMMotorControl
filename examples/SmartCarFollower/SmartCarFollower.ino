@@ -46,12 +46,12 @@
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
 //#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
 //#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 #define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 #define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
-#define USE_SOFT_I2C_MASTER // saves up to 2400 bytes program memory and 220 bytes RAM compared with Arduino Wire
+#define USE_SOFT_I2C_MASTER         // saves up to 2400 bytes program memory and 220 bytes RAM compared with Arduino Wire
 //#define DEBUG
 //#define INFO
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
@@ -121,9 +121,10 @@ void setup() {
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
     printConfigInfo();
+    PWMDcMotor::printCompileOptions(&Serial);
 
     initRobotCarPWMMotorControl();
-    RobotCarPWMMotorControl.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
+    RobotCar.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
 
     /*
      * Initialize US servo and set to forward position
@@ -148,7 +149,7 @@ void setup() {
     delay(1000);
     tone(PIN_BUZZER, 2200, 50);
     delay(100);
-    RobotCarPWMMotorControl.calculateAndPrintIMUOffsets(&Serial);
+    RobotCar.calculateAndPrintIMUOffsets(&Serial);
     tone(PIN_BUZZER, 2200, 50);
 #endif
 #if defined(USE_IR_REMOTE)
@@ -213,7 +214,7 @@ void loop() {
     checkVinPeriodicallyAndPrintIfChanged();
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-    RobotCarPWMMotorControl.delayAndUpdateMotors(100);
+    RobotCar.delayAndUpdateMotors(100);
 #else
     delay(100);
 #endif
@@ -240,9 +241,9 @@ void doFollowerOneStep() {
                 Serial.print(F("TargetNotFoundCount="));
                 Serial.println(sTargetNotFoundCount);
             } else {
-                if (!RobotCarPWMMotorControl.isStopped()) {
+                if (!RobotCar.isStopped()) {
                     Serial.println(F("Stop car"));
-                    RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+                    RobotCar.stop(STOP_MODE_RELEASE);
                 }
             }
 #else
@@ -270,9 +271,6 @@ void doFollowerOneStep() {
                     tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
                             + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 8; // maximum is 240 here
                     tDirection = DIRECTION_FORWARD;
-                    if (tSpeedPWM > MAX_SPEED_PWM) {
-                        tSpeedPWM = MAX_SPEED_PWM;
-                    }
 
                 } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
                     /*
@@ -282,27 +280,27 @@ void doFollowerOneStep() {
                     tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
                             + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 16; // maximum is 320 here
                     tDirection = DIRECTION_BACKWARD;
-                    if (tSpeedPWM > MAX_SPEED_PWM) {
-                        tSpeedPWM = MAX_SPEED_PWM;
-                    }
                 }
 
-                if (RobotCarPWMMotorControl.getCarDirection() != tDirection) {
+                if (RobotCar.getCarDirection() != tDirection) {
                     // print only once at direction change
                     Serial.print(F("go "));
                     PWMDcMotor::printDirectionString(&Serial, tDirection);
                 }
 
                 if (tSpeedPWM != 0) {
+                    if (tSpeedPWM > MAX_SPEED_PWM) {
+                        tSpeedPWM = MAX_SPEED_PWM;
+                    }
                     Serial.print(F("SpeedPWM="));
                     Serial.print(tSpeedPWM);
-                    RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM, tDirection);
+                    RobotCar.setSpeedPWMAndDirection(tSpeedPWM, tDirection);
                 } else {
                     /*
                      * Target is in the right distance -> stop
                      */
-                    if (!RobotCarPWMMotorControl.isStopped()) {
-                        RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE); // stop only once
+                    if (!RobotCar.isStopped()) {
+                        RobotCar.stop(STOP_MODE_RELEASE); // stop only once
                     } else {
                         Serial.print(F("ok"));
                     }
@@ -319,9 +317,9 @@ void doFollowerOneStep() {
          * 4 times no target was found straight ahead, so scan left and right
          * for target at different directions and turn if found.
          */
-        if (!RobotCarPWMMotorControl.isStopped()) {
+        if (!RobotCar.isStopped()) {
             Serial.println(F("Stop car and start scanning"));
-            RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+            RobotCar.stop(STOP_MODE_RELEASE);
         }
 
         /*
@@ -332,7 +330,7 @@ void doFollowerOneStep() {
             // Rotate after target found
             sTargetNotFoundCount = 0;
             DistanceServoWriteAndDelay(90, false); // reset distance servo direction
-            RobotCarPWMMotorControl.rotate(tRotationDegree, TURN_IN_PLACE, false, readVINVoltageAndAdjustDriveSpeed);
+            RobotCar.rotate(tRotationDegree, TURN_IN_PLACE, false, readVINVoltageAndAdjustDriveSpeed);
         }
     }
 }

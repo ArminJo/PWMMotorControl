@@ -48,8 +48,8 @@
 #include "CarPWMMotorControl.hpp"
 #include "RobotCarUtils.hpp"
 
-#define rightMotor RobotCarPWMMotorControl.rightCarMotor
-#define leftMotor   RobotCarPWMMotorControl.leftCarMotor
+#define rightMotor RobotCar.rightCarMotor
+#define leftMotor   RobotCar.leftCarMotor
 
 #define VERSION_EXAMPLE "1.0"
 
@@ -118,11 +118,11 @@ void simpleObjectAvoidance() {
         /*
          * Distance too low here -> Stop and go backwards
          */
-        RobotCarPWMMotorControl.stop();
+        RobotCar.stop();
         delay(1000);
-        RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
+        RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
         delay(1000);
-        RobotCarPWMMotorControl.stop();
+        RobotCar.stop();
         delay(1000);
 
         /*
@@ -132,9 +132,9 @@ void simpleObjectAvoidance() {
         Serial.print("Turn ");
         Serial.print(tTurnValueDegree);
         Serial.println(" degree");
-        RobotCarPWMMotorControl.rotate(tTurnValueDegree, TURN_IN_PLACE);
+        RobotCar.rotate(tTurnValueDegree, TURN_IN_PLACE);
         delay(1000);
-        RobotCarPWMMotorControl.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
+        RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
     }
 }
 

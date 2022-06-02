@@ -81,7 +81,7 @@ void setup() {
     printConfigInfo();
 
     initRobotCarPWMMotorControl();
-    RobotCarPWMMotorControl.setSpeedPWMCompensation(0); // If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
+    RobotCar.setSpeedPWMCompensation(0); // If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
 
     /*
      * Tone feedback for end of boot
@@ -101,5 +101,5 @@ void loop() {
      * Returns only AFTER finishing of requested action
      */
     IRDispatcher.checkAndRunSuspendedBlockingCommands();
-    RobotCarPWMMotorControl.updateMotors();
+    RobotCar.updateMotors();
 }

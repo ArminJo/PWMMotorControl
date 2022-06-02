@@ -105,12 +105,12 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #if defined(USE_ENCODER_MOTOR_CONTROL) && defined(ENABLE_PATH_INFO_PAGE)
         if (sStepMode != MODE_SINGLE_STEP) {
             // add last driven distance to path
-            insertToPath(RobotCarPWMMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+            insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
         }
 #endif
         DistanceServoWriteAndDelay(90);
         sDriveMode = MODE_MANUAL_DRIVE;
-        RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+        RobotCar.stop(STOP_MODE_RELEASE);
         TouchButtonDistanceFeedbackMode.removeButton(COLOR16_WHITE);
     }
 
@@ -141,7 +141,7 @@ int postProcessAndCollisionDetection() {
  */
 void driveCollisonAvoidingOneStep() {
 
-    bool tCarIsStopped = RobotCarPWMMotorControl.isStopped();
+    bool tCarIsStopped = RobotCar.isStopped();
     /*
      * Check step conditions if step should happen
      */
@@ -158,10 +158,10 @@ void driveCollisonAvoidingOneStep() {
              */
             if (sNextRotationDegree == MINIMUM_DISTANCE_TOO_SMALL) {
                 // go backwards and do a new scan
-                RobotCarPWMMotorControl.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
+                RobotCar.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
             } else {
                 // rotate and go
-                RobotCarPWMMotorControl.rotate(sNextRotationDegree, sTurnMode, false, &loopGUI); // do not use slow speed
+                RobotCar.rotate(sNextRotationDegree, sTurnMode, false, &loopGUI); // do not use slow speed
                 // wait to really stop after turning
                 delay(100);
                 sLastDegreesTurned = sNextRotationDegree;
@@ -173,13 +173,13 @@ void driveCollisonAvoidingOneStep() {
              */
             if (sStepMode == MODE_SINGLE_STEP) {
                 // Go fixed distance
-                RobotCarPWMMotorControl.goDistanceMillimeter(sCentimetersDrivenPerScan * 10, DIRECTION_FORWARD, &loopGUI);
+                RobotCar.goDistanceMillimeter(sCentimetersDrivenPerScan * 10, DIRECTION_FORWARD, &loopGUI);
             } else
             /*
              * Continuous mode, start car or let it run (do nothing)
              */
             if (tCarIsStopped) {
-                RobotCarPWMMotorControl.startRampUpAndWaitForDriveSpeedPWM(DIRECTION_FORWARD, &loopGUI);
+                RobotCar.startRampUpAndWaitForDriveSpeedPWM(DIRECTION_FORWARD, &loopGUI);
             }
         }
 
@@ -187,7 +187,7 @@ void driveCollisonAvoidingOneStep() {
          * Here car is moving
          */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-        uint16_t tStepStartDistanceCount = RobotCarPWMMotorControl.rightCarMotor.EncoderCount; // get count before distance scanning
+        uint16_t tStepStartDistanceCount = RobotCar.rightCarMotor.EncoderCount; // get count before distance scanning
 #endif
         bool tCurrentPageIsAutomaticControl = (sCurrentPage == PAGE_AUTOMATIC_CONTROL);
 
@@ -207,13 +207,13 @@ void driveCollisonAvoidingOneStep() {
          * compute distance driven for one US scan
          * First check if car is stopped
          */
-        if (!RobotCarPWMMotorControl.isStopped() && sStepMode != MODE_SINGLE_STEP) {
+        if (!RobotCar.isStopped() && sStepMode != MODE_SINGLE_STEP) {
             /*
              * No stop here => distance is valid
              * One encoder count is 11 mm so just take the count as centimeter here :-)
              */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            sCentimetersDrivenPerScan = RobotCarPWMMotorControl.rightCarMotor.EncoderCount - tStepStartDistanceCount;
+            sCentimetersDrivenPerScan = RobotCar.rightCarMotor.EncoderCount - tStepStartDistanceCount;
 #endif
             if (tCurrentPageIsAutomaticControl) {
                 char tStringBuffer[6];
@@ -230,7 +230,7 @@ void driveCollisonAvoidingOneStep() {
             /*
              * Stop if rotation requested or single step
              */
-            RobotCarPWMMotorControl.stopAndWaitForIt();
+            RobotCar.stopAndWaitForIt();
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 #if defined(ENABLE_PATH_INFO_PAGE)
 
@@ -241,7 +241,7 @@ void driveCollisonAvoidingOneStep() {
                 insertToPath(CENTIMETER_PER_RIDE * 2, sLastDegreesTurned, true);
             } else {
                 // add last driven distance to path
-                insertToPath(RobotCarPWMMotorControl.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+                insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
             }
 #endif
         } else {
@@ -249,9 +249,9 @@ void driveCollisonAvoidingOneStep() {
              * No stop, just continue => overwrite last path element with current riding distance and try to synchronize motors
              */
 #if defined(ENABLE_PATH_INFO_PAGE)
-            insertToPath(RobotCarPWMMotorControl.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
+            insertToPath(RobotCar.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
 #endif
-//            RobotCarPWMMotorControl.rightCarMotor.synchronizeMotor(&RobotCarPWMMotorControl.leftCarMotor, 100);
+//            RobotCar.rightCarMotor.synchronizeMotor(&RobotCar.leftCarMotor, 100);
 #endif
         }
 
@@ -347,7 +347,7 @@ void driveFollowerModeOneStep() {
          */
         if (sDoStep) { // Check if we shall do this step
             DistanceServoWriteAndDelay(90, false); // reset distance servo direction
-            RobotCarPWMMotorControl.rotate(sNextRotationDegree, TURN_FORWARD, false, &loopGUI); // do not use slow speed
+            RobotCar.rotate(sNextRotationDegree, TURN_FORWARD, false, &loopGUI); // do not use slow speed
             sNextRotationDegree = 0;
         }
 
@@ -363,7 +363,7 @@ void driveFollowerModeOneStep() {
                 /*
                  * No target found -> stop car, clear display and start scanning in the next step
                  */
-                RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+                RobotCar.stop(STOP_MODE_RELEASE);
                 clearPrintedForwardDistancesInfos(false); // clear area for next scan results
                 sNextRotationDegree = NO_TARGET_FOUND; // scan at next step
             } else {
@@ -372,29 +372,37 @@ void driveFollowerModeOneStep() {
                  * Target found -> keep distance
                  */
                 int tSpeedPWM = 0;
+                uint8_t tDirection = DIRECTION_STOP;
                 if (tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
                     /*
                      * Target too far, but below scan threshold -> drive FORWARD with speed proportional to the gap
+                     * We start with DEFAULT_START_SPEED_PWM, which is adjusted to avoid undervoltage which prevents moving
                      */
-                    tSpeedPWM = RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt / 2
+                    tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
                             + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 2;
+                    tDirection = DIRECTION_FORWARD;
 
                 } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
                     /*
                      * Target too close -> drive BACKWARD with speed proportional to the gap
+                     * We start with DEFAULT_START_SPEED_PWM, which is adjusted to avoid undervoltage which prevents moving
                      */
-                    tSpeedPWM = -(RobotCarPWMMotorControl.rightCarMotor.DriveSpeedPWMFor2Volt / 2
-                            + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4);
-
+                    tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
+                            + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 4;
+                    tDirection = DIRECTION_BACKWARD;
                 }
+
                 if (tSpeedPWM != 0) {
-                    RobotCarPWMMotorControl.setSpeedPWMAndDirection(tSpeedPWM);
+                    if (tSpeedPWM > MAX_SPEED_PWM) {
+                        tSpeedPWM = MAX_SPEED_PWM;
+                    }
+                    RobotCar.setSpeedPWMAndDirection(tSpeedPWM, tDirection);
                 } else {
                     /*
                      * Target is in the right distance -> stop
                      */
-                    if (!RobotCarPWMMotorControl.isStopped()) {
-                        RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+                    if (!RobotCar.isStopped()) {
+                        RobotCar.stop(STOP_MODE_RELEASE);
                     }
                 }
             }
@@ -406,8 +414,8 @@ void driveFollowerModeOneStep() {
          */
         sDoStep = false;
         delayAndLoopGUI(500);
-        if (!RobotCarPWMMotorControl.isStopped()) {
-            RobotCarPWMMotorControl.stop(STOP_MODE_RELEASE);
+        if (!RobotCar.isStopped()) {
+            RobotCar.stop(STOP_MODE_RELEASE);
         }
     }
     delayAndLoopGUI(100); // the IR sensor takes 39 ms for one measurement

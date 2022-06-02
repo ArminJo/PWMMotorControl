@@ -142,7 +142,7 @@ public:
     PWMDcMotor backLeftCarMotor;
 };
 
-extern MecanumWheelCarPWMMotorControl RobotCarPWMMotorControl;
+extern MecanumWheelCarPWMMotorControl RobotCar;
 
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 #endif // _MECANUM_WHEEL_CAR_PWM_MOTOR_CONTROL_H

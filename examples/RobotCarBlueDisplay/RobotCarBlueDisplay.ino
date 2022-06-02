@@ -49,15 +49,13 @@
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 #define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
-#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
-#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define USE_SOFT_I2C_MASTER             // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
 /*
  * For moving exact distances and turns you may modify this values according to your actual car configuration
  */
 //#define DEFAULT_CIRCUMFERENCE_MILLIMETER     220  // The circumference of your wheel in millimeter
-#define USE_SOFT_I2C_MASTER // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
-#define CAR_HAS_4_MECANUM_WHEELS
 
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
@@ -67,7 +65,7 @@
  */
 //#define TEST_TIMING
 //#include "digitalWriteFast.h"
-#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
+//#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
 //#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
 //#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 /*
@@ -190,7 +188,7 @@ void setup() {
     initRobotCarPWMMotorControl();
 
 #if defined(ENABLE_EEPROM_STORAGE)
-    RobotCarPWMMotorControl.readMotorValuesFromEeprom();
+    RobotCar.readMotorValuesFromEeprom();
 #endif
 
     delay(100);
@@ -200,7 +198,7 @@ void setup() {
     sLastDistanceServoAngleInDegrees = 90; // is required before setupGUI()
 #endif
 
-    // Must be after RobotCarPWMMotorControl.init, since it tries to stop motors in connect callback
+    // Must be after RobotCar.init, since it tries to stop motors in connect callback
     setupGUI(); // this enables output by BlueDisplay1 and lasts around 100 milliseconds
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
@@ -218,8 +216,8 @@ void setup() {
         Serial.println(
                 F(
                         "START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__ "\r\nUsing PWMMotorControl library version " VERSION_PWMMOTORCONTROL));
-        PWMDcMotor::printCompileOptions(&Serial);
         printConfigInfo();
+        PWMDcMotor::printCompileOptions(&Serial);
 #endif
     }
 
@@ -227,7 +225,7 @@ void setup() {
     pinMode(PIN_CAMERA_SUPPLY_CONTROL, OUTPUT);
 #endif
 
-    initServos(); // must be after RobotCarPWMMotorControl.init() since it uses is2WDCar set there.
+    initServos(); // must be after RobotCar.init() since it uses is2WDCar set there.
 
 // reset all values
 #if defined(ENABLE_PATH_INFO_PAGE)
@@ -237,7 +235,7 @@ void setup() {
     initDistance();
 #endif
 
-#if defined(MONITOR_VIN_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE) && defined(ENABLE_RTTTL_FOR_CAR)
     randomSeed(sVINVoltage * 100);
 #endif
 
@@ -261,7 +259,7 @@ void loop() {
     /*
      * Required, if we use rotation, ramps and fixed distance driving
      */
-    RobotCarPWMMotorControl.updateMotors(); // 2 us, if driving
+    RobotCar.updateMotors(); // 2 us, if driving
 
     /*
      * check for user input and update display output
@@ -280,7 +278,7 @@ void loop() {
      * check for playing melody
      */
     if (sPlayMelody) {
-        RobotCarPWMMotorControl.stop();
+        RobotCar.stop();
         playRandomMelody();
     }
 
