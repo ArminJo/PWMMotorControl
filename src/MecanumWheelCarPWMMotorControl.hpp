@@ -29,15 +29,13 @@
 #define CAR_HAS_4_MECANUM_WHEELS
 #endif
 
-#include <Arduino.h>
-
 #include "MecanumWheelCarPWMMotorControl.h"
 #include "CarPWMMotorControl.hpp"
 
 /*
  * The Car Control instance to be used by the main program
  */
-MecanumWheelCarPWMMotorControl RobotCar;
+//MecanumWheelCarPWMMotorControl RobotCar;
 
 #if defined(DEBUG)
 #define LOCAL_DEBUG
@@ -136,11 +134,11 @@ void MecanumWheelCarPWMMotorControl::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     rightCarMotor.setDriveSpeedPWM(aDriveSpeedPWM);
 }
 
-void MecanumWheelCarPWMMotorControl::setDriveSpeedPWMTo2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
+void MecanumWheelCarPWMMotorControl::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
     rightCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
 }
 
-void MecanumWheelCarPWMMotorControl::setDriveSpeedPWMTo2Volt(float aFullBridgeInputVoltageMillivolt) {
+void MecanumWheelCarPWMMotorControl::setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltageMillivolt) {
     rightCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
 }
 

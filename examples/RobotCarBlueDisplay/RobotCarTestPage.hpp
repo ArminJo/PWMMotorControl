@@ -20,13 +20,6 @@
  */
 #ifndef _ROBOT_CAR_TEST_PAGE_HPP
 #define _ROBOT_CAR_TEST_PAGE_HPP
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarBlueDisplay.h"
-
-#include "RobotCarGui.h"
-#include "Distance.h"
 
 /*
  * Motor GUI
@@ -226,7 +219,7 @@ void drawTestPage(void) {
     SliderDistanceServoPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     SliderIROrTofDistance.drawSlider();
 #  endif
 

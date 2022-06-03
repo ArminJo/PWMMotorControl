@@ -156,4 +156,3 @@ uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
 #endif
 
 #endif // _ROBOT_CAR_DISTANCE_H
-#pragma once

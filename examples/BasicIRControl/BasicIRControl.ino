@@ -78,7 +78,7 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
-    printConfigInfo();
+    printConfigInfo(&Serial);
 
     initRobotCarPWMMotorControl();
     RobotCar.setSpeedPWMCompensation(0); // If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.

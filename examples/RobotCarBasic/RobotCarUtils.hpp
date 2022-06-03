@@ -54,14 +54,43 @@ uint16_t sVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
 float sVINVoltage = FULL_BRIDGE_INPUT_MILLIVOLT / 1000; // set default value for later use
 #endif // defined(MONITOR_VIN_VOLTAGE)
 
-void printConfigInfo() {
+void printConfigInfo(Print *aSerial) {
 #if defined(BASIC_CONFIG_NAME)
-    Serial.print(F("Car configuration is: " BASIC_CONFIG_NAME));
+    aSerial->print(F("Car configuration is: " BASIC_CONFIG_NAME));
 #endif
 #if defined(CONFIG_NAME)
-    Serial.print(F(CONFIG_NAME));
+    aSerial->print(F(CONFIG_NAME));
 #endif
-    Serial.println();
+    aSerial->println();
+}
+
+void printProgramOptions(Print *aSerial) {
+    aSerial->println();
+    aSerial->println(F("Settings:"));
+
+    aSerial->print(F("ENABLE_RTTTL_FOR_CAR:"));
+#if !defined(ENABLE_RTTTL_FOR_CAR)
+    aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
+#endif
+    aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
+
+    aSerial->print(F("MONITOR_VIN_VOLTAGE:"));
+#if !defined(MONITOR_VIN_VOLTAGE)
+    aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
+#endif
+    aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
+
+#if !defined(VIN_VOLTAGE_CORRECTION)
+    aSerial->print(F("VIN_VOLTAGE_CORRECTION:"
+            ""));
+    aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
+    aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
+#else
+    aSerial->println(F("VIN_VOLTAGE_CORRECTION=" STR(VIN_VOLTAGE_CORRECTION) "V"));
+#endif
+
+    aSerial->println(F("ADC_INTERNAL_REFERENCE_MILLIVOLT=" STR(ADC_INTERNAL_REFERENCE_MILLIVOLT) " mV"));
+    aSerial->println();
 }
 
 /*
@@ -134,12 +163,13 @@ bool isVINVoltageDividerAttached(uint8_t aPin) {
     pinModeFast(aPin, INPUT);
     readVINVoltageAndAdjustDriveSpeed();
     bool tDividerAttached = sVINVoltage > 3.0;
+#  if defined(APPLICATON_INFO) // requires 1504 bytes program space
     Serial.print(F("VIN voltage divider"));
     if (!tDividerAttached) {
         Serial.print(F("not "));
     }
     Serial.println(F(" attached"));
-
+#  endif
     return tDividerAttached; // if voltage measured > 3 volt, assume that we have a voltage divider attached
 #endif
 }
@@ -191,14 +221,14 @@ void readVINVoltageAndAdjustDriveSpeed() {
         /*
          * Adjust DriveSpeedPWMFor2Volt according to voltage
          */
-        RobotCar.rightCarMotor.setDriveSpeedPWMFor2Volt(sVINVoltage);
+        RobotCar.setDriveSpeedPWMFor2Volt(sVINVoltage);
     }
 #endif // defined(ESP32)
 #endif // defined(MONITOR_VIN_VOLTAGE)
 }
 
 /*
- * Start motors direction forward, get voltage after 400 ms and call setDriveSpeedPWMTo2Volt()
+ * Start motors direction forward, get voltage after 400 ms and call setDriveSpeedPWMFor2Volt()
  */
 void calibrateDriveSpeedPWM() {
 #if defined(MONITOR_VIN_VOLTAGE)
@@ -234,9 +264,11 @@ void checkVinPeriodicallyAndPrintIfChanged() {
              */
             if (abs(sLastVINRawSumPrinted - sVINRawSum) > NUMBER_OF_VIN_SAMPLES) {
                 sLastVINRawSumPrinted = sVINRawSum;
+#    if defined(APPLICATON_INFO) // requires 1504 bytes program space
                 Serial.print(F("VIN="));
                 Serial.print(sVINVoltage);
                 Serial.println(F("V"));
+#    endif
             }
         }
     }

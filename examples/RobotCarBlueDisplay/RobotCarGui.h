@@ -66,7 +66,7 @@ extern uint8_t sCurrentPage;
 #if defined(CAR_HAS_US_DISTANCE_SENSOR)
 void showUSDistance();
 #endif
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 void showIROrTofDistance();
 #endif
 
@@ -87,7 +87,7 @@ void insertToPath(int aLength, int aDegree, bool aAddEntry);
 extern BDButton TouchButtonStep;
 extern BDButton TouchButtonScanSpeed;
 extern BDButton TouchButtonDistanceFeedbackMode;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDButton TouchButtonScanMode;
 #endif
 
@@ -183,7 +183,7 @@ extern BDSlider SliderSpeedLeft;
 
 extern BDSlider SliderDistanceServoPosition;
 extern BDSlider SliderUSDistance;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDSlider SliderIROrTofDistance;
 #endif
 
@@ -237,4 +237,3 @@ void drawCollisionDecision(int aDegreesToTurn, uint8_t aLengthOfVector, bool aDo
 extern uint8_t sRobotCarDirection;
 
 #endif // _ROBOT_CAR_GUI_H
-#pragma once

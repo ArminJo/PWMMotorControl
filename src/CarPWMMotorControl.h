@@ -55,18 +55,18 @@
 #define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_IN_PLACE
 #define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR
 #  else
-#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
+#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    (FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT / 2) // we drive both motors here
 #define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
 #  endif
 #endif
 
 // turn directions
 typedef enum turn_direction {
-    TURN_FORWARD, TURN_BACKWARD, TURN_IN_PLACE
+    TURN_IN_PLACE, TURN_FORWARD, TURN_BACKWARD
 } turn_direction_t;
-//#define TURN_FORWARD    DIRECTION_FORWARD  // 0
-//#define TURN_BACKWARD   DIRECTION_BACKWARD // 1
-//#define TURN_IN_PLACE   2
+//#define TURN_FORWARD    DIRECTION_FORWARD  // 1
+//#define TURN_BACKWARD   DIRECTION_BACKWARD // 2
+//#define TURN_IN_PLACE   0
 
 class CarPWMMotorControl {
 public:
@@ -88,8 +88,8 @@ public:
     void setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
     void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
-    void setDriveSpeedPWMTo2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
-    void setDriveSpeedPWMTo2Volt(float aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltageMillivolt);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
@@ -160,8 +160,6 @@ public:
     unsigned int CarSpeedCmPerSecondFromIMU;
     unsigned int CarRequestedDistanceMillimeter;
     unsigned int CarDistanceMillimeterFromIMU;
-#else
-//    float FactorDegreeToMillimeter;
 #endif
 
     bool updateMotors();
@@ -213,4 +211,3 @@ extern CarPWMMotorControl RobotCar;
 #endif
 
 #endif // _CAR_PWM_MOTOR_CONTROL_H
-#pragma once

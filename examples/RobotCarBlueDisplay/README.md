@@ -61,7 +61,7 @@ Compile options for the used **PWMMotorControl library** like `USE_ENCODER_MOTOR
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
 | `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
-| `CAR_CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
+| `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. The Servo direction is reverse then. |
 | `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PIN_PAN_SERVO` pin. |

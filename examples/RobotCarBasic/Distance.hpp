@@ -116,7 +116,7 @@ unsigned int getDistanceAsCentimeterAndPlayTone(uint8_t aDistanceTimeoutCentimet
 #  if defined(CAR_HAS_US_DISTANCE_SENSOR)
             showUSDistance();
 #  endif
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
             showIROrTofDistance();
 #  endif
 #endif // defined(USE_BLUE_DISPLAY_GUI)
@@ -422,7 +422,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
 #if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
             tWaitDelayforServo = tDeltaDegrees * 5;
 #else
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR)  // TODO really required?
             tWaitDelayforServo = tDeltaDegrees * 9; // 9 => 162 ms for 18 degrees
 #  else
             tWaitDelayforServo = tDeltaDegrees * 8; // 7 => 128 ms, 8 => 144 for 18 degrees
@@ -532,7 +532,9 @@ int scanForTarget(unsigned int aMaximumTargetDistance) {
 
         return tRotationDegree;
     } else {
+#if !defined(USE_BLUE_DISPLAY_GUI)
         Serial.println(); // terminate scan result line without rotate info
+#endif
         return NO_TARGET_FOUND;
     }
 }
@@ -582,7 +584,7 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
         /*
          * rotate servo, wait with delayAndLoopGUI() and get distance
          */
-        DistanceServoWriteAndDelay(tCurrentDegrees, true);
+        DistanceServoWriteAndDelay(tCurrentDegrees, true); // this calls loopGui() during delay, which in turn may update distance sliders.
         if (!aForceScan && sBDEventJustReceived) {
             // User sent an event -> stop and return now
             return true;

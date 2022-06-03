@@ -324,4 +324,3 @@ const struct IRToCommandMappingStruct IRMapping[] = {
 };
 
 #endif // _IR_COMMAND_MAPPING_H
-#pragma once

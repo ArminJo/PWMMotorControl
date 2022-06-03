@@ -94,6 +94,12 @@
  */
 //#define CAR_HAS_4_WHEELS
 //#define CAR_HAS_4_MECANUM_WHEELS
+/*
+ * Disable features of RobotCarBlueDisplay to save program memory
+ */
+//#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+//#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+//#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 /**************************
  * START OF CONFIGURATIONS
  **************************/
@@ -169,6 +175,7 @@
 #if defined(TBB6612_4WD_4AA_FULL_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
+#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
 #define TBB6612_4WD_4AA_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider + MPU6050"
 #endif
@@ -234,6 +241,8 @@
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
+#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define CONFIG_NAME         " + encoder + TOF distance + MPU6050"
 #endif
 
@@ -299,6 +308,9 @@
 #define CAR_HAS_ENCODERS                // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
+//#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+//#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define BASIC_CONFIG_NAME   "4WD + Breadboard TB6612  + 2 Li-ion + VIN divider + servo head down + MPU6050"
 #endif
 
@@ -358,4 +370,3 @@
 #endif
 
 #endif // _ROBOT_CAR_CONFIGURATIONS_H
-#pragma once

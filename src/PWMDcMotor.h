@@ -122,7 +122,7 @@
 #  if defined(USE_L298_BRIDGE)
 // Speed is not linear to PWM and has an offset
 // Effective voltage loss includes loss by switching to high impedance at inactive for bipolar full bridges like L298
-#define FULL_BRIDGE_LOSS_MILLIVOLT          2200 // Effective voltage loss
+#define FULL_BRIDGE_LOSS_MILLIVOLT          2000 // Effective voltage loss
 #  else
 // Speed is almost linear to 1/2 PWM in cm/s without any offset, only with dead band
 #define FULL_BRIDGE_LOSS_MILLIVOLT             0
@@ -171,9 +171,9 @@
 #define DEFAULT_MILLIMETER_PER_SECOND            200 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
 #define DEFAULT_MILLIS_FOR_FIRST_CENTIMETER       75 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
 #  else
-#define DEFAULT_MILLIMETER_PER_SECOND            190 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
-#define DEFAULT_MILLIS_FOR_FIRST_CENTIMETER       85  // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
-#define SPEED_PER_VOLT                           130 // mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
+#define DEFAULT_MILLIMETER_PER_SECOND            230 // At DEFAULT_DRIVE_MILLIVOLT (2.0 V) motor supply
+#define DEFAULT_MILLIS_FOR_FIRST_CENTIMETER       85 // Time for start stop in (guessed) one cm. 50 -> 10 mm at 200 mm/second
+#define SPEED_PER_VOLT                           130 // Only for documentation, not used. mm/s after accelerating. Up to 145 mm/s @7.4V, 50% PWM
 #  endif
 #endif
 /*
@@ -394,8 +394,8 @@ public:
     /**********************************
      * Start of values for EEPROM
      *********************************/
-    uint8_t DriveSpeedPWM; // SpeedPWM value used for going fixed distance. Default is a PWM value which corresponds to 2 volt.
-    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt. Used to go fixed distances.
+    uint8_t DriveSpeedPWM; // SpeedPWM value used internally for moving. Default is a PWM value which corresponds to 2 volt.
+    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt. Used only in startGoDistanceMillimeter() for scaling.
 
     /**********************************
      * End of EEPROM values
@@ -443,7 +443,7 @@ public:
  * Version 1.9.1 - 05/2022
  * - MecanumWheelCar support.
  * - IMUCarData improved.
- * - Renamed instance from RobotCarPWMMotorControl to RobotCar
+ * - Renamed instance from RobotCarPWMMotorControl to RobotCar.
  *
  * Version 1.9.0 - 04/2022
  * - Removed all *Compensated functions, compensation now is always active.
@@ -459,4 +459,3 @@ public:
  * - Initial version.
  */
 #endif // _PWM_DC_MOTOR_H
-#pragma once

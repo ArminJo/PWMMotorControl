@@ -26,7 +26,7 @@
 
 /*
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.
- * You must specify this before the include of "MecanumWheelCarPWMMotorControl.hpp"
+ * You must specify this before the include of "CarPWMMotorControl.hpp" or "MecanumWheelCarPWMMotorControl.hpp"
  */
 //#define USE_ADAFRUIT_MOTOR_SHIELD       // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.

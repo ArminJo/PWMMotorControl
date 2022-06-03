@@ -51,8 +51,6 @@
 #ifndef _AVR_TRACING_HPP
 #define _AVR_TRACING_HPP
 
-#include <Arduino.h>
-
 #include "digitalWriteFast.h"
 #include "AvrTracing.h" // Contains function prototypes
 

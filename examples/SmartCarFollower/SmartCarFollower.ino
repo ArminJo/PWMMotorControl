@@ -46,7 +46,7 @@
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
 //#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
 //#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
-#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 #define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
@@ -79,6 +79,7 @@
  */
 // if CAR_HAS_VIN_VOLTAGE_DIVIDER is NOT specified, existence of voltage divider will be determined dynamically if MONITOR_VIN_VOLTAGE is enabled.
 #define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available
+//#define ADC_INTERNAL_REFERENCE_MILLIVOLT 1100L    // Value measured at the AREF pin
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 
 //#define USE_IR_REMOTE
@@ -120,7 +121,8 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
-    printConfigInfo();
+    printConfigInfo(&Serial);
+    printProgramOptions(&Serial);
     PWMDcMotor::printCompileOptions(&Serial);
 
     initRobotCarPWMMotorControl();

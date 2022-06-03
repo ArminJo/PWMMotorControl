@@ -20,12 +20,6 @@
  */
 #ifndef _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarBlueDisplay.h"
-
-#include "RobotCarGui.h"
 
 // 4 Sliders for accelerometer
 BDSlider SliderForward;     // Y negative

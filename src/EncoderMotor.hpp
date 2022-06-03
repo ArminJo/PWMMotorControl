@@ -33,7 +33,6 @@
 #ifndef _ENCODER_MOTOR_CONTROL_HPP
 #define _ENCODER_MOTOR_CONTROL_HPP
 
-#include <Arduino.h>
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 #include "EncoderMotor.h"
 #include "PWMDcMotor.hpp"

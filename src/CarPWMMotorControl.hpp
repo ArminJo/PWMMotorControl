@@ -29,8 +29,6 @@
 #ifndef _CAR_PWM_MOTOR_CONTROL_HPP
 #define _CAR_PWM_MOTOR_CONTROL_HPP
 
-#include <Arduino.h>
-
 #if defined(USE_MPU6050_IMU)
 #include "IMUCarData.hpp"
 #endif
@@ -40,14 +38,15 @@
 #endif
 
 #include "PWMDcMotor.hpp"
-#include "CarPWMMotorControl.h"
 
 /*
  * The Car Control instance to be used by the main program
  */
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 #include "MecanumWheelCarPWMMotorControl.hpp"
+MecanumWheelCarPWMMotorControl RobotCar;
 #else
+#include "CarPWMMotorControl.h"
 CarPWMMotorControl RobotCar;
 #endif
 
@@ -215,12 +214,12 @@ void CarPWMMotorControl::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
     leftCarMotor.setDriveSpeedPWM(aDriveSpeedPWM);
 }
 
-void CarPWMMotorControl::setDriveSpeedPWMTo2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
+void CarPWMMotorControl::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
     rightCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
     leftCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
 }
 
-void CarPWMMotorControl::setDriveSpeedPWMTo2Volt(float aFullBridgeInputVoltageMillivolt) {
+void CarPWMMotorControl::setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltageMillivolt) {
     rightCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
     leftCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
 }
@@ -374,28 +373,28 @@ void CarPWMMotorControl::resetEncoderControlValues() {
 }
 
 #if defined(USE_MPU6050_IMU)
-        void CarPWMMotorControl::updateIMUData() {
-            if (IMUData.readCarDataFromMPU6050Fifo()) {
-                if (IMUData.AcceleratorForwardOffset != 0) {
-                    if (CarTurn2DegreesPerSecondFromIMU != IMUData.getGyroscopePan2DegreePerSecond()) {
-                        CarTurn2DegreesPerSecondFromIMU = IMUData.getGyroscopePan2DegreePerSecond();
-//                PWMDcMotor::SensorValuesHaveChanged = true; is not displayed
-                    }
-                    if (CarTurnAngleHalfDegreesFromIMU != IMUData.getTurnAngleHalfDegree()) {
-                        CarTurnAngleHalfDegreesFromIMU = IMUData.getTurnAngleHalfDegree();
-                        PWMDcMotor::SensorValuesHaveChanged = true;
-                    }
-                    if (CarSpeedCmPerSecondFromIMU != (unsigned int) abs(IMUData.getSpeedCmPerSecond())) {
-                        CarSpeedCmPerSecondFromIMU = abs(IMUData.getSpeedCmPerSecond());
-                        PWMDcMotor::SensorValuesHaveChanged = true;
-                    }
-                    if (CarDistanceMillimeterFromIMU != (unsigned int) abs(IMUData.getDistanceMillimeter())) {
-                        CarDistanceMillimeterFromIMU = abs(IMUData.getDistanceMillimeter());
-                        PWMDcMotor::SensorValuesHaveChanged = true;
-                    }
-                }
+void CarPWMMotorControl::updateIMUData() {
+    if (IMUData.readCarDataFromMPU6050Fifo()) {
+        if (IMUData.AcceleratorForwardOffset != 0) {
+            if (CarTurn2DegreesPerSecondFromIMU != IMUData.getGyroscopePan2DegreePerSecond()) {
+                CarTurn2DegreesPerSecondFromIMU = IMUData.getGyroscopePan2DegreePerSecond();
+//        PWMDcMotor::SensorValuesHaveChanged = true; is not displayed
+            }
+            if (CarTurnAngleHalfDegreesFromIMU != IMUData.getTurnAngleHalfDegree()) {
+                CarTurnAngleHalfDegreesFromIMU = IMUData.getTurnAngleHalfDegree();
+                PWMDcMotor::SensorValuesHaveChanged = true;
+            }
+            if (CarSpeedCmPerSecondFromIMU != (unsigned int) abs(IMUData.getSpeedCmPerSecond())) {
+                CarSpeedCmPerSecondFromIMU = abs(IMUData.getSpeedCmPerSecond());
+                PWMDcMotor::SensorValuesHaveChanged = true;
+            }
+            if (CarDistanceMillimeterFromIMU != (unsigned int) abs(IMUData.getDistanceMillimeter())) {
+                CarDistanceMillimeterFromIMU = abs(IMUData.getDistanceMillimeter());
+                PWMDcMotor::SensorValuesHaveChanged = true;
             }
         }
+    }
+}
 #endif
 
 /*
@@ -688,14 +687,13 @@ void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillim
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
  * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact
  */
-char sTurnDirectionCharArray[3] = { 'F', 'B', 'P' };
+char sTurnDirectionCharArray[3] = { 'P', 'F', 'B' };
 void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed) {
     /*
      * We have 6 cases
      * - aTurnDirection = TURN_FORWARD      + -> left, right motor F, left 0    - -> right, right motor 0, left F
      * - aTurnDirection = TURN_BACKWARD     + -> left, right motor 0, left B    - -> right, right motor B, left 0
      * - aTurnDirection = TURN_IN_PLACE     + -> left, right motor F, left B    - -> right, right motor B, left F
-     * Turn direction TURN_IN_PLACE is masked to TURN_FORWARD
      */
 
 #if defined(LOCAL_DEBUG)
@@ -745,6 +743,7 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
         tDistanceMillimeterRight = 0;
         tDistanceMillimeterLeft = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER;
     } else {
+        // TURN_IN_PLACE
         tDistanceMillimeterRight = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE;
         tDistanceMillimeterLeft = tDistanceMillimeterRight;
     }

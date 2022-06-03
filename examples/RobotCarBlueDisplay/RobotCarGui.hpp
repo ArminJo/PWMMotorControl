@@ -22,18 +22,16 @@
 
 #define USE_BLUE_DISPLAY_GUI
 
-#include "BlueDisplay.h"
-
-#include "RobotCarGui.h" // this helps the eclipse indexer :-(
+#include "RobotCarGui.h"
 
 #include "RobotCarCommonGui.hpp"
 #include "RobotCarHomePage.hpp"
 #include "RobotCarTestPage.hpp"
+#include "BTSensorDrivePage.hpp"
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
 #include "AutonomousDrive.hpp"
 #include "AutonomousDrivePage.hpp"
 #endif
-#include "BTSensorDrivePage.hpp"
 #if defined(ENABLE_PATH_INFO_PAGE)
 #include "PathInfoPage.hpp"
 #endif

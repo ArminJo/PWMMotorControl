@@ -26,14 +26,8 @@
 
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP
-#include <Arduino.h>
 
 #include "AutonomousDrive.h"
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarBlueDisplay.h"
-#include "RobotCarGui.h"
-#include "Distance.h"
 
 uint8_t sDriveMode = MODE_MANUAL_DRIVE; // one of MODE_MANUAL_DRIVE, MODE_COLLISION_AVOIDING_BUILTIN, MODE_COLLISION_AVOIDING_USER or MODE_FOLLOWER
 
@@ -42,7 +36,9 @@ bool sDoStep = false; // if true => do one step
 
 turn_direction_t sTurnMode = TURN_IN_PLACE;
 int sNextRotationDegree = 0; // Storage for turning decision especially for single step mode
+#if defined(ENABLE_PATH_INFO_PAGE)
 int sLastDegreesTurned = 0; // Storage of last turning for insertToPath()
+#endif
 
 /*
  * Used for adaptive collision detection
@@ -93,7 +89,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
             // Show distance sliders
             SliderUSDistance.drawSlider();
             TouchButtonDistanceFeedbackMode.drawButton();
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
             SliderIROrTofDistance.drawSlider();
 #  endif
         }
@@ -102,7 +98,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         /*
          * Stop autonomous driving.
          */
-#if defined(USE_ENCODER_MOTOR_CONTROL) && defined(ENABLE_PATH_INFO_PAGE)
+#if defined(ENABLE_PATH_INFO_PAGE)
         if (sStepMode != MODE_SINGLE_STEP) {
             // add last driven distance to path
             insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
@@ -114,9 +110,8 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         TouchButtonDistanceFeedbackMode.removeButton(COLOR16_WHITE);
     }
 
-    // manage on off buttons
+    // manage 3 on off buttons
     handleAutomomousDriveRadioButtons();
-    TouchButtonRobotCarStartStop.setValue(aDoStart, false);
 }
 
 /*
@@ -152,45 +147,48 @@ void driveCollisonAvoidingOneStep() {
         bool tMovementJustStarted = sDoStep || tCarIsStopped; // tMovementJustStarted is needed for speeding up US scanning by skipping first scan angle if not just started.
         sDoStep = false; // Now it can be set again by GUI
 
-        if (sNextRotationDegree != 0) {
+        /*
+         * Check sNextRotationDegree
+         */
+        if (sNextRotationDegree == MINIMUM_DISTANCE_TOO_SMALL) {
             /*
-             * rotate car / go backward accordingly to sNextRotationDegree
+             * Go backwards and do a new scan
              */
-            if (sNextRotationDegree == MINIMUM_DISTANCE_TOO_SMALL) {
-                // go backwards and do a new scan
-                RobotCar.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
-            } else {
-                // rotate and go
-                RobotCar.rotate(sNextRotationDegree, sTurnMode, false, &loopGUI); // do not use slow speed
-                // wait to really stop after turning
-                delay(100);
-                sLastDegreesTurned = sNextRotationDegree;
-            }
-        }
-        if (sNextRotationDegree != MINIMUM_DISTANCE_TOO_SMALL) {
+            RobotCar.goDistanceMillimeter(100, DIRECTION_BACKWARD, &loopGUI);
+        } else if (sNextRotationDegree != 0) {
             /*
-             * No rotation or standard rotation here. Go fixed distance or keep moving
+             * Rotate and stop
+             */
+            RobotCar.rotate(sNextRotationDegree, sTurnMode, false, &loopGUI); // do not use slow speed
+            // wait to really stop after turning
+            delay(100);
+#if defined(ENABLE_PATH_INFO_PAGE)
+            sLastDegreesTurned = sNextRotationDegree;
+#endif
+        } else {
+            /*
+             * No rotation or go back here. Go fixed distance or keep moving
              */
             if (sStepMode == MODE_SINGLE_STEP) {
                 // Go fixed distance
                 RobotCar.goDistanceMillimeter(sCentimetersDrivenPerScan * 10, DIRECTION_FORWARD, &loopGUI);
-            } else
-            /*
-             * Continuous mode, start car or let it run (do nothing)
-             */
-            if (tCarIsStopped) {
+            } else if (tCarIsStopped) {
+                /*
+                 * Continuous mode, start car or let it run (do nothing)
+                 */
                 RobotCar.startRampUpAndWaitForDriveSpeedPWM(DIRECTION_FORWARD, &loopGUI);
             }
+#if defined(ENABLE_PATH_INFO_PAGE)
+            sLastDegreesTurned = 0; // rotation was 0 here
+#endif
         }
 
         /*
-         * Here car is moving
+         * Here car is moving or did a rotation or go back
          */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
         uint16_t tStepStartDistanceCount = RobotCar.rightCarMotor.EncoderCount; // get count before distance scanning
 #endif
-        bool tCurrentPageIsAutomaticControl = (sCurrentPage == PAGE_AUTOMATIC_CONTROL);
-
         /*
          * The magic happens HERE
          * This runs as fast as possible and mainly determine the duration of one step
@@ -215,7 +213,7 @@ void driveCollisonAvoidingOneStep() {
 #if defined(USE_ENCODER_MOTOR_CONTROL)
             sCentimetersDrivenPerScan = RobotCar.rightCarMotor.EncoderCount - tStepStartDistanceCount;
 #endif
-            if (tCurrentPageIsAutomaticControl) {
+            if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                 char tStringBuffer[6];
                 sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm");
                 BlueDisplay1.drawText(0, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11,
@@ -231,9 +229,7 @@ void driveCollisonAvoidingOneStep() {
              * Stop if rotation requested or single step
              */
             RobotCar.stopAndWaitForIt();
-#if defined(USE_ENCODER_MOTOR_CONTROL)
 #if defined(ENABLE_PATH_INFO_PAGE)
-
             /*
              * Insert / update last ride in path
              */
@@ -243,15 +239,11 @@ void driveCollisonAvoidingOneStep() {
                 // add last driven distance to path
                 insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
             }
-#endif
         } else {
             /*
              * No stop, just continue => overwrite last path element with current riding distance and try to synchronize motors
              */
-#if defined(ENABLE_PATH_INFO_PAGE)
             insertToPath(RobotCar.rightCarMotor.EncoderCount, sLastDegreesTurned, false);
-#endif
-//            RobotCar.rightCarMotor.synchronizeMotor(&RobotCar.leftCarMotor, 100);
 #endif
         }
 

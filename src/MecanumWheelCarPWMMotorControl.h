@@ -28,7 +28,6 @@
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 
 #include "CarPWMMotorControl.h"
-#include <stdint.h>
 
 class MecanumWheelCarPWMMotorControl : public CarPWMMotorControl {
 public:
@@ -49,8 +48,8 @@ public:
     void setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRight);
     void changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta);
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
-    void setDriveSpeedPWMTo2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
-    void setDriveSpeedPWMTo2Volt(float aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
+    void setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltageMillivolt);
 
     void writeMotorValuesToEeprom();
     void readMotorValuesFromEeprom();
@@ -146,4 +145,3 @@ extern MecanumWheelCarPWMMotorControl RobotCar;
 
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 #endif // _MECANUM_WHEEL_CAR_PWM_MOTOR_CONTROL_H
-#pragma once

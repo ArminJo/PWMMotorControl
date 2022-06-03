@@ -26,7 +26,6 @@
 #ifndef _ROBOT_CAR_IR_COMMANDS_HPP
 #define _ROBOT_CAR_IR_COMMANDS_HPP
 
-#include <Arduino.h>
 #include "IRCommandDispatcher.h" // for RETURN_IF_STOP
 
 /*

@@ -177,4 +177,3 @@ public:
 bool initWire(); // Function copied from MPU6050IMUData
 
 #endif // _IMU_CAR_DATA_H
-#pragma once

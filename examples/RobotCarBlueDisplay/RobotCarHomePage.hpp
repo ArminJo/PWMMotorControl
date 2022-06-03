@@ -22,14 +22,6 @@
 #ifndef _ROBOT_CAR_HOME_PAGE_HPP
 #define _ROBOT_CAR_HOME_PAGE_HPP
 
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarBlueDisplay.h"
-
-#include "RobotCarGui.h"
-#include "Distance.h"
-
 BDButton TouchButtonTestPage;
 BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
@@ -168,7 +160,7 @@ void drawHomePage(void) {
     SliderDistanceServoPosition.drawSlider();
     SliderUSDistance.drawSlider();
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR) && ( ! (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)))
     SliderIROrTofDistance.drawSlider();
 #endif
 

@@ -217,4 +217,3 @@ void noTone(uint8_t _pin){
 #endif // CAR_IS_NANO_BASED
 
 #endif /* ROBOT_CAR_PIN_DEFINITIONS_AND_MORE_H */
-#pragma once

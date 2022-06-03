@@ -24,18 +24,6 @@
  */
 #ifndef _ROBOT_CAR_COMMON_GUI_HPP
 #define _ROBOT_CAR_COMMON_GUI_HPP
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-
-#include "RobotCarBlueDisplay.h"
-#include "RobotCarGui.h"
-#if defined(CAR_HAS_DISTANCE_SENSOR)
-#include "Distance.h"
-#endif
-#if defined(USE_MPU6050_IMU)
-#include "IMUCarData.h"
-#endif
 
 // A string buffer for BD info output
 char sStringBuffer[128];
@@ -75,7 +63,7 @@ BDSlider SliderSpeedLeft;
 BDSlider SliderDistanceServoPosition;
 BDSlider SliderUSDistance;
 uint8_t sSliderUSLastCentimeter;
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 BDSlider SliderIROrTofDistance;
 unsigned int sLastSliderIROrTofCentimeter;
 #endif
@@ -131,10 +119,12 @@ void loopGUI(void) {
         readCheckAndPrintVinPeriodically();
 #endif
         // For Home, sensorDrive and Test page
-        if (sCurrentPage != PAGE_AUTOMATIC_CONTROL) {
+        if (sCurrentPage != PAGE_AUTOMATIC_CONTROL && sCurrentPage != PAGE_SHOW_PATH) {
             printMotorValuesPeriodically();
 #if defined(USE_MPU6050_IMU)
-            printIMUOffsetValues();
+            if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
+                printIMUOffsetValues();
+            }
 #endif
         }
 
@@ -174,7 +164,7 @@ void readAndShowDistancePeriodically() {
 #    if defined(CAR_HAS_US_DISTANCE_SENSOR)
             showUSDistance();
 #    endif
-#    if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#    if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
             showIROrTofDistance();
 #    endif
 #  endif
@@ -222,12 +212,11 @@ void startStopRobotCar(bool aDoStart) {
          * Stop car
          */
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
-//        startStopAutomomousDrive(false);  // calls RobotCar.stop()
-        RobotCar.stop(STOP_MODE_RELEASE);
-#else
-        RobotCar.stop(STOP_MODE_RELEASE);
-        TouchButtonRobotCarStartStop.setValue(aDoStart, false);
+        DistanceServoWriteAndDelay(90);
+        sDriveMode = MODE_MANUAL_DRIVE;
 #endif
+        RobotCar.stop(STOP_MODE_RELEASE);
+
         if (sSensorCallbacksEnabled) {
             /*
              * Global stop for sensor drive
@@ -239,13 +228,12 @@ void startStopRobotCar(bool aDoStart) {
     }
 
     bool tShowValues = sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST;
-    // set start/stop button value always just in case we are called by another than Stop button callback
+    // set start/stop button value always just in case we are called by another than Stop button callback, e.g. by stopAutonomousDrivePage()
     TouchButtonRobotCarStartStop.setValue(!RobotCar.isStopped() || sSensorCallbacksEnabled, tShowValues);
     // update speed slider value
     if (tShowValues) {
         SliderSpeed.setValueAndDrawBar(tSpeedSliderValue);
     }
-
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -257,7 +245,7 @@ void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart) {
     startStopRobotCar(aDoStart);
 }
 
-void calibrateAndPrint(){
+void calibrateAndPrint() {
 #if defined(MONITOR_VIN_VOLTAGE)
     uint8_t tOldDriveSpeedPWM = RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt;
     calibrateDriveSpeedPWM();
@@ -351,7 +339,6 @@ void startCurrentPage() {
     default:
         startHomePage();
         break;
-
     }
 }
 
@@ -376,7 +363,6 @@ void doToggleInfo(BDButton *aTheTouchedButton, int16_t aValue) {
  * @param aValue the Page number of the new page number
  */
 void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue) {
-
     /*
      * Stop old page
      */
@@ -390,6 +376,9 @@ void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue) {
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
     case PAGE_AUTOMATIC_CONTROL:
         stopAutonomousDrivePage();
+        if(aValue != PAGE_SHOW_PATH){
+            startStopRobotCar(false);
+        }
         break;
 #endif
 #if defined(ENABLE_PATH_INFO_PAGE)
@@ -507,7 +496,7 @@ void initCommonGui() {
     SliderDistanceServoPosition.setValueUnitString("\xB0"); // \xB0 is degree character
 #endif
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR) || (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO))
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR) || (defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO))
 #define US_DISTANCE_SLIDER_IS_SMALL
 #endif
     /*
@@ -520,11 +509,10 @@ void initCommonGui() {
             DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW, 2,
-    COLOR16_BLACK,
-    COLOR16_WHITE);
+    COLOR16_BLACK, COLOR16_WHITE);
     SliderUSDistance.setCaption("US");
     // below caption - left aligned
-    SliderUSDistance.setPrintValueProperties(11, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW,
+    SliderUSDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW,
             4 + TEXT_SIZE_10_HEIGHT, COLOR16_BLACK, COLOR16_WHITE);
 #else
 // Big US distance slider without caption but with cm units POS_X_THIRD_SLIDER because it is the position of the left edge
@@ -539,7 +527,7 @@ void initCommonGui() {
     /*
      * One thin IR distance slider
      */
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     // Small IR distance slider with captions and without cm units
     SliderIROrTofDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
             (BUTTON_WIDTH_10 / 2) - 2,
@@ -554,7 +542,7 @@ void initCommonGui() {
     // Captions
     SliderIROrTofDistance.setCaption("IR");
     // value below caption - right aligned
-    SliderIROrTofDistance.setPrintValueProperties(11, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW,
+    SliderIROrTofDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW,
             4 + TEXT_SIZE_10_HEIGHT, COLOR16_BLACK, COLOR16_WHITE);
 #endif
 
@@ -664,8 +652,8 @@ void checkForLowVoltage() {
                 tLoopCount--;
                 readVINVoltageAndAdjustDriveSpeed(); // read new VCC value
             } while (tLoopCount > 0 || (sVINVoltage < VOLTAGE_LIPO_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD));
-            // refresh current page
-            GUISwitchPages(NULL, 0);
+            // Switch to and refresh home page
+            GUISwitchPages(NULL, PAGE_HOME);
         } else {
             delay(VOLTAGE_TOO_LOW_DELAY_OFFLINE);
         }
@@ -724,8 +712,7 @@ void printMotorValuesPeriodically() {
 #else
                 // we can merely use a constant value here
                 dtostrf(
-                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(
-                                RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
+                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
                                 FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                 tPWMVoltageString[4] = 'V';
@@ -737,8 +724,7 @@ void printMotorValuesPeriodically() {
 #else
                 // we can merely use a constant value here
                 dtostrf(
-                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(
-                                RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM,
+                        PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM,
                                 FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                 tPWMVoltageString[4] = 'V';
@@ -746,9 +732,11 @@ void printMotorValuesPeriodically() {
                         tPWMVoltageString);
 
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
-                    RobotCar.rightCarMotor.LastTargetDistanceMillimeter);
-            BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (4 * TEXT_SIZE_11), sStringBuffer);
+                if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
+                    sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
+                            RobotCar.rightCarMotor.LastTargetDistanceMillimeter);
+                    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (4 * TEXT_SIZE_11), sStringBuffer);
+                }
 #endif
             }
 
@@ -849,15 +837,15 @@ void showUSDistance() {
         tUSDistanceCentimeter = sUSDistanceTimeoutCentimeter;
     }
     if (sSliderUSLastCentimeter != tUSDistanceCentimeter) {
-        sSliderUSLastCentimeter = sUSDistanceCentimeter;
+        sSliderUSLastCentimeter = tUSDistanceCentimeter;
         SliderUSDistance.setValueAndDrawBar(tUSDistanceCentimeter);
     }
 }
 #endif
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 void showIROrTofDistance() {
-    if (sIROrTofDistanceCentimeter != sLastSliderIROrTofCentimeter) {
+    if (sLastSliderIROrTofCentimeter != sIROrTofDistanceCentimeter) {
         sLastSliderIROrTofCentimeter = sIROrTofDistanceCentimeter;
         SliderIROrTofDistance.setValueAndDrawBar(sIROrTofDistanceCentimeter);
     }

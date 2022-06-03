@@ -26,12 +26,6 @@
 
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarBlueDisplay.h"
-#include "RobotCarGui.h"
-#include "Distance.h"
 
 BDButton TouchButtonStepMode;
 const char sStepModeButtonStringContinuousStepToTurn[] PROGMEM = "Continuous\n->\nStep to turn";
@@ -54,7 +48,7 @@ BDButton TouchButtonScanSpeed;
 BDButton TouchButtonPathInfoPage;
 #endif
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 BDButton TouchButtonScanMode;
 const char sDistanceSourceModeButtonStringMinMax[] PROGMEM = "Min->Max";
 const char sDistanceSourceModeButtonStringMaxUS[] PROGMEM = "Max->US";
@@ -126,14 +120,12 @@ void doStep(BDButton *aTheTouchedButton, int16_t aValue) {
     /*
      * Start if not yet done
      */
-    if (sDriveMode == MODE_FOLLOWER) {
-        sDoStep = true;
-    } else if (sDriveMode != MODE_MANUAL_DRIVE) {
+    if (sDriveMode == MODE_MANUAL_DRIVE) {
         startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
     }
 }
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 void setScanModeButtonCaption() {
     TouchButtonScanMode.setCaptionFromStringArrayPGM(sDistanceSourceModeButtonCaptionStringArray, sDistanceSourceMode);
 }
@@ -147,7 +139,7 @@ void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
     TouchButtonScanMode.drawButton();
 }
 
-#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 
 void doChangeScanSpeed(BDButton *aTheTouchedButton, int16_t aValue) {
     sDoSlowScan = aValue;
@@ -220,7 +212,7 @@ void initAutonomousDrivePage(void) {
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, reinterpret_cast<const __FlashStringHelper*>(sDistanceFeedbackModeNoTone), TEXT_SIZE_14,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, DISTANCE_FEEDBACK_NO_TONE, &doNextDistanceFeedbackMode);
 
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED,
             reinterpret_cast<const __FlashStringHelper*>(sDistanceSourceModeButtonStringMinMax),
@@ -259,7 +251,7 @@ void drawAutonomousDrivePage(void) {
     // small buttons
     TouchButtonStartStopUserAutonomousDrive.drawButton();
 //    TouchButtonDistanceFeedbackMode.drawButton();
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     TouchButtonScanMode.drawButton();
 #endif
 
@@ -275,11 +267,24 @@ void startAutonomousDrivePage(void) {
 
     // restore last step and scan mode
     setStepModeButtonCaption();
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_CAR_HAS_TOF_DISTANCE_SENSOR)
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     setScanModeButtonCaption();
 #endif
     setDistanceFeedbackModeButtonCaption();
 
+#if defined(ENABLE_PATH_INFO_PAGE)
+#define SLIDER_SHIFTED_Y_POS    BUTTON_HEIGHT_6
+#else
+#define SLIDER_SHIFTED_Y_POS    SLIDER_TOP_MARGIN
+#endif
+#if defined(US_DISTANCE_SLIDER_IS_SMALL)
+    SliderUSDistance.setPosition(POS_X_DISTANCE_POSITION_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2) - TEXT_SIZE_11_WIDTH, SLIDER_SHIFTED_Y_POS);
+#else
+    SliderUSDistance.setPosition(POS_X_DISTANCE_POSITION_SLIDER - BUTTON_WIDTH_10, SLIDER_SHIFTED_Y_POS);
+#endif
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+    SliderIROrTofDistance.setPosition(POS_X_DISTANCE_POSITION_SLIDER - (TEXT_SIZE_11_WIDTH + BUTTON_WIDTH_10), SLIDER_SHIFTED_Y_POS);
+#endif
     drawAutonomousDrivePage();
     if(!isCalibrated) {
         calibrateAndPrint();
@@ -292,7 +297,15 @@ void loopAutonomousDrivePage(void) {
 }
 
 void stopAutonomousDrivePage(void) {
-    startStopRobotCar(false);
+#if defined(US_DISTANCE_SLIDER_IS_SMALL)
+    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+#else
+    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+#endif
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+    SliderIROrTofDistance.setPosition(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+#endif
+
 }
 
 /*
@@ -330,6 +343,7 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
         BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, aLengthOfVector, tDegreeToDisplay + 90,
                 tColor);
         if (!aDoClearVector) {
+            //Print result
             sprintf_P(sStringBuffer, PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
                     aDegreeToTurn, sForwardDistancesInfo.WallRightAngleDegrees); // \xB0 is degree character
             BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,

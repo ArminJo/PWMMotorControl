@@ -41,8 +41,6 @@
 #ifndef _PWM_DC_MOTOR_HPP
 #define _PWM_DC_MOTOR_HPP
 
-#include <Arduino.h>
-
 #include "PWMDcMotor.h"
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
@@ -294,7 +292,7 @@ float PWMDcMotor::getMotorVoltageforPWM(uint8_t aSpeedPWM, float aFullBridgeInpu
 }
 
 void PWMDcMotor::printDirectionString(Print *aSerial, uint8_t aDirection) {
-    if(aDirection > 3) {
+    if (aDirection > 3) {
         aDirection = 3;
     }
     aSerial->print(sDirectionStringArray[aDirection]);
@@ -302,6 +300,7 @@ void PWMDcMotor::printDirectionString(Print *aSerial, uint8_t aDirection) {
 
 /*
  * Sets active PWM and handles speed compensation and stop of motor
+ *  @param  aRequestedSpeedPWM The 8-bit PWM value, 0 is off, 255 is on forward
  */
 void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
     RequestedSpeedPWM = aRequestedSpeedPWM;
@@ -375,7 +374,7 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
 /**
  *  @brief  Control the DC Motor speed/throttle. Subtracts SpeedPWMCompensation from aRequestedSpeedPWM before applying
  *
- *  @param  speed The 8-bit PWM value, 0 is off, 255 is on forward -255 is on backward
+ *  @param  aRequestedSpeedPWM The 8-bit PWM value, 0 is off, 255 is on forward
  *  @param  aRequestedDirection is DIRECTION_FORWARD or DIRECTION_BACKWARD
  *  First set driver mode, then set PWM
  *  PWM period is 600 us for Adafruit Motor Shield V2 using PCA9685.
@@ -401,6 +400,7 @@ void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
 
 /*
  * Signed speed
+ *  @param  aRequestedSpeedPWM The 8-bit PWM value, 0 is off, 255 is on forward -255 is on backward
  */
 void PWMDcMotor::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
     uint8_t tDirection;
@@ -498,7 +498,7 @@ void PWMDcMotor::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
 }
 
 /*
- * Formula is: 2VPWM = (2000mV / tBridgeMillivolt) * 255
+ * Formula is: 2VPWM = (2000mV / tBridgeMillivolt) * MAX_SPEED_PWM
  */
 void PWMDcMotor::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
     uint16_t tBridgeMillivolt = aFullBridgeInputVoltageMillivolt - FULL_BRIDGE_LOSS_MILLIVOLT;
@@ -507,7 +507,7 @@ void PWMDcMotor::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMilliv
     MotorControlValuesHaveChanged = true;
 }
 void PWMDcMotor::setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltage) {
-    float tBridgeVolt = aFullBridgeInputVoltage - (((float) FULL_BRIDGE_LOSS_MILLIVOLT) / 1000);
+    float tBridgeVolt = aFullBridgeInputVoltage - (FULL_BRIDGE_LOSS_MILLIVOLT / 1000.0);
     DriveSpeedPWMFor2Volt = (2 * MAX_SPEED_PWM) / tBridgeVolt;
     DriveSpeedPWM = DriveSpeedPWMFor2Volt;
     MotorControlValuesHaveChanged = true;
@@ -839,11 +839,15 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
     } else {
         tDistanceMillimeterDriveSpeed = 0;
     }
+    /*
+     * Compute milliseconds for distance by using MillisPerCentimeter (which is measured for 2 volt)
+     * and scaling it for the requested aRequestedSpeedPWM
+     */
     uint32_t tComputedMillisOfMotorStopForDistance = (((uint32_t) tDistanceMillimeterDriveSpeed * MillisPerCentimeter
-            * DriveSpeedPWM) / ((uint_fast16_t) MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWMFor2Volt));
+            * DriveSpeedPWMFor2Volt) / ((uint_fast16_t) MILLIMETER_IN_ONE_CENTIMETER * aRequestedSpeedPWM));
 
     if (isStopped()) {
-        // add startup time
+        // add startup time for the centimeter, we subtracted above
         tComputedMillisOfMotorStopForDistance += DEFAULT_MILLIS_FOR_FIRST_CENTIMETER;
     }
     // after check of isStopped(), set PWM
@@ -910,8 +914,8 @@ void PWMDcMotor::printValues(Print *aSerial) {
     aSerial->println();
 }
 
-const char StringNot[] PROGMEM = {" not"};
-const char StringDefined[] PROGMEM = {" defined"};
+const char StringNot[] PROGMEM = { " not" };
+const char StringDefined[] PROGMEM = { " defined" };
 
 void PWMDcMotor::printCompileOptions(Print *aSerial) {
     aSerial->println();
@@ -939,19 +943,14 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
 
     aSerial->print(F("FULL_BRIDGE_OUTPUT_MILLIVOLT="));
     aSerial->print(FULL_BRIDGE_OUTPUT_MILLIVOLT);
-    aSerial->print(F("mV (= FULL_BRIDGE_INPUT_MILLIVOLT|"));
-    aSerial->print(FULL_BRIDGE_INPUT_MILLIVOLT);
-    aSerial->print(F("mV - FULL_BRIDGE_LOSS_MILLIVOLT|"));
-    aSerial->print(FULL_BRIDGE_LOSS_MILLIVOLT);
-    aSerial->println(F("mV)"));
+    aSerial->print(F("mV (= FULL_BRIDGE_INPUT_MILLIVOLT|" STR(FULL_BRIDGE_INPUT_MILLIVOLT) "mV - FULL_BRIDGE_LOSS_MILLIVOLT|" STR(FULL_BRIDGE_LOSS_MILLIVOLT "mV)")));
 
     aSerial->print(F("DEFAULT_START_SPEED_PWM="));
     aSerial->print(DEFAULT_START_SPEED_PWM);
     aSerial->print(F(", DEFAULT_DRIVE_SPEED_PWM="));
     aSerial->println(DEFAULT_DRIVE_SPEED_PWM);
 
-    aSerial->print(F("DEFAULT_MILLIS_FOR_FIRST_CENTIMETER="));
-    aSerial->println(DEFAULT_MILLIS_FOR_FIRST_CENTIMETER);
+    aSerial->println(F("DEFAULT_MILLIS_FOR_FIRST_CENTIMETER=" STR(DEFAULT_MILLIS_FOR_FIRST_CENTIMETER)));
 
     aSerial->print(F("DEFAULT_MILLIS_PER_MILLIMETER="));
     aSerial->println(DEFAULT_MILLIS_PER_CENTIMETER);

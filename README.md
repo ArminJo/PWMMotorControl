@@ -50,10 +50,12 @@ Diagram of PWM, speed[rpm] and encoder count for 2 Li-ion (7.5 volt) supply and 
 
 # Full bridges
 This library was tested with the bipolar full bridge IC L298 and the MOSFET IC TB6612.
-![L298 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Board_small.jpg)
-![TB6612 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/TB6612Board_small.jpg)
 
-The L298 has a loss of around 2 volt, which is the reason for the attached heat sink, the TB6612 has almost no loss.
+| The L298 has a loss of around 2 volt, which is the reason for the attached heat sink | The TB6612 has almost no loss |
+| :-: | :-: |
+| ![L298 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/L298Board_small.jpg) | ![TB6612 board](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/TB6612Board_small.jpg) |
+| L298 voltages at both motor pins @7.5 V | TB6612 effective motor voltage @7.6 V |
+| ![L298 output voltages](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.5V_L298-PWM87-2Channel.bmp) | ![TB6612 motor voltage](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_TB6612-PWM67.bmp) |
 
 # PWM period
 - PWM period is 600 µs (1.6 kHz) for Adafruit Motor Shield V2 using PCA9685.
@@ -118,7 +120,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | Name | Default value | Description |
 |-|-|-|
 | `USE_ENCODER_MOTOR_CONTROL` | disabled | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
-| `USE_MPU6050_IMU` | disabled | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. |
+| `USE_MPU6050_IMU` | disabled | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. Requires up to 2850 bytes program memory if `USE_SOFT_I2C_MASTER` defined and 3756 bytes if `USE_SOFT_I2C_MASTER` is not defined. |
 | `USE_ACCELERATOR_Y_FOR_SPEED` | disabled | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
 | `USE_NEGATIVE_ACCELERATION_FOR_SPEED` | disabled | The speed axis of the GY-521 MPU6050 breakout board points backward, i.e. connectors are at the front or right side. |
 | `USE_ADAFRUIT_MOTOR_SHIELD` | disabled | Use Adafruit Motor Shield v2 connected by I2C instead of simple TB6612 or L298 breakout board.<br/>This requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.<br/>For full bridge, the millis() timer0 is used for analogWrite since we use pin 5 & 6. |
@@ -162,7 +164,7 @@ To customize the software to different car configurations, there are some compil
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
 | `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
-| `CAR_CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
+| `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
 | `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PIN_PAN_SERVO` pin. |
 | `CAR_HAS_TILT_SERVO` | disabled | Enables the tilt slider for the `TiltServo` at the `PIN_TILT_SERVO` pin. |
@@ -203,6 +205,8 @@ VIN sensing
 ### Version 1.9.1 - a 2.0.0 pre release
 - MecanumWheelCar support.
 - IMUCarData improved.
+- Renamed instance from RobotCarPWMMotorControl to RobotCar.
+- Added Voltage handling functions like getVoltageAdjustedSpeedPWM() etc.
 
 ### Version 1.9.0 - a 2.0.0 pre release
 - Removed all *Compensated functions, compensation now is always active.

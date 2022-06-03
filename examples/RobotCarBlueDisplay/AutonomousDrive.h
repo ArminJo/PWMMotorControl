@@ -19,8 +19,6 @@
 #ifndef _AUTONOMOUS_DRIVE_H
 #define _AUTONOMOUS_DRIVE_H
 
-#include <stdint.h>
-
 /*
  * Different autonomous driving modes
  */
@@ -61,4 +59,3 @@ void driveFollowerModeOneStep();
 
 #endif // _AUTONOMOUS_DRIVE_H
 #endif // defined(ENABLE_AUTONOMOUS_DRIVE)
-#pragma once

@@ -23,7 +23,8 @@
 #include <Arduino.h>
 
 bool isVINVoltageDividerAttached(uint8_t aPin);
-void printConfigInfo();
+void printConfigInfo(Print *aSerial);
+void printProgramOptions(Print *aSerial);
 void initRobotCarPWMMotorControl();
 unsigned int getDistanceAndPlayTone();
 
@@ -35,4 +36,3 @@ void calibrateDriveSpeedPWM();
 void checkVinPeriodicallyAndPrintIfChanged();
 
 #endif // _ROBOT_CAR_UTILS_H
-#pragma once

@@ -31,8 +31,14 @@
 #include <Arduino.h>
 
 #define VERSION_EXAMPLE "2.0.0"
+
 //#define DEBUG
 //#define TRACE
+/*
+ * Timeouts for demo mode and inactivity remainder
+ */
+#define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
+#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
 
 /*
  * Car configuration
@@ -56,18 +62,9 @@
  * For moving exact distances and turns you may modify this values according to your actual car configuration
  */
 //#define DEFAULT_CIRCUMFERENCE_MILLIMETER     220  // The circumference of your wheel in millimeter
-
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
-/*
- * Enable functionality of this program
- */
-//#define TEST_TIMING
-//#include "digitalWriteFast.h"
-//#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button
-//#define USE_MOTOR_FOR_MELODY        // Generates the tone by using motor coils as tone generator
-//#define ENABLE_PATH_INFO_PAGE       // Saves program memory
 /*
  * Enabling program features dependent on car configuration
  */
@@ -75,29 +72,62 @@
 #define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
 #endif
 #if defined(CAR_HAS_MPU6050_IMU)
-//#define USE_MPU6050_IMU
+#define USE_MPU6050_IMU             // Requires up to 2850 bytes program memory
 #endif
 #if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
-#define ENABLE_AUTONOMOUS_DRIVE
+#define ENABLE_AUTONOMOUS_DRIVE     // Enable if by default, if available
+#endif
+#if defined(CAR_HAS_PAN_SERVO)
+#include <Servo.h>
+Servo PanServo;
+#endif
+#if defined(CAR_HAS_TILT_SERVO)
+#include <Servo.h>
+Servo TiltServo;
+#define TILT_SERVO_MIN_VALUE     7 // since lower values will make an insane sound at my pan tilt device
 #endif
 
-#define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available
+/*
+ * Enable functionality of this program
+ */
+#if defined(NO_APPLICATON_INFO)
+#define USE_SIMPLE_SERIAL           // saves 1224 bytes
+#else
+#define APPLICATON_INFO             // Prints configuration info at startup. Requires additional 1504 bytes of program memory
+#endif
+#define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
+//#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+#define VOLTAGE_LIPO_LOW_THRESHOLD          6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
+#define VOLTAGE_USB_THRESHOLD               5.5
+#define VOLTAGE_USB_THRESHOLD_MILLIVOLT     5500 // required for preprocessor condition
+#define VOLTAGE_TOO_LOW_DELAY_ONLINE        3000 // display VIN every 500 ms for 3 seconds
+#define VOLTAGE_TOO_LOW_DELAY_OFFLINE       1000 // wait for 1 seconds after double beep
+
+#if !defined(NO_RTTTL_FOR_CAR)
+#define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button - 3730 bytes
+#endif
+//#define USE_MOTOR_FOR_MELODY        // Generates the tone by using left motor coils as tone generator. Not for motor shield. Requires 68 bytes
+#if !defined(NO_PATH_INFO_PAGE) && defined(USE_ENCODER_MOTOR_CONTROL) // We use LastRideEncoderCount for path info entry
+#define ENABLE_PATH_INFO_PAGE       // Requires up to 1400 bytes of program memory
+#endif
+//#define TEST_TIMING
 
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be before #include "BlueDisplay.hpp"
 #define ADC_INTERNAL_REFERENCE_MILLIVOLT 1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #endif
 
+int doUserCollisionDetection();
+
+#include "CarPWMMotorControl.hpp"   // include source of library
+#include "RobotCarUtils.hpp"        // include source of library
+
 /*
  * Settings to configure the BlueDisplay library and to reduce its size
  */
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
 #define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
-
-#define SUPPRESS_HPP_WARNING        // Suppress warnings we get because of helper includes for eclipse indexer
-#include "CarPWMMotorControl.hpp"   // include source of library
-#include "RobotCarUtils.hpp"        // include source of library
 #include "BlueDisplay.hpp"          // include source of library
 
 #if defined(USE_MPU6050_IMU)
@@ -112,15 +142,6 @@
 #if defined(ENABLE_RTTTL_FOR_CAR)
 #define USE_NO_RTX_EXTENSIONS       // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
 #include <PlayRtttl.hpp>
-#endif
-
-/*
- * Timeouts for demo mode and inactivity remainder
- */
-#define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
-#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
-
-#if defined(ENABLE_RTTTL_FOR_CAR)
 bool sPlayMelody = false;
 void playRandomMelody();
 #endif
@@ -137,6 +158,7 @@ void initServos();
 #define MINIMUM_DISTANCE_TO_FRONT 35
 
 int doUserCollisionDetection() {
+#if defined(ENABLE_AUTONOMOUS_DRIVE)
 // if left three distances are all less than 21 centimeter then turn right.
     if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT] <= MINIMUM_DISTANCE_TO_SIDE
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT - 1] <= MINIMUM_DISTANCE_TO_SIDE
@@ -162,6 +184,9 @@ int doUserCollisionDetection() {
         // Turn backwards.
         return 180;
     }
+#else
+    return 0;
+#endif
 }
 
 /*
@@ -203,21 +228,29 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
 
-    if (BlueDisplay1.isConnectionEstablished()) {
+#if defined(APPLICATON_INFO)
+    if (BlueDisplay1.isConnectionEstablished())
+#else
+     if (true)
+#endif
+    {
         // Just to know which program is running on my Arduino
         BlueDisplay1.debug("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
 //        BlueDisplay1.debug("sMCUSR=", sMCUSR);
     } else {
-#if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
-#if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/|| defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
+#if defined(APPLICATON_INFO) // requires 1504 bytes program space
+#  if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
+#    if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/|| defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
-#endif
+#    endif
         // Just to know which program is running on my Arduino
         Serial.println(
                 F(
                         "START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__ "\r\nUsing PWMMotorControl library version " VERSION_PWMMOTORCONTROL));
-        printConfigInfo();
+        printConfigInfo(&Serial);
+        printProgramOptions(&Serial);
         PWMDcMotor::printCompileOptions(&Serial);
+#  endif
 #endif
     }
 
@@ -342,7 +375,7 @@ void playRandomMelody() {
     sPlayMelody = true;
 //    BlueDisplay1.debug("Play melody");
 
-#if defined(USE_MOTOR_FOR_MELODY)
+#if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
     OCR2B = 0;
     bitWrite(TIMSK2, OCIE2B, 1);            // enable interrupt for inverted pin handling
     startPlayRandomRtttlFromArrayPGM(LEFT_MOTOR_FORWARD_PIN, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
@@ -354,7 +387,7 @@ void playRandomMelody() {
 #endif
 #endif
     while (updatePlayRtttl()) {
-#if defined(USE_MOTOR_FOR_MELODY)
+#if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
         // check for pause in melody (i.e. timer disabled) and disable motor for this period
         if (TIMSK2 & _BV(OCIE2A)) {
             // timer enabled
@@ -370,7 +403,7 @@ void playRandomMelody() {
             break;
         }
     }
-#if defined(USE_MOTOR_FOR_MELODY)
+#if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
     digitalWriteFast(LEFT_MOTOR_PWM_PIN, LOW); // disable motor
     bitWrite(TIMSK2, OCIE2B, 0); // disable interrupt
 #endif
@@ -379,7 +412,7 @@ void playRandomMelody() {
 }
 
 void playTone(unsigned int aFrequency, unsigned long aDuration = 0) {
-#if defined(USE_MOTOR_FOR_MELODY)
+#if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
     OCR2B = 0;
     bitWrite(TIMSK2, OCIE2B, 1); // enable interrupt for inverted pin handling
     tone(LEFT_MOTOR_FORWARD_PIN, aFrequency);
@@ -397,22 +430,12 @@ void playTone(unsigned int aFrequency, unsigned long aDuration = 0) {
 /*
  * set INVERTED_TONE_PIN to inverse value of TONE_PIN to avoid DC current
  */
-#if defined(USE_MOTOR_FOR_MELODY)
+#if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
 ISR(TIMER2_COMPB_vect) {
     digitalWriteFast(LEFT_MOTOR_BACKWARD_PIN, !digitalReadFast(LEFT_MOTOR_FORWARD_PIN));
 }
 #endif
 #endif // ENABLE_RTTTL_FOR_CAR
-
-/*
- * Pan tilt servo stuff
- */
-#if defined(CAR_HAS_PAN_SERVO)
-Servo PanServo;
-#endif
-#if defined(CAR_HAS_TILT_SERVO)
-Servo TiltServo;
-#endif
 
 void resetServos() {
 #if defined(CAR_HAS_DISTANCE_SERVO)

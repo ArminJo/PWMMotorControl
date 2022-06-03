@@ -23,13 +23,14 @@
  */
 #ifndef _ROBOT_CAR_PATH_INFO_PAGE_HPP
 #define _ROBOT_CAR_PATH_INFO_PAGE_HPP
-#include <Arduino.h>
-
-#include "RobotCarPinDefinitionsAndMore.h"
-#include "RobotCarGui.h"
-#include "Distance.h"
 
 #if defined(ENABLE_PATH_INFO_PAGE)
+#if defined(DEBUG)
+#define LOCAL_DEBUG
+#else
+#define LOCAL_DEBUG // This enables debug output only for this file - only for development
+#endif
+
 BDButton TouchButtonResetPath;
 BDButton TouchButtonBackSmall;
 
@@ -44,7 +45,7 @@ void initPathInfoPage(void) {
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doResetPath);
 
     TouchButtonBackSmall.init(BUTTON_WIDTH_4_POS_4, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_6, COLOR16_RED, F("Back"), TEXT_SIZE_22,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &GUISwitchPages);
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_AUTOMATIC_CONTROL, &GUISwitchPages);
 }
 
 void drawPathInfoPage(void) {
@@ -110,15 +111,19 @@ void resetPathData() {
  * @param aAddEntry if false only values of current entry will be adjusted
  */
 void insertToPath(int aLength, int aDegree, bool aAddEntry) {
-//    BlueDisplay1.debug("Degree=", aDegree);
-//    BlueDisplay1.debug("Length=", aLength);
+#if defined(LOCAL_DEBUG)
+    BlueDisplay1.debug("Degree=", aDegree);
+    BlueDisplay1.debug("Length=", aLength);
+#endif
 
 // get new direction
     int tLastPathDirectionDegree = sLastPathDirectionDegree + aDegree;
     if (aAddEntry) {
         sLastPathDirectionDegree = tLastPathDirectionDegree;
     }
-//    BlueDisplay1.debug("LastDegree=", tLastPathDirectionDegree);
+#if defined(LOCAL_DEBUG)
+    BlueDisplay1.debug("LastDegree=", tLastPathDirectionDegree);
+#endif
 
     float tRadianOfDegree = tLastPathDirectionDegree * (M_PI / 180);
     /*
@@ -211,5 +216,8 @@ void DrawPath() {
         tYDisplayPos += tYDisplayDelta;
     }
 }
+#if defined(LOCAL_DEBUG)
+#undef LOCAL_DEBUG
+#endif
 #endif // ENABLE_PATH_INFO_PAGE
 #endif // _ROBOT_CAR_PATH_INFO_PAGE_HPP

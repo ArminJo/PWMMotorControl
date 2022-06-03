@@ -31,8 +31,6 @@
 #ifndef _IMU_CAR_DATA_HPP
 #define _IMU_CAR_DATA_HPP
 
-#include <Arduino.h>
-
 //#define USE_ACCELERATOR_Y_FOR_SPEED           // The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the right.
 //#define USE_NEGATIVE_ACCELERATION_FOR_SPEED   // The x axis of the GY-521 MPU6050 breakout board points backwards.
 //#define PRINT_MOVEMENT_DETECTION_MAX_VALUES   // The maximum delta values of the 4 values used for motion detection are printed, when offset recalculation is done.

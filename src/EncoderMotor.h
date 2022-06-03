@@ -176,4 +176,3 @@ extern EncoderMotor * sPointerForInt0ISR;
 extern EncoderMotor * sPointerForInt1ISR;
 
 #endif // _ENCODER_MOTOR_CONTROL_H
-#pragma once
