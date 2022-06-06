@@ -201,11 +201,9 @@ VIN sensing
 
 # Revision History
 ### Version 2.0.0 - work in progress
-
-### Version 1.9.1 - a 2.0.0 pre release
+- Renamed instance from RobotCarPWMMotorControl to RobotCar.
 - MecanumWheelCar support.
 - IMUCarData improved.
-- Renamed instance from RobotCarPWMMotorControl to RobotCar.
 - Added Voltage handling functions like getVoltageAdjustedSpeedPWM() etc.
 
 ### Version 1.9.0 - a 2.0.0 pre release

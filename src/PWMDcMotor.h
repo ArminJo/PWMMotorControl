@@ -38,10 +38,10 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "1.9.1"
-#define VERSION_PWMMOTORCONTROL_MAJOR 1
-#define VERSION_PWMMOTORCONTROL_MINOR 9
-#define VERSION_PWMMOTORCONTROL_PATCH 1
+#define VERSION_PWMMOTORCONTROL "2.0.0"
+#define VERSION_PWMMOTORCONTROL_MAJOR 2
+#define VERSION_PWMMOTORCONTROL_MINOR 0
+#define VERSION_PWMMOTORCONTROL_PATCH 0
 // The change log is at the bottom of the file
 
 /*
@@ -438,12 +438,11 @@ public:
 };
 
 /*
- * Version 2.0.0 - 08/2022
- *
- * Version 1.9.1 - 05/2022
+ * Version 2.0.0 - 06/2022
+ * - Renamed instance from RobotCarPWMMotorControl to RobotCar.
  * - MecanumWheelCar support.
  * - IMUCarData improved.
- * - Renamed instance from RobotCarPWMMotorControl to RobotCar.
+ * - Added Voltage handling functions like getVoltageAdjustedSpeedPWM() etc.
  *
  * Version 1.9.0 - 04/2022
  * - Removed all *Compensated functions, compensation now is always active.
