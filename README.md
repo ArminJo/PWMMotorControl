@@ -1,7 +1,7 @@
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Available as Arduino library "PWMMotorControl". Contains the [Arduino-RobotCar](https://github.com/ArminJo/Arduino-RobotCar) example.
 
-### [Version 2.0.0](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
+### [Version 2.0.1](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
@@ -200,7 +200,9 @@ VIN sensing
 
 
 # Revision History
-### Version 2.0.0 - work in progress
+### Version 2.0.1 - work in progress
+
+### Version 2.0.0
 - Renamed instance from RobotCarPWMMotorControl to RobotCar.
 - MecanumWheelCar support.
 - IMUCarData improved.

@@ -137,6 +137,8 @@ public:
     void moveTrapezium(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveTestDistances(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
 
+    void doDemo();
+
     PWMDcMotor backRightCarMotor;
     PWMDcMotor backLeftCarMotor;
 };

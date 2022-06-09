@@ -38,7 +38,7 @@
  * Timeouts for demo mode and inactivity remainder
  */
 #define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
-#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 10000 // Start demo mode 10 seconds after boot up
+#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
 
 /*
  * Car configuration
@@ -93,7 +93,7 @@ Servo TiltServo;
 #if defined(NO_APPLICATON_INFO)
 #define USE_SIMPLE_SERIAL           // saves 1224 bytes
 #else
-#define APPLICATON_INFO             // Prints configuration info at startup. Requires additional 1504 bytes of program memory
+#define APPLICATON_INFO             // Prints configuration info at startup. Requires additional 1748 bytes of program memory
 #endif
 #define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
 //#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin
@@ -113,10 +113,23 @@ Servo TiltServo;
 #endif
 //#define TEST_TIMING
 
+/*
+ * Configuration / correction values supported by this program
+ */
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be before #include "BlueDisplay.hpp"
-#define ADC_INTERNAL_REFERENCE_MILLIVOLT 1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #endif
+
+/*
+ * Values used in distance.hpp
+ */
+//#define IR_SENSOR_TYPE_430            // 4 to 30 cm, 18 ms, GP2YA41SK0F
+//#define IR_SENSOR_TYPE_1080           // 10 to 80 cm, GP2Y0A21YK0F - default
+//#define IR_SENSOR_TYPE_20150          // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
+//#define IR_SENSOR_TYPE_100550         // 100 to 550 cm, 18 ms, GP2Y0A710K0F
+//#define TOF_OFFSET_MILLIMETER      10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
+//#define DISTANCE_SERVO_TRIM_DEGREE  5 // This value is internally added to all servo writes.
 
 int doUserCollisionDetection();
 
@@ -127,7 +140,7 @@ int doUserCollisionDetection();
  * Settings to configure the BlueDisplay library and to reduce its size
  */
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
-#define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
+#define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables unused basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
 #include "BlueDisplay.hpp"          // include source of library
 
 #if defined(USE_MPU6050_IMU)
@@ -318,12 +331,12 @@ void loop() {
 #endif
 
     /*
-     * check if timeout, no Bluetooth connection and not connected to USB. For
+     * After 30 seconds of being disconnected, run the demo.
+     * Do not run it if the car is connected to USB (e.g. for programming or debugging), which can be tested only for a Li-ion supply :-(.
      */
-    if ((!BlueDisplay1.isConnectionEstablished()) && (millis() < (TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS + 1000))
-            && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
+    if ((!BlueDisplay1.isConnectionEstablished()) && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
 #if defined(MONITOR_VIN_VOLTAGE) && (FULL_BRIDGE_INPUT_MILLIVOLT > VOLTAGE_USB_THRESHOLD_MILLIVOLT)
-            && (sVINVoltage > VOLTAGE_USB_THRESHOLD_MILLIVOLT)
+            && (sVINVoltage > (VOLTAGE_USB_THRESHOLD_MILLIVOLT / 1000.0))
 #endif
             ) {
 
@@ -333,8 +346,9 @@ void loop() {
 #if defined(ENABLE_RTTTL_FOR_CAR)
         playRandomMelody();
         delayAndLoopGUI(1000);
-#else
-        delayAndLoopGUI(6000); // delay needed for millis() check above!
+#endif
+#if defined(APPLICATON_INFO)
+        Serial.println(F("Timeout -> running follower demo"));
 #endif
         // check again, maybe we are connected now
         if (!BlueDisplay1.isConnectionEstablished()) {

@@ -41,6 +41,7 @@
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
 //#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_NIMH_BASIC_CONFIGURATION  // China set with TB6612 mosfet bridge + 4AA NiMh.
 //#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
 //#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
@@ -62,13 +63,14 @@
  */
 #if !defined(CAR_HAS_DISTANCE_SERVO)
 #error This program requires a distance servo mounted indicated by a #define CAR_HAS_DISTANCE_SERVO
+#define CAR_HAS_DISTANCE_SERVO
 #endif
 
 #if defined(CAR_HAS_ENCODERS)
-#define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
+#define USE_ENCODER_MOTOR_CONTROL   // Enable it by default, if available
 #endif
 #if defined(CAR_HAS_MPU6050_IMU)
-#define USE_MPU6050_IMU
+#define USE_MPU6050_IMU             // Enable it by default, if available
 #endif
 
 #include "CarPWMMotorControl.hpp"

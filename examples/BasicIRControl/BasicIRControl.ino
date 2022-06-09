@@ -37,19 +37,27 @@
  */
 
 /*
- * You will need to change these values according to your motor, H-bridge and motor supply voltage.
- * You must specify this before the include of "PWMDcMotor.hpp"
+ * Car configuration
+ * For a complete list of available configurations see RobotCarConfigurations.h
+ * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define USE_L298_BRIDGE                  // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
-//#define VIN_2_LI_ION                     // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-//#define VIN_1_LI_ION                     // If you use a mosfet bridge (TB6612), 1 Li-ion cell (around 3.7 volt) may be sufficient.
-//#define CAR_HAS_4_WHEELS
-//#define FULL_BRIDGE_INPUT_MILLIVOLT 6000 // Default. For 4 x AA batteries (6 volt).
-#define FULL_BRIDGE_INPUT_MILLIVOLT 4800 // For 4 x AA NIMH rechargeable batteries (4.8 volt).
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
+//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
+#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+#define USE_SOFT_I2C_MASTER             // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
 
+#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
-#include "CarPWMMotorControl.h"
 #include "CarPWMMotorControl.hpp"
 
 /*
@@ -63,7 +71,6 @@
 //#define USE_DVBT_STICK_REMOTE
 #define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
 #define INFO // Enable info just for IR dispatcher
-#include "IRCommandDispatcher.h" // for RETURN_IF_STOP
 #include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
 #include "IRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
 #include "IRCommandDispatcher.hpp"

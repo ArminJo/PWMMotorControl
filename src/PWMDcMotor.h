@@ -113,8 +113,8 @@
 #  elif defined(VIN_1_LI_ION)
 #define FULL_BRIDGE_INPUT_MILLIVOLT         3700 // for 1 x LIPO battery (3.7 volt).
 #  else
-//#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).
-#define FULL_BRIDGE_INPUT_MILLIVOLT         4800  // Default. For 4 x AA rechargeable batteries (4.8 volt).
+#define FULL_BRIDGE_INPUT_MILLIVOLT         6000  // Default. For 4 x AA batteries (6 volt).
+//#define FULL_BRIDGE_INPUT_MILLIVOLT         4800  // Default. For 4 x AA rechargeable batteries (4.8 volt).
 #  endif
 #endif
 

@@ -6,7 +6,13 @@
  *  Copyright (C) 2016-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
+ *
+ *  PWMMotorControl and Arduino-RobotCar are free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,7 +40,7 @@
 #include <Servo.h>
 #    endif
 #    if defined(CAR_HAS_DISTANCE_SERVO)
-extern Servo DistanceServo;
+extern Servo DistanceServo;     // The pan servo instance for distance sensor
 #    endif
 #  endif
 #endif // defined(CAR_HAS_SERVO)
@@ -57,7 +63,10 @@ extern uint8_t sDistanceFeedbackMode;
 #define DISTANCE_SOURCE_MODE_US         2 // Take just US value
 #define DISTANCE_SOURCE_MODE_IR_OR_TOF  3 // Take just IR or TOF value
 #define DISTANCE_LAST_SOURCE_MODE       DISTANCE_SOURCE_MODE_IR_OR_TOF
-#define DISTANCE_SOURCE_MODE_DEFAULT   DISTANCE_SOURCE_MODE_US
+#if !defined(DISTANCE_SOURCE_MODE_DEFAULT)
+//#define DISTANCE_SOURCE_MODE_DEFAULT    DISTANCE_SOURCE_MODE_US
+#define DISTANCE_SOURCE_MODE_DEFAULT    DISTANCE_SOURCE_MODE_IR_OR_TOF
+#endif
 extern uint8_t sDistanceSourceMode;
 #endif
 
@@ -78,11 +87,6 @@ extern uint8_t sDistanceSourceMode;
 #define MINIMUM_DISTANCE_TOO_SMALL 360 // possible result of doBuiltInCollisionDetection()
 
 #define DISTANCE_TIMEOUT_COLOR COLOR16_CYAN
-
-// for future use maybe
-//#define SERVO_CURRENT_LOW_THRESHOLD 100
-//#define SERVO_INITIAL_DELAY 5
-//#define SERVO_CURRENT_LOW_MILLIS_FOR_SERVO_STOPPED 12
 
 /*
  * Index definitions for ForwardDistancesInfoStruct
@@ -131,9 +135,9 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTAN
         bool aWaitForCurrentMeasurementToEnd = false);
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
-#define NO_TARGET_FOUND     360
-void DistanceServoWriteAndDelay(uint8_t aValue, bool doDelay = false);
+#define NO_TARGET_FOUND     360     // return value of scanForTarget()
 int scanForTarget(unsigned int aMaximumTargetDistance);
+void DistanceServoWriteAndDelay(uint8_t aValue, bool doDelay = false);
 bool fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan = false);
 void doWallDetection();
 void postProcessDistances(uint8_t aDistanceThreshold);
@@ -141,18 +145,15 @@ void postProcessDistances(uint8_t aDistanceThreshold);
 
 int doBuiltInCollisionDetection();
 
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
+#endif
+
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #include "vl53l1x_class.h"
 extern VL53L1X sToFDistanceSensor;
 uint8_t getToFDistanceAsCentimeter();
 uint8_t readToFDistanceAsCentimeter(); // no start of measurement, just read result.
-#define OFFSET_MILLIMETER 10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
-#endif
-
-#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
-#define IR_SENSOR_NEW_MEASUREMENT_THRESHOLD 2 // If the output value changes by this amount, we can assume that a new measurement is started
-#define IR_SENSOR_MEASUREMENT_TIME_MILLIS   41 // the IR sensor takes 39 ms for one measurement
 #endif
 
 #endif // _ROBOT_CAR_DISTANCE_H

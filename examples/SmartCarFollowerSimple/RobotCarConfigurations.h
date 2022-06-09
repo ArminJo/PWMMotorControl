@@ -7,8 +7,9 @@
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
+ *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
- *  PWMMotorControl is free software: you can redistribute it and/or modify
+ *  PWMMotorControl and Arduino-RobotCar are free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
@@ -32,10 +33,12 @@
  */
 //////////////////////////////////////////////////////
 //#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
+//#define TBB6612_4WD_4AA_NIMH_BASIC_CONFIGURATION  // China set with TB6612 mosfet bridge + 4AA NiMh.
 //#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
 //#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
 //#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_DIRECT_CONFIGURATION  // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN
 //#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
 //#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
@@ -64,7 +67,7 @@
 //                                           Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin
 //#define CAR_HAS_IR_DISTANCE_SENSOR      // A Sharp GP2Y0A21YK / 1080 IR distance sensor is mounted
 //#define CAR_HAS_TOF_DISTANCE_SENSOR     // A VL53L1X TimeOfFlight distance sensor is mounted
-//#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+//#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars). 0 is right, 180 is left.
 //#define CAR_HAS_ENCODERS                // 2 slot type slot-type photo interrupter are mounted and connected with pin 2 and 3
 //#define CAR_HAS_MPU6050_IMU             // A MPU6050 breakout board like GY-521 is mounted and connected by I2C
 //
@@ -98,7 +101,7 @@
  * Disable features of RobotCarBlueDisplay to save program memory
  */
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
 //#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 /**************************
  * START OF CONFIGURATIONS
@@ -172,10 +175,16 @@
 #define CONFIG_NAME         " + VIN divider"
 #endif
 
+#if defined(TBB6612_4WD_4AA_NIMH_BASIC_CONFIGURATION)
+#define FULL_BRIDGE_INPUT_MILLIVOLT         4800  // For 4 x AA rechargeable batteries (4.8 volt).
+#define TBB6612_4WD_4AA_BASIC_CONFIGURATION
+#define CONFIG_NAME         " NiMh"
+#endif
+
 #if defined(TBB6612_4WD_4AA_FULL_CONFIGURATION)
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
 #define TBB6612_4WD_4AA_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider + MPU6050"
 #endif
@@ -201,6 +210,19 @@
 #endif
 
 /*
+ * TBB6612_4WD_4AA_BASIC_CONFIGURATION with 2 Li-ion instead of 4AA. Power supply is connected direct to VIN, but:
+ * !!!cut connection VIN to servo row and replace by 5 volt on Sensor Shield!!!
+ * Uno board has series diode at power jack connector.
+ */
+#if defined(TBB6612_4WD_2LI_ION_DIRECT_CONFIGURATION)
+#define CAR_HAS_4_WHEELS
+#define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
+#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
+#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
+#define BASIC_CONFIG_NAME   "4WD + TB6612 + 2 Li-ion direct"
+#endif
+
+/*
  * TBB6612_4WD_4AA_BASIC_CONFIGURATION with 2 Li-ion instead of 4AA. Connect to UNO power jack!
  * Uno board has series diode at power jack connector.
  */
@@ -212,6 +234,7 @@
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define BASIC_CONFIG_NAME   "4WD + TB6612 + 2 Li-ion"
 #endif
+
 /*
  * Basic 2WD + VL53L1X TimeOfFlight sensor
  */
@@ -241,7 +264,8 @@
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
-#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
+//#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define CONFIG_NAME         " + encoder + TOF distance + MPU6050"
 #endif
@@ -270,6 +294,9 @@
 #define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
 #define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION
+#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define CONFIG_NAME         " + encoder + IR distance"
 #endif
 
@@ -308,9 +335,9 @@
 #define CAR_HAS_ENCODERS                // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
-//#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 1504 bytes
-#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
+#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define BASIC_CONFIG_NAME   "4WD + Breadboard TB6612  + 2 Li-ion + VIN divider + servo head down + MPU6050"
 #endif
 

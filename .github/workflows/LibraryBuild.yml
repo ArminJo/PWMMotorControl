@@ -75,6 +75,7 @@ jobs:
             sketches-exclude: PrintMotorDiagram,PrintCarValuesWithIMU,RobotCarBasic,RobotCarBlueDisplay,SmartCarFollower  # no Encoder support yet
             build-properties: # the flags were put in compiler.cpp.extra_flags
               All: -DCAR_IS_ESP32_CAM_BASED
+              MecanumWheelCar: -DDUMMY # undefine CAR_IS_ESP32_CAM_BASED
               RobotCarBlueDisplay:
                 -DCAR_IS_ESP32_CAM_BASED
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200

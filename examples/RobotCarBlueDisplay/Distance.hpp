@@ -6,9 +6,10 @@
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
+ *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
- *  Arduino-RobotCar is free software: you can redistribute it and/or modify
+ *  PWMMotorControl and Arduino-RobotCar are free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
@@ -32,33 +33,35 @@
 #include "LightweightServo.hpp"
 #endif
 
-#include "pitches.h"
-
-bool sDoSlowScan = false;
+#if defined(CAR_HAS_DISTANCE_SERVO)
+#  if !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+Servo DistanceServo;    // The pan servo instance for distance sensor
+#  endif
+uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 required for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
+#endif // defined(CAR_HAS_DISTANCE_SERVO)
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-// Default is US. One of DISTANCE_SOURCE_MODE_MINIMUM, DISTANCE_SOURCE_MODE_MAXIMUM, DISTANCE_SOURCE_MODE_US or DISTANCE_SOURCE_MODE_IR_OR_TOF
+// Default is IR. One of DISTANCE_SOURCE_MODE_MINIMUM, DISTANCE_SOURCE_MODE_MAXIMUM, DISTANCE_SOURCE_MODE_US or DISTANCE_SOURCE_MODE_IR_OR_TOF
 uint8_t sDistanceSourceMode =  DISTANCE_SOURCE_MODE_DEFAULT;
 #endif
 
-uint8_t sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-uint8_t sUSDistanceCentimeter;
-uint8_t sUSDistanceTimeoutCentimeter; // The value to display if sUSDistanceCentimeter == DISTANCE_TIMEOUT_RESULT
-uint8_t sIROrTofDistanceCentimeter;
-uint8_t sEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
-uint8_t sLastEffectiveDistanceCentimeter; // depends on sDistanceSourceMode
-bool sDistanceJustChanged;
-
-ForwardDistancesInfoStruct sForwardDistancesInfo;
-
-#if defined(CAR_HAS_DISTANCE_SERVO)
-#  if !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
-Servo DistanceServo;
+//#define IR_SENSOR_TYPE_430      // 4 to 30 cm, 18 ms, GP2YA41SK0F
+//#define IR_SENSOR_TYPE_1080     // 10 to 80 cm, GP2Y0A21YK0F - default
+//#define IR_SENSOR_TYPE_20150    // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
+//#define IR_SENSOR_TYPE_100550   // 100 to 550 cm, 18 ms, GP2Y0A710K0F
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
+#define IR_SENSOR_TYPE_1080                     // default is 10 to 80 cm, GP2Y0A21YK0F
 #  endif
-uint8_t sLastDistanceServoAngleInDegrees; // 0 - 180 needed for optimized delay for servo repositioning. Only set by DistanceServoWriteAndDelay()
-#endif
+#define IR_SENSOR_NEW_MEASUREMENT_THRESHOLD 2   // If the output value changes by this amount, we can assume that a new measurement is started
+#define IR_SENSOR_MEASUREMENT_TIME_MILLIS   41  // the IR sensor takes 39 ms for one measurement
+#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR)
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if !defined(TOF_OFFSET_MILLIMETER)
+//#define TOF_OFFSET_MILLIMETER   10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
+#  endif
+
 #  if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
 #undef USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE // just in case...
 #include "SoftI2CMasterConfig.h"
@@ -68,7 +71,21 @@ VL53L1X sToFDistanceSensor(-1, -1); // 100 kHz
 // removing usage of SFEVL53L1X wrapper class saves 794 bytes
 VL53L1X sToFDistanceSensor(&Wire, -1, -1); // 100 kHz
 #  endif
-#endif
+#endif // defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+
+#include "pitches.h"    // for pentatonic feedback mode
+
+bool sDoSlowScan = false;
+
+uint8_t sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
+uint8_t sUSDistanceCentimeter;
+uint8_t sUSDistanceTimeoutCentimeter;       // The value to display if sUSDistanceCentimeter == DISTANCE_TIMEOUT_RESULT
+uint8_t sIROrTofDistanceCentimeter;
+uint8_t sEffectiveDistanceCentimeter;       // depends on sDistanceSourceMode
+uint8_t sLastEffectiveDistanceCentimeter;   // depends on sDistanceSourceMode
+bool sDistanceJustChanged;
+
+ForwardDistancesInfoStruct sForwardDistancesInfo;
 
 /*
  * This initializes the pins too
@@ -93,7 +110,9 @@ void initDistance() {
     // Short mode max distance is limited to 1.3 m but better ambient immunity. Above 1.3 meter we get error 4 (wrap around).
     sToFDistanceSensor.VL53L1X_SetDistanceMode(1); // 1 for Mode short
     //sToFDistanceSensor.setDistanceModeLong(); // default
-    sToFDistanceSensor.VL53L1X_SetOffset(OFFSET_MILLIMETER);
+#if defined(TOF_OFFSET_MILLIMETER)
+    sToFDistanceSensor.VL53L1X_SetOffset(TOF_OFFSET_MILLIMETER);
+#endif
 
     /*
      * The minimum timing budget is 20 ms for short distance mode and 33 ms for medium and long distance modes.
@@ -235,9 +254,6 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aW
 }
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
-#define IR_SENSOR_TYPE_1080
-#  endif
 /*
  * The Sharp 1080 takes 39 ms for each measurement cycle
  */
@@ -254,16 +270,16 @@ uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
                 // assume, that voltage has changed because of the end of a measurement
                 break;
             }
-#if defined(USE_BLUE_DISPLAY_GUI)
+#  if defined(USE_BLUE_DISPLAY_GUI)
             loopGUI();
-#endif
+#  endif
         } while (millis() - tStartMillis <= IR_SENSOR_MEASUREMENT_TIME_MILLIS);
         // now a new measurement has started, wait for the result
-#if defined(USE_BLUE_DISPLAY_GUI)
+   #if defined(USE_BLUE_DISPLAY_GUI)
         delayAndLoopGUI(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
-#else
+#  else
         delay(IR_SENSOR_NEW_MEASUREMENT_THRESHOLD); // the IR sensor takes 39 ms for one measurement
-#endif
+#  endif
     }
 
     float tVolt = analogRead(PIN_IR_DISTANCE_SENSOR); // 100 us
@@ -280,7 +296,7 @@ uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
     // Model 20150 - Do not forget to add at least 100uF capacitor between the Vcc and GND connections on the sensor
     return (60.374 * pow(tVolt * 0.004887585, -1.16)) + 0.5;// see https://github.com/guillaume-rico/SharpIR/blob/master/SharpIR.cpp
 
-#  elif defined(IR_SENSOR_TYPE_100550) // GP2Y0A02YK0F // 100 to 550 cm, 18 ms, GP2Y0A710K0F
+#  elif defined(IR_SENSOR_TYPE_100550) // 100 to 550 cm, 18 ms, GP2Y0A710K0F
     return 1.0 / (((tVolt * 0.004887585 - 1.1250)) / 137.5);
 #  endif
 }
@@ -375,7 +391,7 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
     }
 
     /*
-     * Move servo
+     * The central place where the servo is moved
      */
 #if defined(USE_OVERSHOOT_FOR_FAST_SERVO_MOVING)
     /*
@@ -388,7 +404,9 @@ void DistanceServoWriteAndDelay(uint8_t aTargetDegrees, bool doDelay) {
         aTargetDegrees += tOvershootDegrees;
     }
 #endif
-
+#if defined(DISTANCE_SERVO_TRIM_DEGREE)
+    aTargetDegrees += DISTANCE_SERVO_TRIM_DEGREE;
+#endif
 #if defined(DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN)
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;

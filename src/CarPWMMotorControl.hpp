@@ -95,8 +95,8 @@ void CarPWMMotorControl::init() {
 void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
         uint8_t aLeftMotorForwardPin, uint8_t aLeftMotorBackwardPin, uint8_t aLeftMotorPWMPin) {
 
-    leftCarMotor.init(aLeftMotorForwardPin, aLeftMotorBackwardPin, aLeftMotorPWMPin);
     rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin);
+    leftCarMotor.init(aLeftMotorForwardPin, aLeftMotorBackwardPin, aLeftMotorPWMPin);
     CarDirection = DIRECTION_STOP;
 
 #  if defined(USE_MPU6050_IMU)
@@ -129,8 +129,8 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
 void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotorBackwardPin, uint8_t aRightPWMPin,
         uint8_t aRightInterruptNumber, uint8_t aLeftMotorForwardPin, uint8_t LeftMotorBackwardPin, uint8_t aLeftMotorPWMPin,
         uint8_t aLeftInterruptNumber) {
-    leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin, aLeftInterruptNumber);
     rightCarMotor.init(aRightMotorForwardPin, aRightMotorBackwardPin, aRightPWMPin, aRightInterruptNumber);
+    leftCarMotor.init(aLeftMotorForwardPin, LeftMotorBackwardPin, aLeftMotorPWMPin, aLeftInterruptNumber);
 
 #    if defined(USE_MPU6050_IMU)
     CarRequestedRotationDegrees = 0;
@@ -187,8 +187,8 @@ void CarPWMMotorControl::setSpeedPWMCompensation(int8_t aSpeedPWMCompensationRig
  *  If negative, -value is added to the compensation value of the left motor, or subtracted from the right motor value.
  */
 void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensationRightDelta) {
-    uint8_t tLeftCarMotorSpeedPWMCompensation = leftCarMotor.SpeedPWMCompensation;
     uint8_t tRightCarMotorSpeedPWMCompensation = rightCarMotor.SpeedPWMCompensation;
+    uint8_t tLeftCarMotorSpeedPWMCompensation = leftCarMotor.SpeedPWMCompensation;
     if (aSpeedPWMCompensationRightDelta > 0) {
         if (tLeftCarMotorSpeedPWMCompensation >= aSpeedPWMCompensationRightDelta) {
             tLeftCarMotorSpeedPWMCompensation -= aSpeedPWMCompensationRightDelta;
@@ -203,8 +203,8 @@ void CarPWMMotorControl::changeSpeedPWMCompensation(int8_t aSpeedPWMCompensation
             tLeftCarMotorSpeedPWMCompensation += aSpeedPWMCompensationRightDelta;
         }
     }
-    leftCarMotor.setSpeedPWMCompensation(tLeftCarMotorSpeedPWMCompensation);
     rightCarMotor.setSpeedPWMCompensation(tRightCarMotorSpeedPWMCompensation);
+    leftCarMotor.setSpeedPWMCompensation(tLeftCarMotorSpeedPWMCompensation);
 
     PWMDcMotor::MotorControlValuesHaveChanged = true;
 }
@@ -338,13 +338,13 @@ uint8_t CarPWMMotorControl::getCarDirection() {
 }
 
 void CarPWMMotorControl::readMotorValuesFromEeprom() {
-    leftCarMotor.readMotorValuesFromEeprom(0);
-    rightCarMotor.readMotorValuesFromEeprom(1);
+    rightCarMotor.readMotorValuesFromEeprom(0);
+    leftCarMotor.readMotorValuesFromEeprom(1);
 }
 
 void CarPWMMotorControl::writeMotorValuesToEeprom() {
-    leftCarMotor.writeMotorValuesToEeprom(0);
-    rightCarMotor.writeMotorValuesToEeprom(1);
+    rightCarMotor.writeMotorValuesToEeprom(0);
+    leftCarMotor.writeMotorValuesToEeprom(1);
 }
 
 /*
