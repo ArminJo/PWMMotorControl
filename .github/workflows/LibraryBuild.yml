@@ -54,7 +54,7 @@ jobs:
             build-properties: # the flags were put in compiler.cpp.extra_flags
               SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION
               RobotCarBlueDisplay:
-                -DBREADBOARD_FULL_CONFIGURATION
+                -DBREADBOARD_4WD_FULL_CONFIGURATION
 
           - arduino-boards-fqbn: arduino:avr:uno|full
             build-properties: # the flags were put in compiler.cpp.extra_flags
@@ -65,9 +65,8 @@ jobs:
               SmartCarFollower: -DMOTOR_SHIELD_2WD_BASIC_CONFIGURATION -DUSE_MPU6050_IMU -DUSE_ENCODER_MOTOR_CONTROL -DUSE_IR_REMOTE -DTRACE
               RobotCarBlueDisplay:
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
-                -DBREADBOARD_FULL_CONFIGURATION
+                -DBREADBOARD_4WD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE
-                -DENABLE_MOTOR_LIST_FUNCTIONS
 
           - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
             platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
@@ -79,9 +78,8 @@ jobs:
               RobotCarBlueDisplay:
                 -DCAR_IS_ESP32_CAM_BASED
                 -DBLUETOOTH_BAUD_RATE=BAUD_115200
-                -DBREADBOARD_FULL_CONFIGURATION
+                -DBREADBOARD_4WD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE
-                -DENABLE_MOTOR_LIST_FUNCTIONS
 
       # Do not cancel all jobs / architectures if one job fails
       fail-fast: false

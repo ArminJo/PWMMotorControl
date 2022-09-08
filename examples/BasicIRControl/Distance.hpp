@@ -197,8 +197,10 @@ void printDistanceIfChanged(Print *aSerial) {
     }
 }
 
-/*
- * @param aWaitForCurrentMeasurmentToEnd  for IR Distance sensors if true, wait for the current measurement to end, since the sensor was recently moved.
+/**
+ * Get distance from US, IR and TOF sensors.
+ * If two sensors are available, sDistanceSourceMode defines, which value to take. Modes are US, IR_OR_TOF, MINIMUM and MAXIMUM. Default is IR_OR_TOF.
+ * @param aWaitForCurrentMeasurmentToEnd  Used for IR Distance sensors: If true, wait for the current measurement to end, since the sensor was recently moved.
  * @param doShow show distance value in the GUI
  * @return 0 / DISTANCE_TIMEOUT_RESULT for timeout
  */

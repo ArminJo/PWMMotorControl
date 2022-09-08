@@ -29,16 +29,6 @@
 #ifndef _CAR_PWM_MOTOR_CONTROL_HPP
 #define _CAR_PWM_MOTOR_CONTROL_HPP
 
-#if defined(USE_MPU6050_IMU)
-#include "IMUCarData.hpp"
-#endif
-
-#if defined(USE_ENCODER_MOTOR_CONTROL)
-#include "EncoderMotor.hpp"
-#endif
-
-#include "PWMDcMotor.hpp"
-
 /*
  * The Car Control instance to be used by the main program
  */
@@ -49,6 +39,16 @@ MecanumWheelCarPWMMotorControl RobotCar;
 #include "CarPWMMotorControl.h"
 CarPWMMotorControl RobotCar;
 #endif
+
+#if defined(USE_MPU6050_IMU)
+#include "IMUCarData.hpp"
+#endif
+
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+#include "EncoderMotor.hpp"
+#endif
+
+#include "PWMDcMotor.hpp"
 
 #if defined(DEBUG)
 #define LOCAL_DEBUG
@@ -87,7 +87,7 @@ void CarPWMMotorControl::init() {
     CarRequestedDistanceMillimeter = 0;
     IMUData.initMPU6050CarDataAndCalculateAllOffsetsAndWait();
 #  else
-//    FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER;
+    RobotCar.readCarValuesFromEeprom();
 #  endif
 }
 
@@ -105,7 +105,7 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
     IMUData.initMPU6050CarDataAndCalculateAllOffsetsAndWait();
 
 #  else
-//    FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER;
+    RobotCar.readCarValuesFromEeprom();
 #  endif // defined(USE_MPU6050_IMU)
 
 #  if defined(USE_ENCODER_MOTOR_CONTROL)
@@ -122,7 +122,8 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
 #    endif
 #  endif // defined(USE_ENCODER_MOTOR_CONTROL)
 }
-#    if defined(USE_ENCODER_MOTOR_CONTROL)
+
+#  if defined(USE_ENCODER_MOTOR_CONTROL)
 /*
  * With parameters aRightInterruptNumber + aLeftInterruptNumber
  */
@@ -137,7 +138,7 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
     CarRequestedDistanceMillimeter = 0;
     IMUData.initMPU6050FifoForCarData();
 #    else
-//    FactorDegreeToMillimeter = FACTOR_DEGREE_TO_MILLIMETER;
+//    MillimeterPerDegree = MILLIMETER_PER_DEGREE;
 #    endif
 }
 #  endif // USE_ENCODER_MOTOR_CONTROL
@@ -148,6 +149,8 @@ void CarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t aRightMotor
  * Is called automatically at init if parameter aReadFromEeprom is set to false
  */
 void CarPWMMotorControl::setDefaultsForFixedDistanceDriving() {
+    MillimeterPer256Degree = DEFAULT_MILLIMETER_PER_256_DEGREE;
+    MillimeterPer256DegreeInPlace = DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE;
     rightCarMotor.setDefaultsForFixedDistanceDriving();
     leftCarMotor.setDefaultsForFixedDistanceDriving();
 }
@@ -337,16 +340,6 @@ uint8_t CarPWMMotorControl::getCarDirection() {
     return CarDirection;;
 }
 
-void CarPWMMotorControl::readMotorValuesFromEeprom() {
-    rightCarMotor.readMotorValuesFromEeprom(0);
-    leftCarMotor.readMotorValuesFromEeprom(1);
-}
-
-void CarPWMMotorControl::writeMotorValuesToEeprom() {
-    rightCarMotor.writeMotorValuesToEeprom(0);
-    leftCarMotor.writeMotorValuesToEeprom(1);
-}
-
 /*
  * Stop car
  * @param aStopMode STOP_MODE_KEEP (take previously defined StopMode) or STOP_MODE_BRAKE or STOP_MODE_RELEASE
@@ -437,7 +430,7 @@ bool CarPWMMotorControl::updateMotors() {
                     /*
                      * Reduce SpeedPWM just before target angle is reached. If motors are not stopped, we run for extra 2 to 4 degree
                      */
-                    changeSpeedPWM(rightCarMotor.DriveSpeedPWM / 2);
+                    changeSpeedPWM(rightCarMotor.DriveSpeedPWMFor2Volt / 2);
                 }
             } else {
                 /*
@@ -556,7 +549,7 @@ void CarPWMMotorControl::startRampUpAndWaitForDriveSpeedPWM(uint8_t aRequestedDi
 }
 
 void CarPWMMotorControl::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 /*
@@ -582,16 +575,16 @@ void CarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, u
 
 void CarPWMMotorControl::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection,
         void (*aLoopCallback)(void)) {
-    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
     waitUntilStopped(aLoopCallback);
 }
 
 void CarPWMMotorControl::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
-        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
     } else {
-        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
     }
 }
 
@@ -669,15 +662,19 @@ bool CarPWMMotorControl::isStateRamp() {
 #endif
 }
 
-/*
- * Currently disabled
- */
-void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter) {
+void CarPWMMotorControl::setMillimeterPer256Degree(uint16_t aMillimeterPer256Degree) {
 #if defined(USE_MPU6050_IMU)
-            (void) aFactorDegreeToMillimeter;
+    (void) aMillimeterPer256Degree;
 #else
-    (void) aFactorDegreeToMillimeter;
-//    FactorDegreeToMillimeter = aFactorDegreeToMillimeter;
+    MillimeterPer256Degree = aMillimeterPer256Degree;
+#endif
+}
+
+void CarPWMMotorControl::setMillimeterPer256DegreeInPlace(uint16_t aMillimeterPer256DegreeInPlace) {
+#if defined(USE_MPU6050_IMU)
+    (void) aMillimeterPer256DegreeInPlace;
+#else
+    MillimeterPer256DegreeInPlace = aMillimeterPer256DegreeInPlace;
 #endif
 }
 
@@ -685,7 +682,7 @@ void CarPWMMotorControl::setFactorDegreeToMillimeter(float aFactorDegreeToMillim
  * Set distances and SpeedPWM (DriveSpeedPWM or DEFAULT_START_SPEED_PWM) for 2 motors to turn the requested angle
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
- * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact
+ * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact. Not suitable for 4WD cars.
  */
 char sTurnDirectionCharArray[3] = { 'P', 'F', 'B' };
 void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed) {
@@ -737,32 +734,44 @@ void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTur
     unsigned int tDistanceMillimeterLeft;
 
     if (aTurnDirection == TURN_FORWARD) {
-        tDistanceMillimeterRight = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER;
+#if defined(USE_MPU6050_IMU)
+        tDistanceMillimeterRight = 1; // must be != 0;
+#else
+        tDistanceMillimeterRight = ((int32_t) aRotationDegrees * MillimeterPer256Degree) / 256;
+#endif
         tDistanceMillimeterLeft = 0;
     } else if (aTurnDirection == TURN_BACKWARD) {
         tDistanceMillimeterRight = 0;
-        tDistanceMillimeterLeft = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER;
+#if defined(USE_MPU6050_IMU)
+        tDistanceMillimeterLeft = 1; // must be != 0;
+#else
+        tDistanceMillimeterLeft = ((int32_t) aRotationDegrees * MillimeterPer256Degree) / 256;
+#endif
     } else {
         // TURN_IN_PLACE
-        tDistanceMillimeterRight = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE;
-        tDistanceMillimeterLeft = tDistanceMillimeterRight;
-    }
-
-    /*
-     * Handle slow speed flag and reduce turn SpeedPWMs
-     */
-    uint8_t tTurnSpeedPWMRight = tRightMotorIfPositiveTurn->DriveSpeedPWM;
-    uint8_t tTurnSpeedPWMLeft = tLeftMotorIfPositiveTurn->DriveSpeedPWM;
-    if (aUseSlowSpeed) {
-#if defined(CAR_HAS_4_WHEELS)
-            // DEFAULT_START_SPEED_PWM does not really work for 4 WD cars
-            tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
-            tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM + (DEFAULT_START_SPEED_PWM / 2);
+#if defined(USE_MPU6050_IMU)
+        tDistanceMillimeterRight = 1; // must be != 0;
+        tDistanceMillimeterLeft = 1; // must be != 0;
 #else
-        tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM;
-        tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM;
+        tDistanceMillimeterRight = ((int32_t) aRotationDegrees * MillimeterPer256DegreeInPlace) / 256;
+        tDistanceMillimeterLeft = tDistanceMillimeterRight;
 #endif
     }
+
+    uint8_t tTurnSpeedPWMRight = tRightMotorIfPositiveTurn->DriveSpeedPWMFor2Volt;
+    uint8_t tTurnSpeedPWMLeft = tLeftMotorIfPositiveTurn->DriveSpeedPWMFor2Volt;
+
+    /*
+     * Handle slow speed flag
+     */
+#if defined(CAR_HAS_4_WHEELS)
+    (void)aUseSlowSpeed; // Slow speed is not suitable for 4WD cars.
+#else
+    if (aUseSlowSpeed) {
+        tTurnSpeedPWMRight = DEFAULT_START_SPEED_PWM;
+        tTurnSpeedPWMLeft = DEFAULT_START_SPEED_PWM;
+    }
+#endif
 
 #if defined(LOCAL_DEBUG)
         Serial.print(F("TurnSpeedPWMRight="));
@@ -840,6 +849,7 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
     return ((tCarTurn2DegreesPerSecondFromIMU * tCarTurn2DegreesPerSecondFromIMU) / 20);
 }
 #  endif
+
 
 ///*
 // * Generates a rising ramp and detects the first movement -> this sets dead band / minimum SpeedPWM
@@ -924,6 +934,76 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 //}
 
 #endif // defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
+
+void CarPWMMotorControl::printCalibrationValues(Print *aSerial) {
+    aSerial->println(F("Calibration values"));
+    aSerial->print(F("mm/256deg="));
+    aSerial->print(RobotCar.MillimeterPer256Degree);
+    aSerial->print(F(" inPlace="));
+    aSerial->println(RobotCar.MillimeterPer256DegreeInPlace);
+    aSerial->print(F("2 volt PWM right="));
+    aSerial->print(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
+    aSerial->print(F(" left="));
+    aSerial->println(RobotCar.leftCarMotor.DriveSpeedPWMFor2Volt);
+}
+
+/********************************************************************************************
+ * EEPROM functions
+ * Uses the start of EEPROM for storage of EepromMotorInfoStruct's
+ ********************************************************************************************/
+/*
+ * @return true if reading was successful
+ */
+bool CarPWMMotorControl::readCarValuesFromEeprom() {
+#if defined(E2END)
+    EepromCarInfoStruct tEepromCarInfo;
+    eeprom_read_block((void*) &tEepromCarInfo, 0, sizeof(EepromCarInfoStruct));
+#if defined(DEBUG)
+    Serial.print(F("EEPROM values="));
+    Serial.println(tEepromCarInfo.ValidMarker);
+#  if !defined(USE_MPU6050_IMU)
+    Serial.println(tEepromCarInfo.MillimeterPer256DegreeInPlace);
+    Serial.println(tEepromCarInfo.MillimeterPer256Degree);
+#  endif
+#endif
+    if (tEepromCarInfo.ValidMarker == EEPROM_CAR_INFO_VALID_MARKER_VALUE
+            && rightCarMotor.readMotorValuesFromInfoStructure(&tEepromCarInfo.rightMotorInfo)
+            && leftCarMotor.readMotorValuesFromInfoStructure(&tEepromCarInfo.leftMotorInfo)
+#if !defined(USE_MPU6050_IMU)
+            && tEepromCarInfo.MillimeterPer256Degree < 2000 && tEepromCarInfo.MillimeterPer256Degree > 600
+            && tEepromCarInfo.MillimeterPer256DegreeInPlace < 1500 && tEepromCarInfo.MillimeterPer256DegreeInPlace > 400
+#endif
+                    ) {
+#if !defined(USE_MPU6050_IMU)
+        MillimeterPer256Degree = tEepromCarInfo.MillimeterPer256Degree;
+        MillimeterPer256DegreeInPlace = tEepromCarInfo.MillimeterPer256DegreeInPlace;
+#endif
+        return true;
+    } else {
+        setDefaultsForFixedDistanceDriving();
+    }
+#else
+    MillimeterPer256Degree = DEFAULT_MILLIMETER_PER_256_DEGREE;
+    MillimeterPer256DegreeInPlace = DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE;
+#endif // defined(E2END)
+    return false;
+}
+
+void CarPWMMotorControl::writeCarValuesToEeprom() {
+#if defined(E2END)
+    EepromCarInfoStruct tEepromCarInfo;
+    rightCarMotor.writeMotorValuesToInfoStructure(&tEepromCarInfo.rightMotorInfo);
+    leftCarMotor.writeMotorValuesToInfoStructure(&tEepromCarInfo.leftMotorInfo);
+#if !defined(USE_MPU6050_IMU)
+    tEepromCarInfo.MillimeterPer256Degree = MillimeterPer256Degree;
+    tEepromCarInfo.MillimeterPer256DegreeInPlace = MillimeterPer256DegreeInPlace;
+#endif
+    tEepromCarInfo.ValidMarker = EEPROM_CAR_INFO_VALID_MARKER_VALUE;
+
+    eeprom_write_block((void*) &tEepromCarInfo, 0, sizeof(EepromCarInfoStruct));
+#endif // defined(E2END)
+}
+
 #if defined(LOCAL_DEBUG)
 #undef LOCAL_DEBUG
 #endif

@@ -27,6 +27,13 @@
 #define _ROBOT_CAR_IR_COMMANDS_HPP
 
 #include "IRCommandDispatcher.h" // for RETURN_IF_STOP
+#include "RobotCarUtils.h"
+
+#if defined(DEBUG)
+#define LOCAL_DEBUG
+#else
+//#define LOCAL_DEBUG // This enables debug output only for this file - only for development
+#endif
 
 /*
  * Basic IR functions
@@ -41,6 +48,8 @@ void doDefaultSpeed();
 #define SPEED_PWM_CHANGE_VALUE  16
 void doIncreaseSpeed();
 void doDecreaseSpeed();
+
+void doCalibrate();
 
 void testRotation();
 void testDrive();
@@ -70,6 +79,7 @@ void doStop() {
 void doReset() {
     doStop();
     RobotCar.setDefaultsForFixedDistanceDriving();
+
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -78,7 +88,7 @@ void doReset() {
     sDoSlowScan = false;
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #endif
-    noTone(PIN_BUZZER);
+    noTone (PIN_BUZZER);
 }
 
 void goForward() {
@@ -128,13 +138,48 @@ void doDecreaseSpeed() {
     RobotCar.rightCarMotor.printValues(&Serial);
 }
 
+void doCalibrate() {
+    RobotCar.readCarValuesFromEeprom();
+    calibrateDriveSpeedPWMAndPrint();
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+    && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+    delay(500);
+    /*
+     * Start in place calibration
+     */
+    if(calibrateRotation(TURN_IN_PLACE)){
+        return;
+    }
+    DELAY_AND_RETURN_IF_STOP(2000);
+    // now show 90 degree
+    RobotCar.rotate(90, TURN_IN_PLACE);
+    DELAY_AND_RETURN_IF_STOP(500);
+    RobotCar.rotate(-90, TURN_IN_PLACE);
+    DELAY_AND_RETURN_IF_STOP(4000);
+    /*
+     * Start forward rotation calibration
+     */
+    if(calibrateRotation(TURN_FORWARD)){
+        return;
+    }
+    DELAY_AND_RETURN_IF_STOP(2000);
+    // now show 90 degree
+    RobotCar.rotate(90, TURN_FORWARD);
+    DELAY_AND_RETURN_IF_STOP(500);
+    RobotCar.rotate(-90, TURN_FORWARD);
+#endif
+    Serial.println(F("Store values to EEPROM"));
+    RobotCar.printCalibrationValues(&Serial);
+    RobotCar.writeCarValuesToEeprom();
+}
+
 /*
  * Rotate by 9 times 10 degree in place with normal and with slow motion
  */
 void testRotation() {
 #define DEGREE_OF_TEST_ROTATION    10
 #define NUMBER_OF_TEST_ROTATIONS    9 // to have 90 degree at 9 times 10 degree rotation
-    Serial.println(F("Rotate 9 times for 10 degree"));
+    Serial.println(F("Rotate forward 9 times for 10 degree"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
         RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
         DELAY_AND_RETURN_IF_STOP(500);
@@ -143,8 +188,9 @@ void testRotation() {
     DELAY_AND_RETURN_IF_STOP(1000);
     Serial.println(F("Rotate back for 90 degree"));
     RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
-    DELAY_AND_RETURN_IF_STOP(2000);
+    DELAY_AND_RETURN_IF_STOP(3000);
 
+    Serial.println(F("Rotate backwards"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
         RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
         DELAY_AND_RETURN_IF_STOP(500);
@@ -154,23 +200,24 @@ void testRotation() {
     RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
     DELAY_AND_RETURN_IF_STOP(2000);
 
-    Serial.println(F("Now rotate in place and use slow speed"));
+    Serial.println(F("Rotate in place"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
+        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
+    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE);
     DELAY_AND_RETURN_IF_STOP(2000);
 
+    Serial.println(F("Rotate in place backwards"));
     for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE, true);
+        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE);
         DELAY_AND_RETURN_IF_STOP(500);
     }
     // rotate back
     DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE, true);
+    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE);
     DELAY_AND_RETURN_IF_STOP(2000);
 }
 
@@ -243,7 +290,7 @@ void stepDistanceFeedbackMode() {
     Serial.println(sDistanceFeedbackMode);
 }
 
-#if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+#  if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
 void stepDistanceSourceMode() {
     sDistanceSourceMode++;
     Serial.print(F("DistanceSourceMode="));
@@ -265,12 +312,15 @@ void stepDistanceSourceMode() {
         break;
     }
 }
-#endif
+#  endif
 
 void toggleDistanceScanSpeed() {
     sDoSlowScan = !sDoSlowScan;
     doBeepFeedback(sDoSlowScan);
 }
+#endif // defined(_ROBOT_CAR_DISTANCE_HPP)
 
+#if defined(LOCAL_DEBUG)
+#undef LOCAL_DEBUG
 #endif
 #endif // _ROBOT_CAR_IR_COMMANDS_HPP

@@ -76,7 +76,8 @@ void setup() {
      * You will need to change these values according to your motor, wheels and motor supply voltage.
      */
     RobotCar.setDriveSpeedAndSpeedCompensationPWM(DEFAULT_DRIVE_SPEED_PWM, SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
-    RobotCar.setFactorDegreeToMillimeter(FACTOR_DEGREE_TO_MILLIMETER);
+    RobotCar.setMillimeterPer256Degree(DEFAULT_MILLIMETER_PER_256_DEGREE);
+    RobotCar.setMillimeterPer256DegreeInPlace(DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE);
 
     // Print info
     PWMDcMotor::printCompileOptions(&Serial);

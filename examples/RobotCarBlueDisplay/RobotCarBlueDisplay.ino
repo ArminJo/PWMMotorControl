@@ -39,23 +39,25 @@
  */
 #define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
 #define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
+#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
 
 /*
  * Car configuration
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
-//#define TBB6612_4WD_4AA_VIN_CONFIGURATION         // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider.
-//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
-//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
-//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
-//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
-//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
-//#define MECANUM_DISTANCE_CONFIGURATION            // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 AA.
+//#define TBB6612_4WD_4AA_VIN_CONFIGURATION             // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider.
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION            // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_4NIMH_BASIC_CONFIGURATION         // China set with TB6612 mosfet bridge + 4 NiMh.
+//#define TBB6612_4WD_4NIMH_VIN_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 NiMh + VIN voltage divider.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION              // China 2WD set with L298 bridge and Uno board with series diode for VIN + 4 AA batteries. DEFAULT.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MECANUM_US_DISTANCE_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 #define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 #define USE_SOFT_I2C_MASTER             // Saves 2110 bytes program memory and 200 bytes RAM compared with Arduino Wire
 /*
@@ -68,6 +70,8 @@
 /*
  * Enabling program features dependent on car configuration
  */
+#define ROBOT_CAR_BLUE_DISPLAY       // The program name, used by RobotCarUtils.hpp
+
 #if defined(CAR_HAS_ENCODERS)
 #define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
 #endif
@@ -90,14 +94,12 @@ Servo TiltServo;
 /*
  * Enable functionality of this program
  */
-#if defined(NO_APPLICATON_INFO)
-#define USE_SIMPLE_SERIAL           // saves 1224 bytes
-#else
-#define APPLICATON_INFO             // Prints configuration info at startup. Requires additional 1748 bytes of program memory
+#if defined(NO_APPLICATON_INFO)     // Disables printing of any info with Serial.print. Saves 1748 bytes of program memory
+#define USE_SIMPLE_SERIAL           // We can use simple serial here, since no Serial.print are active. Saves 1224 bytes
 #endif
 #define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
-//#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin
-#define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+//#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#define PRINT_VOLTAGE_PERIOD_MILLIS         500 // we only print if changed
 #define VOLTAGE_LIPO_LOW_THRESHOLD          6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
 #define VOLTAGE_USB_THRESHOLD               5.5
 #define VOLTAGE_USB_THRESHOLD_MILLIVOLT     5500 // required for preprocessor condition
@@ -130,11 +132,9 @@ Servo TiltServo;
 //#define IR_SENSOR_TYPE_100550         // 100 to 550 cm, 18 ms, GP2Y0A710K0F
 //#define TOF_OFFSET_MILLIMETER      10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
 //#define DISTANCE_SERVO_TRIM_DEGREE  5 // This value is internally added to all servo writes.
-
 int doUserCollisionDetection();
 
 #include "CarPWMMotorControl.hpp"   // include source of library
-#include "RobotCarUtils.hpp"        // include source of library
 
 /*
  * Settings to configure the BlueDisplay library and to reduce its size
@@ -142,6 +142,8 @@ int doUserCollisionDetection();
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
 #define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables unused basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
 #include "BlueDisplay.hpp"          // include source of library
+
+#include "RobotCarUtils.hpp"        // after BlueDisplay.hpp
 
 #if defined(USE_MPU6050_IMU)
 #include "IMUCarData.hpp"           // include source of library
@@ -153,6 +155,7 @@ int doUserCollisionDetection();
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
+#include "digitalWriteFast.h"
 #define USE_NO_RTX_EXTENSIONS       // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
 #include <PlayRtttl.hpp>
 bool sPlayMelody = false;
@@ -225,10 +228,6 @@ void setup() {
     // initialize motors, this also stops motors
     initRobotCarPWMMotorControl();
 
-#if defined(ENABLE_EEPROM_STORAGE)
-    RobotCar.readMotorValuesFromEeprom();
-#endif
-
     delay(100);
     tone(PIN_BUZZER, 2200, 50); // motor initialized
 
@@ -241,17 +240,20 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
 
-#if defined(APPLICATON_INFO)
+#if !defined(NO_APPLICATON_INFO)
     if (BlueDisplay1.isConnectionEstablished())
 #else
-     if (true)
+    if (true)
 #endif
     {
         // Just to know which program is running on my Arduino
         BlueDisplay1.debug("START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from " __DATE__);
 //        BlueDisplay1.debug("sMCUSR=", sMCUSR);
+//        displayRotationValues();
+
+
     } else {
-#if defined(APPLICATON_INFO) // requires 1504 bytes program space
+#if !defined(NO_APPLICATON_INFO) // requires 1504 bytes program space
 #  if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
 #    if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/|| defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
@@ -260,12 +262,18 @@ void setup() {
         Serial.println(
                 F(
                         "START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__ "\r\nUsing PWMMotorControl library version " VERSION_PWMMOTORCONTROL));
-        printConfigInfo(&Serial);
-        printProgramOptions(&Serial);
-        PWMDcMotor::printCompileOptions(&Serial);
 #  endif
 #endif
     }
+#if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
+    /*
+     * Print this always, it can be seen in the app log
+     */
+    RobotCar.printCalibrationValues(&Serial);
+    printConfigInfo(&Serial);
+    printProgramOptions(&Serial);
+    PWMDcMotor::printCompileOptions(&Serial);
+#endif
 
 #if defined(CAR_HAS_CAMERA)
     pinMode(PIN_CAMERA_SUPPLY_CONTROL, OUTPUT);
@@ -299,6 +307,8 @@ void setup() {
  * 140 us per loop for idle AutoDrivePage
  */
 void loop() {
+    static bool sTimeoutDemoDisable = false;
+
 #if defined(TEST_TIMING)
     digitalToggleFast(PIN_BUZZER);
 #endif
@@ -327,19 +337,48 @@ void loop() {
         RobotCar.stop();
         playRandomMelody();
     }
-
 #endif
+
+#if !defined(USE_MPU6050_IMU)
+    /*
+     * check for calibration
+     */
+    if (doCalibration) {
+        // first get EEPROM values, in order to not work with the values we accidently set before in a former calibration
+        RobotCar.readCarValuesFromEeprom();
+        displayRotationValues();
+        calibrateDriveSpeedPWMAndPrint();
+#  if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+    && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+
+#    if defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS)
+        delayMillisAndCheckForEvent(500);
+#    else
+        delayMillisAndCheckForEvent(3000); // time to rearrange car
+#    endif
+        calibrateRotation();
+        startStopRobotCar(false); // Reset also button
+#  else
+        RobotCar.writeCarValuesToEeprom();  // write only DriveSpeedPWM values
+#  endif
+        doCalibration = false;
+    }
+#endif
+
+    if (BlueDisplay1.isConnectionEstablished()) {
+        sTimeoutDemoDisable = true;
+    }
 
     /*
      * After 30 seconds of being disconnected, run the demo.
      * Do not run it if the car is connected to USB (e.g. for programming or debugging), which can be tested only for a Li-ion supply :-(.
      */
-    if ((!BlueDisplay1.isConnectionEstablished()) && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
+    if (!sTimeoutDemoDisable && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
 #if defined(MONITOR_VIN_VOLTAGE) && (FULL_BRIDGE_INPUT_MILLIVOLT > VOLTAGE_USB_THRESHOLD_MILLIVOLT)
             && (sVINVoltage > (VOLTAGE_USB_THRESHOLD_MILLIVOLT / 1000.0))
 #endif
             ) {
-
+        sTimeoutDemoDisable = true;
         /*
          * Timeout just reached, play melody and start autonomous drive
          */
@@ -347,20 +386,24 @@ void loop() {
         playRandomMelody();
         delayAndLoopGUI(1000);
 #endif
-#if defined(APPLICATON_INFO)
+#if !defined(NO_APPLICATON_INFO)
         Serial.println(F("Timeout -> running follower demo"));
 #endif
         // check again, maybe we are connected now
         if (!BlueDisplay1.isConnectionEstablished()) {
             // Set right page for reconnect
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+            RobotCar.doDemo();
+            delayAndLoopGUI(60000); // wait a minute before next demo loop
+            sTimeoutDemoDisable = false;
+#elif defined(ENABLE_AUTONOMOUS_DRIVE)
             GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
             startStopAutomomousDrive(true, MODE_FOLLOWER);
 #else
             GUISwitchPages(NULL, PAGE_HOME);
 #endif
         }
-    }
+    } // Timeout demo
 
     /*
      * After 4 minutes of user inactivity, make noise by scanning with US Servo and repeat it every 2. minute
@@ -380,7 +423,6 @@ void loop() {
 }
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
-#include "digitalWriteFast.h"
 /*
  * Prepare for tone, use motor as loudspeaker
  */

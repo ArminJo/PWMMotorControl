@@ -114,7 +114,7 @@ Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the Bl
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
-These macros must be defined in your program before the line `#include <CarPWMMotorControl.hpp>`, `#include <EncoderMotor.hpp>` or `#include <PWMDcMotor.hpp>`to take effect.<br/>
+These macros must be defined in your program **before** the line `#include <CarPWMMotorControl.hpp>`, `#include <EncoderMotor.hpp>` or `#include <PWMDcMotor.hpp>`to take effect.<br/>
 Modify them by enabling / disabling them, or change the values if applicable.
 
 | Name | Default value | Description |
@@ -137,7 +137,7 @@ These values are for a standard 2 WD car as can be seen on the pictures below.
 | `CAR_HAS_4_MECANUM_WHEELS` | disabled | Use different setDirection() and modified values for going fixed distances. |
 | `DEFAULT_CIRCUMFERENCE_MILLIMETER` | 220 | At a circumference of around 220 mm this gives 11 mm per count. |
 | `ENCODER_COUNTS_PER_FULL_ROTATION` | 20 | This value is for 20 slot encoder discs, giving 20 on and 20 off counts per full rotation. |
-| `FACTOR_DEGREE_TO_MILLIMETER_DEFAULT` | 2.2777 for 2 wheel drive cars, 4.1 for 4 WD cars and 2.2 for mecanum wheel cars. | Reflects the geometry of the standard 2 WD car or mecanum cars sets. The 4 WD car value is estimated for slip on smooth surfaces. |
+| `MILLIMETER_PER_DEGREE_DEFAULT` | 2.2777 for 2 wheel drive cars, 4.1 for 4 WD cars and 2.2 for mecanum wheel cars. | Reflects the geometry of the standard 2 WD car or mecanum cars sets. The 4 WD car value is estimated for slip on smooth surfaces. |
 
 ## Other default values for this library
 These values are used by functions and some can be overwritten by set* functions.
@@ -158,11 +158,11 @@ To customize the software to different car configurations, there are some compil
 
 | Name | Default value | Description |
 |-|-|-|
-| `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage. |
+| `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1 M&ohm; to VIN, 100 k&ohm; to ground. Required to show and monitor (for undervoltage) VIN voltage. |
 | `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for UNO | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the UNO boards, set it to 0.8. |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. The Servo direction is reverse then. |
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
-| `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
+| `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10 k&ohm; between echo and trigger and then use only trigger pin. |
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
 | `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
@@ -171,7 +171,7 @@ To customize the software to different car configurations, there are some compil
 | `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
 | `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
 | `ENABLE_RTTTL_FOR_CAR` | undefined | Plays melody after initial timeout has reached. Enables the Melody button, which plays a random melody. |
-| `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1MOhm to VIN, 100kOhm to ground. |
+| `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1 M&ohm; to VIN, 100 k&ohm; to ground. |
 | `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation and drive speed. |
 
 #### If you find this library useful, please give it a star.

@@ -20,17 +20,19 @@ the **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** for Smartp
 | 4WD car with IR receiver and Bluetooth module and 4 AA rechargeable batteries. | Instructable |
 |-|-|
 | ![4 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/4WDInstructable.jpg) | [![Instructable](https://github.com/ArminJo/Arduino-OpenWindowAlarm/blob/master/pictures/instructables-logo-v2.png)](https://www.instructables.com/Arduino-4WD-Car-Assembly-and-Code-With-Optional-In/) |
-| 4 wheel car, like 2 WD car before, but with servo mounted head up. | 2 wheel car with encoders, 2 Li-ion batteries, Adafruit Motor Shield V2, Bluetooth connection, and servo mounted head down.  |
+| 4 wheel car like the 2 WD car right, but with servo mounted head up. | 2 wheel car with encoders, 2 Li-ion batteries, Adafruit Motor Shield V2, Bluetooth connection, and servo mounted head down.  |
 | ![4 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/4WheelDriveCar.jpg) | ![2 wheel car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/2WheelDriveCar.jpg)  |
 | Encoder fork sensor | Servo mounted head down |
 | ![Encoder fork sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg) | ![Servo mounting](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ServoAtTopBack.jpg) |
-| VIN sensing |   |
-| ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg) |   |
+| VIN sensing with motor shield | Red car with Sharp GP2Y0A21YK distance sensor |
+| ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg) | https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg  |
 
 # SCREENSHOTS
 | Start page | Test page |
 |-|-|
 | ![Start page](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/HomePage.png) | ![Test page](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/TestPage.png) |
+| Sensor drive page | Sensor drive page for mecanum car |
+| ![Sensor drive page](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensorDrivePage.jpg) | ![Sensor drive page for mecanum car](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensorDrivePageWithTurn.jpg) |
 
 Automatic control page with detected wall at right
 ![Automatic control page](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/AutoDrivePageWallDetected.jpg)
@@ -56,10 +58,10 @@ Compile options for the used **PWMMotorControl library** like `USE_ENCODER_MOTOR
 
 | Name | Default value | Description |
 |-|-|-|
-| `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage. |
+| `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1 M&ohm; to VIN, 100 k&ohm; to ground. Required to show and monitor (for undervoltage) VIN voltage. |
 | `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for UNO | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the UNO boards, set it to 0.8. |
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
-| `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin. |
+| `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10 k&ohm; between echo and trigger and then use only trigger pin. |
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
 | `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
@@ -69,8 +71,8 @@ Compile options for the used **PWMMotorControl library** like `USE_ENCODER_MOTOR
 | `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
 | `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
 | `ENABLE_RTTTL_FOR_CAR` | undefined | Plays melody after initial timeout has reached. Enables the Melody button, which plays a random melody. |
-| `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1MOhm to VIN, 100kOhm to ground. |
-| `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation and drive speed. |
+| `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1 M&ohm; to VIN, 100 k&ohm; to ground. |
+| `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation values. Normally they are stored after calibration. |
 
 ### Changing include (*.h) files with Arduino IDE
 First, use *Sketch > Show Sketch Folder (Ctrl+K)*.<br/>

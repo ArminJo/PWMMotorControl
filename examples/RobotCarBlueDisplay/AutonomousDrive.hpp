@@ -101,7 +101,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #if defined(ENABLE_PATH_INFO_PAGE)
         if (sStepMode != MODE_SINGLE_STEP) {
             // add last driven distance to path
-            insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+            insertToPath(RobotCar.rightCarMotor.EncoderCount, sLastDegreesTurned, true);
         }
 #endif
         DistanceServoWriteAndDelay(90);
@@ -237,7 +237,7 @@ void driveCollisonAvoidingOneStep() {
                 insertToPath(CENTIMETER_PER_RIDE * 2, sLastDegreesTurned, true);
             } else {
                 // add last driven distance to path
-                insertToPath(RobotCar.rightCarMotor.LastRideEncoderCount, sLastDegreesTurned, true);
+                insertToPath(RobotCar.rightCarMotor.EncoderCount, sLastDegreesTurned, true);
             }
         } else {
             /*

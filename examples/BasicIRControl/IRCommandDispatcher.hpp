@@ -15,7 +15,7 @@
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of ServoEasing https://github.com/ArminJo/ServoEasing.
- *  This file is part of IRMP https://github.com/ukw100/IRMP.
+ *  This file is part of IRMP https://github.com/IRMP-org/IRMP.
  *  This file is part of Arduino-IRremote https://github.com/Arduino-IRremote/Arduino-IRremote.
  *
  *  ServoEasing is free software: you can redistribute it and/or modify
@@ -316,8 +316,8 @@ void IRCommandDispatcher::printIRCommandString(Print *aSerial) {
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(unknown));
 }
 
-void IRCommandDispatcher::setRequestToStopReceived() {
-    requestToStopReceived = true;
+void IRCommandDispatcher::setRequestToStopReceived(bool aRequestToStopReceived) {
+    requestToStopReceived = aRequestToStopReceived;
 }
 
 #if defined(LOCAL_DEBUG)

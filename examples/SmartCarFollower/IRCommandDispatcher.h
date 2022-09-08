@@ -9,7 +9,7 @@
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of ServoEasing https://github.com/ArminJo/ServoEasing.
- *  This file is part of IRMP https://github.com/ukw100/IRMP.
+ *  This file is part of IRMP https://github.com/IRMP-org/IRMP.
  *  This file is part of Arduino-IRremote https://github.com/Arduino-IRremote/Arduino-IRremote.
  *
  *  ServoEasing is free software: you can redistribute it and/or modify
@@ -28,6 +28,8 @@
 
 #ifndef _IR_COMMAND_DISPATCHER_H
 #define _IR_COMMAND_DISPATCHER_H
+
+#include <stdint.h>
 
 /*
  * For command mapping file
@@ -55,7 +57,7 @@ struct IRDataForCommandDispatcherStruct {
     uint16_t command;
     bool isRepeat;
     uint32_t MillisOfLastCode;  // millis() of last IR command -including repeats!- received - for timeouts etc.
-    volatile bool isAvailable;  // flag for a polling interpreting function, that a new command has arrived.
+    volatile bool isAvailable;  // flag for a polling interpreting function, that a new command has arrived. Is set true by library and set false by main loop.
 };
 
 /*
@@ -80,14 +82,14 @@ public:
     void checkAndCallCommand(bool aCallAlsoBlockingCommands);
 
     void printIRCommandString(Print *aSerial);
-    void setRequestToStopReceived();
+    void setRequestToStopReceived(bool aRequestToStopReceived = true);
 
     uint8_t currentBlockingCommandCalled = COMMAND_INVALID; // The code for the current called command
     bool executingBlockingCommand = false;              // Lock for recursive calls of regular commands
     bool justCalledBlockingCommand = false;             // Flag that a blocking command was received and called - is set before call of command
     uint8_t BlockingCommandToRunNext = COMMAND_INVALID; // Storage for command currently suspended to allow the current command to end, before it is called by main loop
     /*
-     * Flag for running blocking commands to terminate. To check, you can use "if (requestToStopReceived) return;" (available as macro RETURN_IF_STOP).
+     * Flag for running blocking commands to terminate. To check, you can use "if (IRDispatcher.requestToStopReceived) return;" (available as macro RETURN_IF_STOP).
      * Is reset by next IR command received. Can be reset by main loop, if command has stopped.
      */
     volatile bool requestToStopReceived;

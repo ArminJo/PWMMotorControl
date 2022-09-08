@@ -29,10 +29,15 @@ void initRobotCarPWMMotorControl();
 unsigned int getDistanceAndPlayTone();
 
 // for MONITOR_VIN_VOLTAGE
-extern uint16_t sVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
+extern uint16_t sLastVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
 extern float sVINVoltage;
-void readVINVoltageAndAdjustDriveSpeed();
-void calibrateDriveSpeedPWM();
+bool readVINVoltage();
+void readVINVoltageAndAdjustDriveSpeedAndPrint();
+void calibrateDriveSpeedPWMAndPrint();
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+    && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+bool calibrateRotation(turn_direction_t aTurnDirection);
+#endif
 void checkVinPeriodicallyAndPrintIfChanged();
 
 #endif // _ROBOT_CAR_UTILS_H

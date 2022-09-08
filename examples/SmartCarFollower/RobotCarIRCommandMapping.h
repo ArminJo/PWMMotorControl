@@ -1,14 +1,11 @@
 /*
- * IRCommandMapping.h
+ * RobotCarIRCommandMapping.h
  *
- * IR remote button codes, strings, and functions to call for quadruped IR control
+ * IR remote button codes, strings, and functions to call for robot car IR control
  *
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
- * Mapping for controlling a smart car
- * Supported IR remote are KEYES (the original mePed remote) and the remote from a DVBT stick
- * Select the one you have below.
  */
 
 #ifndef _IR_COMMAND_MAPPING_H
@@ -23,12 +20,12 @@
  */
 //#define USE_KEYES_REMOTE_CLONE // With number pad above direction control, will be taken as default
 //#define USE_KEYES_REMOTE       // The mePed 2 Standard remote with number pad below direction control. Another name printed on the remote is Lafvin
-//#define USE_DVBT_STICK_REMOTE
+//#define USE_DVBT_STICK_REMOTE  // A 3 x 7 key remote from a DVBT receiver.
 #if !defined(USE_KEYES_REMOTE) && !defined(USE_KEYES_REMOTE_CLONE) && !defined(USE_DVBT_STICK_REMOTE)
 #define USE_KEYES_REMOTE_CLONE // The one you can buy at aliexpress
 #endif
 
-#if defined(USE_KEYES_REMOTE_CLONE)
+#if defined(USE_KEYES_REMOTE_CLONE) // // With number pad above direction control, will be taken as default
 #define IR_REMOTE_NAME "KEYES_CLONE"
 // Codes for the KEYES CLONE remote control with 17 keys with keypad above direction control
 #define IR_ADDRESS 0x00
@@ -80,7 +77,7 @@
 
 #endif // defined(USE_KEYES_REMOTE_CLONE)
 
-#if defined(USE_KEYES_REMOTE)
+#if defined(USE_KEYES_REMOTE) // The mePed 2 Standard remote with number pad below direction control. Another name printed on the remote is Lafvin
 #  if defined(IR_REMOTE_NAME)
 #error "Please choose only one remote for compile"
 #  else
@@ -122,10 +119,6 @@
 #define COMMAND_LEFT        IR_LEFT
 #define COMMAND_STOP        IR_OK
 
-#define COMMAND_DISTANCE_FEEDBACK   IR_STAR
-#define COMMAND_RESET               IR_0
-#define COMMAND_DISTANCE_SOURCE     IR_HASH
-
 #define COMMAND_DECREASE_SPEED  IR_1
 #define COMMAND_DEFAULT_SPEED   IR_2
 #define COMMAND_INCREASE_SPEED  IR_3
@@ -137,6 +130,32 @@
 #define COMMAND_TEST_ROTATION   IR_7
 #define COMMAND_TEST_DRIVE      IR_8
 #define COMMAND_TEST            IR_9
+
+#define COMMAND_DISTANCE_FEEDBACK   IR_STAR
+#define COMMAND_RESET               IR_0
+#define COMMAND_DISTANCE_SOURCE     IR_HASH
+
+// IR Layout mirrored
+// for attaching at the back of the remote
+//
+//          Forward
+//
+// Right     Stop      Left
+//  <-                  ->
+//          Backward
+//
+//-----------------------------
+// Speed  |  Speed   | Speed
+//   +    | default  |   -
+//-----------------------------
+//  Scan  | Follower | keep
+//  speed |          | dist.
+//-----------------------------
+//  Test  |  Test    | Test
+//        |  drive   | rotation
+//-----------------------------
+// Dist.  |  Reset   | Sound
+// source |          | mode
 
 #  endif // defined(IR_REMOTE_NAME)
 #endif
@@ -188,7 +207,8 @@
 #define COMMAND_DISTANCE_SOURCE     IR_SOURCE
 #define COMMAND_DISTANCE_FEEDBACK   IR_MUTE
 
-#define COMMAND_SCAN_SPEED      IR_RECORD
+#define COMMAND_SCAN_SPEED      IR_TIMESHIFT
+#define COMMAND_CALIBRATE       IR_RECORD
 
 #define COMMAND_FORWARD         IR_CH_PLUS
 #define COMMAND_BACKWARD        IR_CH_MINUS
@@ -213,7 +233,7 @@
 // Sound. |  Dist.   | Reset
 // mode   |  source  |
 //-----------------------------
-//  Scan  | Forward  |
+//  Scan  | Forward  | Calibr.
 //  speed |          |
 //-----------------------------
 // Right  |   Stop   | Left
@@ -240,6 +260,7 @@
 // IR strings of functions for output in alphabetical order
 static const char backward[] PROGMEM ="backward";
 static const char beep[] PROGMEM ="beep";
+static const char calibrate[] PROGMEM ="calibrate";
 static const char center[] PROGMEM ="center";
 static const char distance[] PROGMEM ="distance";
 static const char drive[] PROGMEM ="drive";
@@ -253,34 +274,12 @@ static const char rotate[] PROGMEM ="rotate";
 static const char speedIncrease[] PROGMEM ="increase speed";
 static const char speedDecrease[] PROGMEM ="decrease speed";
 static const char speedDefault[] PROGMEM ="default speed";
+static const char stepFeedback[] PROGMEM ="step feedback";
+static const char stepDistanceSource[] PROGMEM ="step distance source";
 static const char stop[] PROGMEM ="stop";
 static const char test[] PROGMEM ="test";
 static const char toggleScanSpeed[] PROGMEM ="toggle scan speed";
-static const char stepFeedback[] PROGMEM ="step feedback";
-static const char stepDistanceSource[] PROGMEM ="step distance source";
 static const char unknown[] PROGMEM ="unknown";
-
-// IR Layout mirrored
-// for attaching at the back of the remote
-//
-//          Forward
-//
-// Right     Stop      Left
-//  <-                  ->
-//          Backward
-//
-//-----------------------------
-// Speed  |  Speed   | Speed
-//   +    | default  |   -
-//-----------------------------
-//        | Follower | keep
-//        |          | dist.
-//-----------------------------
-//  Scan  |  Test    | Test
-//  speed |  drive   | rotation
-//-----------------------------
-// Sound. |  Reset   | Dist.
-// mode   |          | source
 
 /*
  * Main mapping array of commands to C functions and command strings
@@ -296,6 +295,9 @@ const struct IRToCommandMappingStruct IRMapping[] = {
         { COMMAND_TEST_ROTATION, IR_COMMAND_FLAG_BLOCKING, &testRotation, rotate }, /**/
         { COMMAND_TEST_DRIVE, IR_COMMAND_FLAG_BLOCKING, &testDrive, drive }, /**/
         { COMMAND_TEST, IR_COMMAND_FLAG_BLOCKING, &testCommand, test }, /**/
+#if defined(COMMAND_CALIBRATE)
+        { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING, &doCalibrate, calibrate }, /**/
+#endif
 
         /*
          * Commands, which can be executed always, since the are short. Like set mode etc.

@@ -40,19 +40,24 @@
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 4AA.
-//#define TBB6612_4WD_4AA_NIMH_BASIC_CONFIGURATION  // China set with TB6612 mosfet bridge + 4AA NiMh.
-//#define TBB6612_4WD_4AA_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 4AA + VIN voltage divider + MPU6050.
-//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION   // China set with TB6612 mosfet bridge + 2 Li-ion.
-//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION    // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define L298_2WD_4AA_BASIC_CONFIGURATION          // Default. Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 4 AA batteries.
-//#define L298_4WD_4AA_BASIC_CONFIGURATION          // China set with L298 + 4AA.
-//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION      // Basic = Lafvin 2WD model using L298 bridge. Uno board with series diode for VIN + 2 Li-ion.
-//#define L298_2WD_VIN_IR_DISTANCE_CONFIGURATION    // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
-//#define L298_2WD_VIN_IR_IMU_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 AA.
+//#define TBB6612_4WD_4AA_VIN_CONFIGURATION             // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider.
+//#define TBB6612_4WD_4AA_FULL_CONFIGURATION            // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_4NIMH_BASIC_CONFIGURATION         // China set with TB6612 mosfet bridge + 4 NiMh.
+//#define TBB6612_4WD_4NIMH_VIN_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 NiMh + VIN voltage divider.
+//#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 2 Li-ion.
+//#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define L298_2WD_4AA_BASIC_CONFIGURATION              // China 2WD set with L298 bridge and Uno board with series diode for VIN + 4 AA batteries. DEFAULT.
+//#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
+//#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
+//#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
+//#define MECANUM_US_DISTANCE_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
+#define ENABLE_MOTOR_LIST_FUNCTIONS
 #define DO_NOT_SUPPORT_RAMP         // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 #define DO_NOT_SUPPORT_AVERAGE_SPEED // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 #define USE_SOFT_I2C_MASTER         // saves up to 2400 bytes program memory and 220 bytes RAM compared with Arduino Wire
+
+//#define TRACE
 //#define DEBUG
 //#define INFO
 #include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
@@ -60,7 +65,10 @@
 
 /*
  * Enabling program features dependent on car configuration
+ * If IR or TOF distance sensors are available, they take precedence over the US sensor.
  */
+#define SMART_CAR_FOLLOWER          // The program name, used by RobotCarUtils.hpp
+
 #if !defined(CAR_HAS_DISTANCE_SERVO)
 #error This program requires a distance servo mounted indicated by a #define CAR_HAS_DISTANCE_SERVO
 #define CAR_HAS_DISTANCE_SERVO
@@ -97,10 +105,11 @@
 //#define USE_DVBT_STICK_REMOTE
 #define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
 #include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
-#include "IRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
+#include "RobotCarIRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
 #define LOCAL_INFO // Enable info just for IRCommandDispatcher
 #include "IRCommandDispatcher.hpp"
 #else
+// Tone only if no external control (here by IR) is enabled
 #define DISTANCE_FEEDBACK_MODE   DISTANCE_FEEDBACK_PENTATONIC // one of DISTANCE_FEEDBACK_CONTINUOUSLY or DISTANCE_FEEDBACK_PENTATONIC
 #endif
 
@@ -123,11 +132,22 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
+
+#if defined(USE_IR_REMOTE)
+    // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
+    IRDispatcher.init();
+#endif
+
+#if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
+    pinMode(DISTANCE_TONE_FEEDBACK_ENABLE_PIN, INPUT_PULLUP);
+#endif
+
     printConfigInfo(&Serial);
     printProgramOptions(&Serial);
     PWMDcMotor::printCompileOptions(&Serial);
 
     initRobotCarPWMMotorControl();
+    RobotCar.printCalibrationValues(&Serial);
     RobotCar.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
 
     /*
@@ -139,6 +159,8 @@ void setup() {
     /*
      * Tone feedback for end of boot
      */
+    tone(PIN_BUZZER, 2200, 100);
+    delay(200);
     tone(PIN_BUZZER, 2200, 100);
 
 #if defined(US_DISTANCE_SENSOR_ENABLE_PIN) // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
@@ -156,17 +178,6 @@ void setup() {
     RobotCar.calculateAndPrintIMUOffsets(&Serial);
     tone(PIN_BUZZER, 2200, 50);
 #endif
-#if defined(USE_IR_REMOTE)
-    // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
-    IRDispatcher.init();
-    Serial.print(F("Listening to IR remote of type "));
-    Serial.print(IR_REMOTE_NAME);
-    Serial.println(F(" at pin " STR(IR_INPUT_PIN)));
-#else
-#  if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) // If this pin is connected to ground, enable distance feedback
-    pinMode(DISTANCE_TONE_FEEDBACK_ENABLE_PIN, INPUT_PULLUP);
-#  endif
-#endif
 
     /*
      * Do not start immediately with driving
@@ -183,11 +194,6 @@ void setup() {
     DistanceServoWriteAndDelay(90);
     delay(500);
 
-    /*
-     * Move car forward and measure voltage with load to enable exact turns
-     */
-    calibrateDriveSpeedPWM();
-
     Serial.println(F("Start loop"));
 }
 
@@ -198,9 +204,7 @@ void loop() {
      * Returns only AFTER finishing of requested action
      */
     IRDispatcher.checkAndRunSuspendedBlockingCommands();
-#endif
 
-#if defined(USE_IR_REMOTE)
     // we can enable / disable follower / distance (no turn) mode by IR
     if (sEnableKeepDistance || sEnableFollower) {
         doFollowerOneStep();
@@ -268,21 +272,23 @@ void doFollowerOneStep() {
 
                 if (tCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
                     /*
-                     * Target too far, but below scan threshold -> drive FORWARD with speed proportional to the gap.
+                     * Distance (31 to 60) too far, but below scan threshold -> drive FORWARD with speed proportional to the gap.
                      * We start with DEFAULT_START_SPEED_PWM, which is adjusted to avoid undervoltage which prevents moving
                      * Maximum difference between current and target distance (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) is 30.
                      */
+                    uint8_t tDifferenceCentimeter = tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER;
                     tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
-                            + (tCentimeter - FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) * 8; // maximum is 240 here
+                            + tDifferenceCentimeter * 8; // maximum is 240 here
                     tDirection = DIRECTION_FORWARD;
 
                 } else if (tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
                     /*
-                     * Target too close -> drive BACKWARD with speed proportional to the gap.
+                     * Distance (1 to 19) too close -> drive BACKWARD with speed proportional to the gap.
                      * We start with DEFAULT_START_SPEED_PWM, which is adjusted to avoid undervoltage which prevents moving
                      */
+                    uint16_t tDifferenceCentimeter = FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter;
                     tSpeedPWM = PWMDcMotor::getVoltageAdjustedSpeedPWM(DEFAULT_START_SPEED_PWM, sVINVoltage)
-                            + (FOLLOWER_DISTANCE_MINIMUM_CENTIMETER - tCentimeter) * 16; // maximum is 320 here
+                            + tDifferenceCentimeter * 16; // maximum is 320 here
                     tDirection = DIRECTION_BACKWARD;
                 }
 
@@ -293,6 +299,9 @@ void doFollowerOneStep() {
                 }
 
                 if (tSpeedPWM != 0) {
+                    /*
+                     * check for 8 bit speed overflow
+                     */
                     if (tSpeedPWM > MAX_SPEED_PWM) {
                         tSpeedPWM = MAX_SPEED_PWM;
                     }
@@ -334,7 +343,7 @@ void doFollowerOneStep() {
             // Rotate after target found
             sTargetNotFoundCount = 0;
             DistanceServoWriteAndDelay(90, false); // reset distance servo direction
-            RobotCar.rotate(tRotationDegree, TURN_IN_PLACE, false, readVINVoltageAndAdjustDriveSpeed);
+            RobotCar.rotate(tRotationDegree, TURN_IN_PLACE);
         }
     }
 }

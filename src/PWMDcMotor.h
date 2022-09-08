@@ -38,9 +38,9 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "2.0.0"
+#define VERSION_PWMMOTORCONTROL "2.1.0"
 #define VERSION_PWMMOTORCONTROL_MAJOR 2
-#define VERSION_PWMMOTORCONTROL_MINOR 0
+#define VERSION_PWMMOTORCONTROL_MINOR 1
 #define VERSION_PWMMOTORCONTROL_PATCH 0
 // The change log is at the bottom of the file
 
@@ -68,7 +68,6 @@
 //#define DEFAULT_DRIVE_MILLIVOLT   2000  // Drive voltage / motors default speed. Default value is 2.0 volt.
 //#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED    // Disables the encoder function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
-
 //#define USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // Activate this to force using of Adafruit library. Requires 694 bytes program memory.
 #if !defined(USE_STANDARD_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
 #define _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // to avoid double negations
@@ -143,7 +142,6 @@
 #define DEFAULT_START_MILLIVOLT_L298        1700 // For L298 the start voltage is higher (because of a higher ESR of the L298 bridge?)
 #define DEFAULT_DRIVE_MILLIVOLT             2000 // Drive voltage -motors default speed- is 2.0 volt
 
-
 // Default values - used if EEPROM values are invalid or not available
 #if !defined(DEFAULT_DRIVE_SPEED_PWM)
 // Corresponds to 2 volt. At 2 volt I measured around 32 cm/s. PWM=127 for 4 volt VCC, 68 for 7.4 volt VCC
@@ -179,7 +177,7 @@
 /*
  * Use MILLIS_PER_CENTIMETER instead of MILLIS_PER_MILLIMETER to get a reasonable resolution
  */
-#define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND)
+#define DEFAULT_MILLIS_PER_CENTIMETER       ((MILLIS_IN_ONE_SECOND * MILLIMETER_IN_ONE_CENTIMETER) / DEFAULT_MILLIMETER_PER_SECOND) // 43 for 230 mm/s
 /*
  * Currently formula used to convert distance in mm to motor on time in milliseconds is:
  * computedMillisOfMotorStopForDistance = DEFAULT_MILLIS_FOR_FIRST_CENTIMETER + ((((aRequestedDistanceMillimeter - 10) * MillisPerCentimeter) / MILLIMETER_IN_ONE_CENTIMETER * DriveSpeedPWM));
@@ -217,11 +215,11 @@
  * Program defines
  ********************************************/
 // Motor directions and stop modes. Are used for parameter aMotorDriverMode and sequence is determined by the Adafruit library API.
-#define DIRECTION_STOP                  0x00
+#define DIRECTION_STOP                  0x00 // 0 is also turn in place
 #define DIRECTION_FORWARD               0x01
 #define DIRECTION_BACKWARD              0x02
-#define DIRECTION_MASK                  (DIRECTION_FORWARD | DIRECTION_BACKWARD)
-#define oppositeDIRECTION(aDirection)   (aDirection ^ DIRECTION_MASK) // invert every bit
+#define DIRECTION_FORWARD_BACKWARD_MASK (DIRECTION_FORWARD | DIRECTION_BACKWARD)
+#define oppositeDIRECTION(aDirection)   (aDirection ^ DIRECTION_FORWARD_BACKWARD_MASK) // invert every bit
 /*
  * Stop mode definitions
  */
@@ -277,7 +275,7 @@ extern const char *sDirectionStringArray[4];
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
 struct EepromMotorInfoStruct {
-    uint8_t DriveSpeedPWM;
+    uint8_t DriveSpeedPWMFor2Volt;
     uint8_t SpeedPWMCompensation;
 };
 
@@ -373,6 +371,8 @@ public:
     /*
      * EEPROM functions to read and store control values (DriveSpeedPWM, SpeedPWMCompensation)
      */
+    bool readMotorValuesFromInfoStructure(EepromMotorInfoStruct *aEepromMotorInfo);
+    void writeMotorValuesToInfoStructure(EepromMotorInfoStruct *aEepromMotorInfo);
     void readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber);
     void writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber);
 
@@ -394,13 +394,13 @@ public:
     /**********************************
      * Start of values for EEPROM
      *********************************/
-    uint8_t DriveSpeedPWM; // SpeedPWM value used internally for moving. Default is a PWM value which corresponds to 2 volt.
-    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt. Used only in startGoDistanceMillimeter() for scaling.
+    uint8_t DriveSpeedPWM;         // SpeedPWM value used internally for moving. Default is a PWM value which corresponds to 2 volt.
+    uint8_t DriveSpeedPWMFor2Volt; // SpeedPWM value which corresponds to 2 volt. Used only in startRotate() and startGoDistanceMillimeter() for scaling.
 
     /**********************************
      * End of EEPROM values
      *********************************/
-    uint8_t DefaultStopMode; // used for PWM == 0 and STOP_MODE_KEEP
+    uint8_t DefaultStopMode;        // used for PWM == 0 and STOP_MODE_KEEP
     static bool MotorControlValuesHaveChanged; // true if DefaultStopMode, DriveSpeedPWM or SpeedPWMCompensation have changed - for printing
 #if defined(USE_MPU6050_IMU) || defined(USE_ENCODER_MOTOR_CONTROL)
     volatile static bool SensorValuesHaveChanged; // true if encoder data or IMU data have changed
@@ -412,12 +412,11 @@ public:
      * Value is computed in EncoderMotor::synchronizeMotor()
      */
     uint8_t SpeedPWMCompensation;   // Positive value!
-    uint8_t RequestedSpeedPWM;      // Last PWM requested for motor. Stopped if RequestedSpeedPWM == 0. It is always >= CurrentCompensatedSpeedPWM
+    uint8_t RequestedSpeedPWM; // Last PWM requested for motor. Stopped if RequestedSpeedPWM == 0. It is always >= CurrentCompensatedSpeedPWM
     uint8_t CurrentCompensatedSpeedPWM; // RequestedSpeedPWM - SpeedPWMCompensation.
     uint8_t CurrentDirection; // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.
     static bool MotorPWMHasChanged;
-
-    bool CheckDistanceInUpdateMotor;
+    bool CheckStopConditionInUpdateMotor;
 
 #if !defined(DO_NOT_SUPPORT_RAMP)
     /*
@@ -430,7 +429,8 @@ public:
 #endif
 
 #if !defined(USE_ENCODER_MOTOR_CONTROL) // this saves 5 bytes ram if we know, that we do not use the simple PWMDcMotor distance functions
-    uint32_t computedMillisOfMotorStopForDistance; // Since we have no distance sensing, we must estimate a duration instead
+    uint16_t computedMillisOfMotorForDistance;      // Since we have no distance sensing, we must estimate a duration instead
+    uint32_t computedMillisOfMotorStopForDistance;  // computedMillisOfMotorForDistance + millis() at time of computation
     // MillisPerMillimeter values were in the range of 3 and 4, thus use MillisPerCentimeter for better resolution
     uint8_t MillisPerCentimeter; // Value for 2 volt motor effective voltage at DEFAULT_DRIVE_SPEED_PWM. Required for non encoder motors to estimate duration for a fixed distance
 #endif
@@ -438,6 +438,10 @@ public:
 };
 
 /*
+ * Version 2.0.1 - 09/2022
+ * - Added computedMillisOfMotorForDistance.
+ * - Added MillimeterPer256Degree and MillimeterPer256DegreeInPlace instead of using always constants.
+ *
  * Version 2.0.0 - 06/2022
  * - Renamed instance from RobotCarPWMMotorControl to RobotCar.
  * - MecanumWheelCar support.

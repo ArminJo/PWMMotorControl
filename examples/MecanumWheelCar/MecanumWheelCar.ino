@@ -64,7 +64,7 @@ void setup() {
     /*
      * Move car forward and measure voltage with load to enable exact turns
      */
-    calibrateDriveSpeedPWM();
+    calibrateDriveSpeedPWMAndPrint();
 
     delay(2000);
 

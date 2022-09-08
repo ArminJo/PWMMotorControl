@@ -158,14 +158,21 @@ void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
 void doStartStopRobotCar(BDButton *aTheTochedButton, int16_t aDoStart);
 void doReset(BDButton *aTheTochedButton, int16_t aValue);
+#if VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
+bool delayMillisAndCheckForEvent(unsigned long aDelayMillis);
+#endif
 
 extern BDButton TouchButtonDirection;
 extern BDButton TouchButtonInfo;
 
 //#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
-extern bool isCalibrated;
-void calibrateAndPrint();
+extern bool isPWMCalibrated;
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+    && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+void calibrateRotation();
+#endif
+void displayRotationValues();
 void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue);
 
 extern BDButton TouchButtonCompensationRight;
@@ -215,10 +222,10 @@ void readAndShowDistancePeriodically();
 void rotate(int16_t aRotationDegrees, bool inPlace = true);
 void showDistance(int aCentimeter);
 
-void printAndDisplayMotorSpeed();
 void printMotorValuesPeriodically();
 
 #if defined(MONITOR_VIN_VOLTAGE)
+void forceDisplayOfVin();
 void readAndPrintVin();
 void readCheckAndPrintVinPeriodically();
 #endif

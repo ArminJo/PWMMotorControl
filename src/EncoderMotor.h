@@ -164,9 +164,10 @@ public:
 
     /*
      * Distance optocoupler impulse counter. It is reset at startGoDistanceCount if motor was stopped.
+     * Both values are incremented at each encoder interrupt and reset at startGoDistanceMillimeter().
      */
-    volatile unsigned int EncoderCount; // 11 mm for a 220 mm Wheel and 20 encoder slots
-    volatile unsigned int LastRideEncoderCount; // count of last ride - from start of MOTOR_STATE_RAMP_UP to next MOTOR_STATE_RAMP_UP
+    volatile unsigned int EncoderCount; // 11 mm for a 220 mm Wheel and 20 encoder slots reset at startGoDistanceMillimeter
+    volatile unsigned int EncoderCountForSynchronize; // count used and modified by function
 
     // Do not move it!!! It must be the last element in structure and is required for stopMotorAndReset()
     volatile unsigned long LastEncoderInterruptMillis; // used internal for debouncing and lock/timeout detection

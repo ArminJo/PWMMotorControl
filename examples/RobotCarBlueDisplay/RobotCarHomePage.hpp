@@ -25,11 +25,14 @@
 BDButton TouchButtonTestPage;
 BDButton TouchButtonBTSensorDrivePage;
 BDButton TouchButtonLaser;
+
 #if defined(ENABLE_RTTTL_FOR_CAR)
 BDButton TouchButtonMelody;
 #endif
 #if defined(CAR_HAS_CAMERA)
 BDButton TouchButtonCameraOnOff;
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+BDButton TouchButtonDemo;
 #endif
 
 #if defined(CAR_HAS_PAN_SERVO)
@@ -64,6 +67,10 @@ void doLaserOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
 void doCameraSupplyOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
     digitalWrite(PIN_CAMERA_SUPPLY_CONTROL, aValue);
 }
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+void doDemo(BDButton * aTheTouchedButton, int16_t aValue) {
+    RobotCar.doDemo(); // !!! Ultimate blocking command !!!
+}
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
@@ -94,6 +101,9 @@ void initHomePage(void) {
     TouchButtonCameraOnOff.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8,
     TEXT_SIZE_22_HEIGHT, COLOR16_BLACK, F("Cam"), TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             false, &doCameraSupplyOnOff);
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+    TouchButtonDemo.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED,
+            F("Demo"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &doDemo);
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
@@ -132,6 +142,8 @@ void drawHomePage(void) {
     TouchButtonRobotCarStartStop.drawButton();
 #if defined(CAR_HAS_CAMERA)
     TouchButtonCameraOnOff.drawButton();
+#elif defined(CAR_HAS_4_MECANUM_WHEELS)
+    TouchButtonDemo.drawButton();
 #endif
 #if defined(ENABLE_RTTTL_FOR_CAR)
     TouchButtonMelody.drawButton();

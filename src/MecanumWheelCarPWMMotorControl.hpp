@@ -36,7 +36,6 @@
  * The Car Control instance to be used by the main program
  */
 //MecanumWheelCarPWMMotorControl RobotCar;
-
 #if defined(DEBUG)
 #define LOCAL_DEBUG
 #else
@@ -78,6 +77,7 @@ void MecanumWheelCarPWMMotorControl::init(uint8_t aRightMotorForwardPin, uint8_t
 
     backRightCarMotor.init(aBackRightMotorForwardPin, aBackRightMotorBackwardPin, aPWMPin);
     backLeftCarMotor.init(aBackLeftMotorForwardPin, aBackLeftMotorBackwardPin, aPWMPin);
+    RobotCar.readCarValuesFromEeprom();
 }
 #endif // USE_ADAFRUIT_MOTOR_SHIELD
 
@@ -221,7 +221,7 @@ void MecanumWheelCarPWMMotorControl::setSpeedPWMWithDeltaAndDirection(uint8_t aR
 void MecanumWheelCarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
     checkAndHandleDirectionChange(aRequestedDirection);
 
-    uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_MASK;
+    uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_FORWARD_BACKWARD_MASK;
 #  if defined(LOCAL_DEBUG)
     Serial.print(F("Speed="));
     Serial.print(aRequestedSpeedPWM);
@@ -550,12 +550,12 @@ void MecanumWheelCarPWMMotorControl::startRotate(int aRotationDegrees, turn_dire
     unsigned int tDistanceMillimeter;
     if (aTurnDirection == TURN_FORWARD) {
         tDirection |= DIRECTION_FORWARD;
-        tDistanceMillimeter = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER;   // We need around twice the time of an in place turn
+        tDistanceMillimeter = ((int32_t) aRotationDegrees * MillimeterPer256Degree) / 256; // We need around twice the time of an in place turn
     } else if (aTurnDirection == TURN_BACKWARD) {
         tDirection |= DIRECTION_BACKWARD;
-        tDistanceMillimeter = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER;   // We need around twice the time of an in place turn
+        tDistanceMillimeter = ((int32_t) aRotationDegrees * MillimeterPer256Degree) / 256; // We need around twice the time of an in place turn
     } else {
-        tDistanceMillimeter = aRotationDegrees * FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE;
+        tDistanceMillimeter = ((int32_t) aRotationDegrees * MillimeterPer256DegreeInPlace) / 256;
     }
     setDirection(tDirection | DIRECTION_TURN);
 
@@ -595,7 +595,8 @@ void MecanumWheelCarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDrivi
 }
 #endif // USE_ENCODER_MOTOR_CONTROL
 
-#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 62.0)
+//#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 62.0)
+#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 42.0)
 #define MECANUM_FORWARD_TO_DIAGONAL_FACTOR   (82.0 / 50.0)
 #define MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL   (82.0 * M_SQRT2 / 50.0)
 
@@ -713,19 +714,35 @@ void MecanumWheelCarPWMMotorControl::moveFullStar(uint8_t aRequestedSpeedPWM, un
 }
 
 /*
+ *  --<--
+ *  |   |
+ *  o->--
+ */
+void MecanumWheelCarPWMMotorControl::moveRectangle(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * 4);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove * 4);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+}
+
+/*
  *  ->-
  *  | |
  *  o<-
  */
 void MecanumWheelCarPWMMotorControl::moveSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
         unsigned int aDelayBetweenMoves) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
-    delay(aDelayBetweenMoves);
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
     delay(aDelayBetweenMoves);
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
     delay(aDelayBetweenMoves);
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
 }
 
 /*
@@ -825,7 +842,7 @@ void MecanumWheelCarPWMMotorControl::moveRhombus(uint8_t aRequestedSpeedPWM, uns
  */
 void MecanumWheelCarPWMMotorControl::moveTrapezium(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
         unsigned int aDelayBetweenMoves) {
-    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove + (aMillisforOneMove / 2));
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, (2 * aMillisforOneMove) + (aMillisforOneMove / 2));
     delay(aDelayBetweenMoves);
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_FORWARD,
             aMillisforOneMove * MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL);
@@ -841,20 +858,17 @@ void MecanumWheelCarPWMMotorControl::moveTrapezium(uint8_t aRequestedSpeedPWM, u
 #define MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS     500
 #define MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS            4000
 
-void MecanumWheelCarPWMMotorControl::doDemo(){
+void MecanumWheelCarPWMMotorControl::doDemo() {
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    moveSqare(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS, MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    moveSqare(MECANUM_DEMO_SPEED,
+            MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS + (MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS / 2),
+            MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
     delay(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
 
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
     moveStar(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS, MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    delay(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
-
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    moveTrapezium(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS, MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
     delay(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
 
     /*
@@ -902,8 +916,8 @@ void MecanumWheelCarPWMMotorControl::doDemo(){
     tone(PIN_BUZZER, 2200, 200);
     delay(400);
     tone(PIN_BUZZER, 2200, 200);
-
 }
+
 #if defined(LOCAL_DEBUG)
 #undef LOCAL_DEBUG
 #endif

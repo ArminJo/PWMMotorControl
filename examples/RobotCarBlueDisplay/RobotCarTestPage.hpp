@@ -46,11 +46,10 @@ bool sShowInfo = true;
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
-    RobotCar.startGoDistanceMillimeter(aValue, sRobotCarDirection);
-#if !defined(USE_ENCODER_MOTOR_CONTROL)
-    BlueDisplay1.debug("Millis=",
-            (uint16_t) (RobotCar.rightCarMotor.computedMillisOfMotorStopForDistance - millis()));
+#if defined(USE_MPU6050_IMU)
+    RobotCar.IMUData.resetOffsetFifoAndCarDataAndWait();
 #endif
+    RobotCar.startGoDistanceMillimeter(aValue, sRobotCarDirection);
 }
 
 /*
@@ -59,7 +58,12 @@ void doDistance(BDButton *aTheTouchedButton, int16_t aValue) {
  */
 void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopRobotCar(false);
+#if defined(USE_ENCODER_MOTOR_CONTROL)
     RobotCar.resetEncoderControlValues();
+#endif
+#if defined(USE_MPU6050_IMU)
+    RobotCar.IMUData.resetOffsetFifoAndCarData();
+#endif
     sLastSpeedSliderValue = 0;
 }
 
@@ -71,6 +75,9 @@ void doTest(BDButton *aTheTouchedButton, int16_t aValue) {
 }
 
 void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
+#if defined(USE_MPU6050_IMU)
+    RobotCar.IMUData.resetOffsetFifoAndCarDataAndWait();
+#endif
     if (aValue == 360) {
         // use in place for 360 degree and change turn direction according to sRobotCarDirection
         if (sRobotCarDirection != DIRECTION_FORWARD) {
@@ -82,7 +89,7 @@ void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
     }
 }
 
-#if defined(ENABLE_EEPROM_STORAGE)
+
 /*
  * Callback handler for user speed input
  * Store user speed input as DriveSpeed
@@ -91,12 +98,12 @@ void doStoreSpeed(float aValue) {
     uint16_t tValue = aValue;
     if (tValue > 10 && tValue < 256) {
         // must use value for compensation not compensated value
-        RobotCar.rightCarMotor.DriveSpeed = tValue;
+        RobotCar.rightCarMotor.DriveSpeedPWM = tValue;
         // use the same value here !
-        RobotCar.leftCarMotor.DriveSpeed = tValue;
-        RobotCar.writeMotorValuesToEeprom();
+        RobotCar.leftCarMotor.DriveSpeedPWM = tValue;
+        RobotCar.rightCarMotor.MotorControlValuesHaveChanged = true;
     }
-    printMotorValues();
+    printMotorValuesPeriodically();
 }
 
 
@@ -106,7 +113,7 @@ void doStoreSpeed(float aValue) {
 void doGetSpeedAsNumber(BDButton * aTheTouchedButton, int16_t aValue) {
     BlueDisplay1.getNumberWithShortPrompt(&doStoreSpeed, "Drive speed [11-255]", sLastSpeedSliderValue);
 }
-#endif
+
 
 /*
  * replacing parameter init with structure init INCREASES code size by 82 bytes
@@ -232,8 +239,8 @@ void drawTestPage(void) {
 void startTestPage(void) {
     doReset(NULL, 0);
     drawTestPage();
-    if (!isCalibrated) {
-        calibrateAndPrint();
+    if (!isPWMCalibrated) {
+        calibrateDriveSpeedPWMAndPrint();
     }
 }
 

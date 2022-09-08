@@ -41,6 +41,8 @@
 //#define DEFAULT_DRIVE_MILLIVOLT       2000 // Drive voltage -motors default speed- is 2.0 volt
 //#define DO_NOT_SUPPORT_AVERAGE_SPEED  // Disables the function getAverageSpeed(). Saves 44 bytes RAM per motor and 156 bytes program memory.
 
+//#define TRACE
+
 #define USE_SOFT_I2C_MASTER           // Saves 1044 bytes program memory and 99 bytes RAM compared with Arduino Wire
 #include "RobotCarPinDefinitionsAndMore.h"
 

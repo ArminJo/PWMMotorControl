@@ -349,7 +349,7 @@ bool PWMDcMotor::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
     /*
      * Reduce to STOP, FORWARD or BACKWARD
      */
-    uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_MASK;
+    uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_FORWARD_BACKWARD_MASK;
     bool tReturnValue = false;
     if (CurrentDirection != tRequestedDirection) {
         if (!isStopped()) {
@@ -439,7 +439,7 @@ void PWMDcMotor::stop(uint8_t aStopMode) {
     RequestedSpeedPWM = 0;
     CurrentCompensatedSpeedPWM = 0;
     MotorPWMHasChanged = true;
-    CheckDistanceInUpdateMotor = false;
+    CheckStopConditionInUpdateMotor = false;
 #if !defined(DO_NOT_SUPPORT_RAMP)
     MotorRampState = MOTOR_STATE_STOPPED;
 #endif
@@ -658,8 +658,8 @@ bool PWMDcMotor::updateMotor() {
      * Check if target milliseconds are reached
      */
     if (tNewSpeedPWM > 0) {
-        if (CheckDistanceInUpdateMotor && millis() > computedMillisOfMotorStopForDistance) {
-            stop(STOP_MODE_KEEP); // resets CheckDistanceInUpdateMotor and sets MOTOR_STATE_STOPPED;
+        if (CheckStopConditionInUpdateMotor && millis() > computedMillisOfMotorStopForDistance) {
+            stop(STOP_MODE_KEEP); // resets CheckStopConditionInUpdateMotor and sets MOTOR_STATE_STOPPED;
             return false;
         }
     }
@@ -707,7 +707,7 @@ bool PWMDcMotor::updateMotor() {
         /*
          * Time based distance. Ramp down is included in time formula.
          */
-        if (CheckDistanceInUpdateMotor && millis() >= computedMillisOfMotorStopForDistance) {
+        if (CheckStopConditionInUpdateMotor && millis() >= computedMillisOfMotorStopForDistance) {
             /*
              * "Distance" reached -> stop now
              */
@@ -734,7 +734,7 @@ bool PWMDcMotor::updateMotor() {
                 /*
                  * Ramp ended, last value was RAMP_VALUE_MIN_SPEED_PWM
                  */
-                if (!CheckDistanceInUpdateMotor) {
+                if (!CheckStopConditionInUpdateMotor) {
                     // can stop now
                     tNewSpeedPWM = 0;
                 } else {
@@ -783,18 +783,18 @@ void PWMDcMotor::goDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         tRequestedDirection = DIRECTION_BACKWARD;
     }
-    goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, tRequestedDirection);
+    goDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, tRequestedDirection);
 }
 
 void PWMDcMotor::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    goDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    goDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
     startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
 #if defined(DO_NOT_SUPPORT_RAMP)
-    delay(computedMillisOfMotorStopForDistance - millis());
+    delay(computedMillisOfMotorForDistance);
 #else
     while (millis() <= computedMillisOfMotorStopForDistance) {
         updateMotor();
@@ -804,7 +804,7 @@ void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int a
 }
 
 void PWMDcMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 /*
@@ -813,9 +813,9 @@ void PWMDcMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillim
 void PWMDcMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
-        startGoDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+        startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
     } else {
-        startGoDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+        startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
     }
 }
 
@@ -843,12 +843,12 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
      * Compute milliseconds for distance by using MillisPerCentimeter (which is measured for 2 volt)
      * and scaling it for the requested aRequestedSpeedPWM
      */
-    uint32_t tComputedMillisOfMotorStopForDistance = (((uint32_t) tDistanceMillimeterDriveSpeed * MillisPerCentimeter
+    uint32_t tComputedMillisOfMotorForDistance = (((uint32_t) tDistanceMillimeterDriveSpeed * MillisPerCentimeter
             * DriveSpeedPWMFor2Volt) / ((uint_fast16_t) MILLIMETER_IN_ONE_CENTIMETER * aRequestedSpeedPWM));
 
     if (isStopped()) {
         // add startup time for the centimeter, we subtracted above
-        tComputedMillisOfMotorStopForDistance += DEFAULT_MILLIS_FOR_FIRST_CENTIMETER;
+        tComputedMillisOfMotorForDistance += DEFAULT_MILLIS_FOR_FIRST_CENTIMETER;
     }
     // after check of isStopped(), set PWM
     setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
@@ -857,47 +857,62 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
     Serial.print(F("Go for distance "));
     Serial.print(aRequestedDistanceMillimeter);
     Serial.print(F(" mm -> "));
-    Serial.print(tComputedMillisOfMotorStopForDistance);
+    Serial.print(tComputedMillisOfMotorForDistance);
     Serial.println(F(" ms"));
 #endif
 
-    computedMillisOfMotorStopForDistance = tComputedMillisOfMotorStopForDistance + millis();
-    CheckDistanceInUpdateMotor = true;
+    computedMillisOfMotorForDistance = tComputedMillisOfMotorForDistance;
+    computedMillisOfMotorStopForDistance = tComputedMillisOfMotorForDistance + millis();
+    CheckStopConditionInUpdateMotor = true;
 }
 
 #endif // !defined(USE_ENCODER_MOTOR_CONTROL)
 
-#if defined(E2END)
+/*
+ * @return true, if both values were valid
+ */
+bool PWMDcMotor::readMotorValuesFromInfoStructure(EepromMotorInfoStruct *aEepromMotorInfo) {
+    /*
+     * Overwrite with EEPROM values if valid
+     */
+    if (aEepromMotorInfo->DriveSpeedPWMFor2Volt < 222 && aEepromMotorInfo->DriveSpeedPWMFor2Volt > 40
+            && aEepromMotorInfo->SpeedPWMCompensation < 24) {
+        DriveSpeedPWMFor2Volt = aEepromMotorInfo->DriveSpeedPWMFor2Volt;
+        SpeedPWMCompensation = aEepromMotorInfo->SpeedPWMCompensation;
+        MotorControlValuesHaveChanged = true;
+        return true;
+    }
+    return false;
+}
+
+void PWMDcMotor::writeMotorValuesToInfoStructure(EepromMotorInfoStruct *aEepromMotorInfo) {
+    aEepromMotorInfo->DriveSpeedPWMFor2Volt = DriveSpeedPWMFor2Volt;
+    aEepromMotorInfo->SpeedPWMCompensation = SpeedPWMCompensation;
+}
+
 /********************************************************************************************
  * EEPROM functions
  * Uses the start of EEPROM for storage of EepromMotorInfoStruct's for motor number 1 to n
  ********************************************************************************************/
 void PWMDcMotor::readMotorValuesFromEeprom(uint8_t aMotorValuesEepromStorageNumber) {
+#if defined(E2END)
     EepromMotorInfoStruct tEepromMotorInfo;
     eeprom_read_block((void*) &tEepromMotorInfo, (void*) ((aMotorValuesEepromStorageNumber) * sizeof(EepromMotorInfoStruct)),
             sizeof(EepromMotorInfoStruct));
 
-    /*
-     * Overwrite with values if valid
-     */
-    if (tEepromMotorInfo.DriveSpeedPWM < 222 && tEepromMotorInfo.DriveSpeedPWM > 40) {
-        DriveSpeedPWM = tEepromMotorInfo.DriveSpeedPWM;
-        if (tEepromMotorInfo.SpeedPWMCompensation < 24) {
-            SpeedPWMCompensation = tEepromMotorInfo.SpeedPWMCompensation;
-        }
-    }
-    MotorControlValuesHaveChanged = true;
+    readMotorValuesFromInfoStructure(&tEepromMotorInfo);
+#endif // defined(E2END)
 }
 
 void PWMDcMotor::writeMotorValuesToEeprom(uint8_t aMotorValuesEepromStorageNumber) {
+#if defined(E2END)
     EepromMotorInfoStruct tEepromMotorInfo;
-    tEepromMotorInfo.DriveSpeedPWM = DriveSpeedPWM;
-    tEepromMotorInfo.SpeedPWMCompensation = SpeedPWMCompensation;
+    writeMotorValuesToInfoStructure(&tEepromMotorInfo);
 
     eeprom_write_block((void*) &tEepromMotorInfo, (void*) ((aMotorValuesEepromStorageNumber) * sizeof(EepromMotorInfoStruct)),
             sizeof(EepromMotorInfoStruct));
-}
 #endif // defined(E2END)
+}
 
 void PWMDcMotor::printValues(Print *aSerial) {
 #if defined(_USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD)
@@ -907,6 +922,8 @@ void PWMDcMotor::printValues(Print *aSerial) {
     aSerial->print(CurrentCompensatedSpeedPWM);
     aSerial->print(F(" DriveSpeedPWM="));
     aSerial->print(DriveSpeedPWM);
+    aSerial->print(F(" DriveSpeedPWMFor2Volt="));
+    aSerial->print(DriveSpeedPWMFor2Volt);
     aSerial->print(F(" SpeedPWMCompensation="));
     aSerial->print(SpeedPWMCompensation);
     aSerial->print(F(" CurrentDirection="));
@@ -914,8 +931,8 @@ void PWMDcMotor::printValues(Print *aSerial) {
     aSerial->println();
 }
 
-const char StringNot[] PROGMEM = { " not" };
-const char StringDefined[] PROGMEM = { " defined" };
+const char StringNot[] PROGMEM = {" not"};
+const char StringDefined[] PROGMEM = {" defined"};
 
 void PWMDcMotor::printCompileOptions(Print *aSerial) {
     aSerial->println();
@@ -943,7 +960,9 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
 
     aSerial->print(F("FULL_BRIDGE_OUTPUT_MILLIVOLT="));
     aSerial->print(FULL_BRIDGE_OUTPUT_MILLIVOLT);
-    aSerial->print(F("mV (= FULL_BRIDGE_INPUT_MILLIVOLT|" STR(FULL_BRIDGE_INPUT_MILLIVOLT) "mV - FULL_BRIDGE_LOSS_MILLIVOLT|" STR(FULL_BRIDGE_LOSS_MILLIVOLT "mV)")));
+    aSerial->print(
+            F(
+                    "mV (= FULL_BRIDGE_INPUT_MILLIVOLT|" STR(FULL_BRIDGE_INPUT_MILLIVOLT) "mV - FULL_BRIDGE_LOSS_MILLIVOLT|" STR(FULL_BRIDGE_LOSS_MILLIVOLT "mV)")));
 
     aSerial->print(F("DEFAULT_START_SPEED_PWM="));
     aSerial->print(DEFAULT_START_SPEED_PWM);

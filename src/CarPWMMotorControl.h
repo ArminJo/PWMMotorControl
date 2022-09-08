@@ -41,24 +41,36 @@
  * Values for 20 slot encoder discs. Circumference of the wheel is 22.0 cm
  * Distance between two wheels is around 14 cm -> 360 degree are 82 cm
  */
-#define FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT          2.2777
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_IN_PLACE         2.5 // Estimated, with slip.
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR                  3.5 // Estimated, with slip.
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_IN_PLACE 2.3 // For turns with 4 wheels.
-#define FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR          4.8 // For turns with 2 wheels.
+#define MILLIMETER_PER_256_DEGREE_2WD_CARIN_PLACE           320 // we drive both motors here
+#define MILLIMETER_PER_256_DEGREE_2WD_CAR                   750
+#define MILLIMETER_PER_256_DEGREE_4WD_CAR_IN_PLACE          600 //  670, 860 for NIMH car.
+#define MILLIMETER_PER_256_DEGREE_4WD_CAR                  1100 // 1075, 1350 for NIMH car.
+#define MILLIMETER_PER_256_DEGREE_4WD_MECANUM_CAR_IN_PLACE  600 // For turns with 4 wheels.
+#define MILLIMETER_PER_256_DEGREE_4WD_MECANUM_CAR          1550 // For turns with 2 wheels.
 
-#if !defined(FACTOR_DEGREE_TO_MILLIMETER)
+#if !defined(MILLIMETER_PER_256_DEGREE)
 #  if defined(CAR_HAS_4_MECANUM_WHEELS)
-#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR_IN_PLACE
-#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_4WD_MECANUM_CAR
+#define DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE    MILLIMETER_PER_256_DEGREE_4WD_MECANUM_CAR_IN_PLACE
+#define DEFAULT_MILLIMETER_PER_256_DEGREE             MILLIMETER_PER_256_DEGREE_4WD_MECANUM_CAR
 #  elif defined(CAR_HAS_4_WHEELS)
-#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR_IN_PLACE
-#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_4WD_CAR
+#define DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE    MILLIMETER_PER_256_DEGREE_4WD_CAR_IN_PLACE
+#define DEFAULT_MILLIMETER_PER_256_DEGREE             MILLIMETER_PER_256_DEGREE_4WD_CAR
 #  else
-#define FACTOR_DEGREE_TO_MILLIMETER_IN_PLACE    (FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT / 2) // we drive both motors here
-#define FACTOR_DEGREE_TO_MILLIMETER             FACTOR_DEGREE_TO_MILLIMETER_2WD_CAR_DEFAULT
+#define DEFAULT_MILLIMETER_PER_256_DEGREE_IN_PLACE    (MILLIMETER_PER_256_DEGREE_2WD_CAR / 2)
+#define DEFAULT_MILLIMETER_PER_256_DEGREE             MILLIMETER_PER_256_DEGREE_2WD_CAR
 #  endif
 #endif
+
+#define EEPROM_CAR_INFO_VALID_MARKER_VALUE  A5
+struct EepromCarInfoStruct {
+    EepromMotorInfoStruct rightMotorInfo;
+    EepromMotorInfoStruct leftMotorInfo;
+#if !defined(USE_MPU6050_IMU)
+    uint16_t MillimeterPer256Degree;
+    uint16_t MillimeterPer256DegreeInPlace;
+#endif
+    uint8_t ValidMarker; // must be A5
+};
 
 // turn directions
 typedef enum turn_direction {
@@ -90,9 +102,6 @@ public:
     void setDriveSpeedPWM(uint8_t aDriveSpeedPWM);
     void setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt);
     void setDriveSpeedPWMFor2Volt(float aFullBridgeInputVoltageMillivolt);
-
-    void writeMotorValuesToEeprom();
-    void readMotorValuesFromEeprom();
 
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
     void getStartSpeedPWM(void (*aLoopCallback)(void)); // aLoopCallback must call readCarDataFromMPU6050Fifo()
@@ -146,10 +155,18 @@ public:
     /*
      * Functions for rotation
      */
-    void setFactorDegreeToMillimeter(float aFactorDegreeToMillimeter);
     void startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed = false);
     void rotate(int aRotationDegrees, turn_direction_t aTurnDirection = TURN_IN_PLACE, bool aUseSlowSpeed = false,
             void (*aLoopCallback)(void) = NULL);
+    void setMillimeterPer256Degree(uint16_t aMillimeterPerDegree);
+    void setMillimeterPer256DegreeInPlace(uint16_t aMillimeterPerDegreeInPlace);
+
+    uint16_t MillimeterPer256Degree;
+    uint16_t MillimeterPer256DegreeInPlace;
+
+    bool readCarValuesFromEeprom();
+    void writeCarValuesToEeprom();
+    void printCalibrationValues(Print *aSerial);
 
 #if defined(USE_MPU6050_IMU)
     IMUCarData IMUData;

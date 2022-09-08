@@ -51,8 +51,8 @@ uint8_t sSensorChangeCallCountForZeroAdjustment;
 float sYZeroValueAdded; // The accumulator for the values of the first 8 calls.
 float sYZeroValue = 0;
 
-struct positiveNegativeSlider sAccelerationLeftRightSliders;
-struct positiveNegativeSlider sAccelerationForwardBackwardSliders;
+struct positiveNegativeSlider sAccelerationLeftRightSliders;        // Left is positive slider
+struct positiveNegativeSlider sAccelerationForwardBackwardSliders;  // Forward is positive slider
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 BDButton TouchButtonTurnMode;
@@ -116,20 +116,80 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         BlueDisplay1.playTone(24);        // feedback for zero value acquired
     } else {
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+        /*
+         * Regular operation here
+         * Forward backward handling
+         * We operate with speed and direction instead of signed speed, because direction postprocessing is easier then
+         */
+        int tForwardBackwardValue = -((aSensorCallbackInfo->ValueY - sYZeroValue) * (MAX_SPEED_PWM / 10)); // Scale value to 0 to MAX_SPEED_PWM
+        uint8_t tDirection = DIRECTION_FORWARD;
+        bool tDirectionForward = true;
+        if (tForwardBackwardValue < 0) {
+            tDirection = DIRECTION_BACKWARD;
+            tDirectionForward = false;
+            tForwardBackwardValue = -tForwardBackwardValue;
+        }
+        tForwardBackwardValue = setPositiveNegativeSliders(&sAccelerationForwardBackwardSliders, (unsigned int)tForwardBackwardValue,
+                tDirectionForward, SPEED_DEAD_BAND);
+
+        //Print speedPWM as value of bottom slider
+        sprintf(sStringBuffer, "%3d", tForwardBackwardValue);
+        SliderBackward.printValue(sStringBuffer);
+
+        /*
+         * Left right handling
+         */
+        int tLeftRightValue = aSensorCallbackInfo->ValueX * (MAX_SPEED_PWM / 10); // Scale value
+        bool tDirectionLeft = true;
+        if (tLeftRightValue < 0) {
+            tDirection |= DIRECTION_RIGHT;
+            tDirectionLeft = false;
+            tLeftRightValue = -tLeftRightValue;
+        } else if (tLeftRightValue > 0) {
+            tDirection |= DIRECTION_LEFT;
+        }
+        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, (unsigned int)tLeftRightValue, tDirectionLeft, SPEED_DEAD_BAND);
+
+        /*
+         * Direction postprocessing
+         */
+        if (tForwardBackwardValue == 0 && tLeftRightValue == 0) {
+            tDirection = DIRECTION_STOP;
+        }
+        if(tLeftRightValue == 0 || tForwardBackwardValue > 2 * tLeftRightValue) {
+            //suppress left right
+            tDirection &= ~DIRECTION_LEFT_RIGHT_MASK;
+        }
+        if (tForwardBackwardValue == 0 || tLeftRightValue > 2 * tForwardBackwardValue) {
+            //suppress forward backward
+            tDirection &= ~DIRECTION_FORWARD_BACKWARD_MASK;
+        }
+        if(sTurnModeEnabled) {
+            tDirection |= DIRECTION_TURN;
+        }
+
+        unsigned int tSpeedPWM = max(tForwardBackwardValue, tLeftRightValue);
+        // reapply dead band;
+        tSpeedPWM += SPEED_DEAD_BAND;
+        // overflow handling since analogWrite only accepts byte values
+        if (tSpeedPWM > MAX_SPEED_PWM) {
+            tSpeedPWM = MAX_SPEED_PWM;
+        }
+        RobotCar.setSpeedPWMAndDirection(tSpeedPWM, tDirection);
+#else //defined(CAR_HAS_4_MECANUM_WHEELS)
+
         /*
          * Regular operation here
          * Left right handling
+         * We operate with signed speed, because speed for left and right motors can be computed easier
          */
 #if defined(CAR_HAS_4_WHEELS)
         int tLeftRightValue = aSensorCallbackInfo->ValueX * 16.0;
 #else
         int tLeftRightValue = aSensorCallbackInfo->ValueX * 8.0; // Scale value
 #endif
-#if defined(CAR_HAS_4_MECANUM_WHEELS)
-        tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, SPEED_DEAD_BAND);
-#else
         tLeftRightValue = setPositiveNegativeSliders(&sAccelerationLeftRightSliders, tLeftRightValue, LEFT_RIGHT_SENSOR_DEAD_BAND);
-#endif
         /*
          * forward backward handling
          */
@@ -141,38 +201,11 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
          */
         sprintf(sStringBuffer, "%4d", tSpeedPWMValue);
         SliderBackward.printValue(sStringBuffer);
-
-#if defined(CAR_HAS_4_MECANUM_WHEELS)
-        /*
-         * Get direction
-         */
-        uint8_t tDirection = DIRECTION_STOP;
-        if(tSpeedPWMValue > 0) {
-            tDirection = DIRECTION_FORWARD;
-        } else if (tSpeedPWMValue < 0) {
-            tSpeedPWMValue = -tSpeedPWMValue;
-            tDirection = DIRECTION_BACKWARD;
-        }
-        if(tLeftRightValue > 0) {
-            // Left
-            tDirection |= DIRECTION_LEFT;
-        } else if(tLeftRightValue < 0) {
-            tLeftRightValue = - tLeftRightValue;
-            tDirection |= DIRECTION_RIGHT;
-        }
-        if(sTurnModeEnabled) {
-            tDirection |= DIRECTION_TURN;
-        }
-        tSpeedPWMValue = max(tSpeedPWMValue, tLeftRightValue);
-        RobotCar.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue), tDirection);
-#else
-        if(tSpeedPWMValue < 0){
+        if (tSpeedPWMValue < 0) {
             tLeftRightValue = -tLeftRightValue;
         }
-        RobotCar.rightCarMotor.setSpeedPWMAndDirection(
-                speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue));
-        RobotCar.leftCarMotor.setSpeedPWMAndDirection(
-                speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue));
+        RobotCar.rightCarMotor.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue + tLeftRightValue));
+        RobotCar.leftCarMotor.setSpeedPWMAndDirection(speedOverflowAndDeadBandHandling(tSpeedPWMValue - tLeftRightValue));
 #endif
     }
 }

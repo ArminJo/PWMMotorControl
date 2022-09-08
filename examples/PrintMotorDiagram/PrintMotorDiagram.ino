@@ -149,7 +149,7 @@ void loop() {
     int16_t tMaxEncoderCount = MotorUnderTest.EncoderCount;
     delay(1000);
     tMaxSpeed = MotorUnderTest.getAverageSpeed();
-    MotorUnderTest.LastRideEncoderCount = 0;
+    MotorUnderTest.EncoderCount = 0;
     // and decrease
     for (int tPWM = 248; tPWM >= 0; tPWM--) {
         MotorUnderTest.setSpeedPWMAndDirection(tPWM, sMotorDirection);
@@ -169,7 +169,7 @@ void loop() {
         Serial.print(MotorUnderTest.getAverageSpeed());
 
         Serial.print(' ');
-        Serial.print(tMaxEncoderCount - (int16_t) MotorUnderTest.LastRideEncoderCount);
+        Serial.print(tMaxEncoderCount - (int16_t) MotorUnderTest.EncoderCount);
         Serial.println();
     }
 
