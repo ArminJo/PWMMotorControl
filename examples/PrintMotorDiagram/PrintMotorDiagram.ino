@@ -31,6 +31,7 @@
  * You will need to change these values according to your motor, H-bridge and motor supply voltage.
  * You must specify this before the include of "CarPWMMotorControl.hpp" or "EncoderMotor.hpp".
  */
+#define CAR_HAS_ENCODERS            // To get the right pin definitions
 #define USE_ENCODER_MOTOR_CONTROL   // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 //#define USE_ADAFRUIT_MOTOR_SHIELD   // Use Adafruit Motor Shield v2 connected by I2C instead of TB6612 or L298 breakout board.
 //#define USE_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.

@@ -35,7 +35,7 @@
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
 #endif
 
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
 #include "RobotCarGui.h"
 bool doCalibration = false;
 bool receivedStopForCalibration = false;
@@ -77,18 +77,36 @@ void printConfigInfo(Print *aSerial) {
     aSerial->println();
 }
 
+void printConfigPinInfo(uint8_t aConfigPinNumber, const __FlashStringHelper *aConfigPinDescription, Print *aSerial) {
+    aSerial->print(F("Pin "));
+    aSerial->print(aConfigPinNumber);
+    aSerial->print(F(" is"));
+    bool tIsEnabled = digitalRead(aConfigPinNumber) == LOW;
+    if (!tIsEnabled) {
+        aSerial->print(F(" not"));
+    }
+    aSerial->print(F(" connected to ground, "));
+    aSerial->print(aConfigPinDescription);
+    aSerial->print(F(" is "));
+    if (tIsEnabled) {
+        aSerial->println(F("enabled"));
+    } else {
+        aSerial->println(F("disabled"));
+    }
+}
+
 void printProgramOptions(Print *aSerial) {
     aSerial->println();
     aSerial->println(F("Settings:"));
 
-#if !defined(ROBOT_CAR_BLUE_DISPLAY)
+#if !defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
 #  if defined(USE_IR_REMOTE)
     // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
-    Serial.print(F("Listening to IR remote of type "));
-    Serial.print(IR_REMOTE_NAME);
-    Serial.println(F(" at pin " STR(IR_INPUT_PIN)));
+    aSerial->print(F("Listening to IR remote of type "));
+    aSerial->print(IR_REMOTE_NAME);
+    aSerial->println(F(" at pin " STR(IR_INPUT_PIN)));
 #  else
-    Serial.println(F("USE_IR_REMOTE: not defined"));
+    aSerial->println(F("USE_IR_REMOTE: not defined"));
 #  endif
 #endif
 
@@ -113,25 +131,24 @@ void printProgramOptions(Print *aSerial) {
     aSerial->println(F("ADC_INTERNAL_REFERENCE_MILLIVOLT: " STR(ADC_INTERNAL_REFERENCE_MILLIVOLT) " mV"));
     aSerial->println();
 
-#if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
-    aSerial->print(F("Pin " STR(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)));
-    if (digitalRead(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) == HIGH) {
-        aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
-    }
-    aSerial->print(F(" connected to ground. Tone feedback"));
-    if (digitalRead(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) == HIGH) {
-        aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
-    }
-    aSerial->println(F(" enabled."));
-#endif
-
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
     aSerial->println(F("If not connected, run follower demo after " STR(TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS) " ms"));
 #endif
-#if defined(ROBOT_CAR_BLUE_DISPLAY) || !defined(USE_IR_REMOTE)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM) || !defined(USE_IR_REMOTE)
     aSerial->println(
             F(
-                    "Keep distance between " STR(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) " and " STR(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) " cm. Rescan if distance > " STR(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER) " cm"));
+                    "Keep distance between " STR(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) " and " STR(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) " cm. Scan for target up to > " STR(FOLLOWER_TARGET_DISTANCE_MAXIMUM_CENTIMETER) " cm"));
+#endif
+
+#if !defined(USE_IR_REMOTE)
+#  if defined(US_DISTANCE_SENSOR_ENABLE_PIN) // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+    pinMode(US_DISTANCE_SENSOR_ENABLE_PIN, INPUT_PULLUP);
+    printConfigPinInfo(US_DISTANCE_SENSOR_ENABLE_PIN, F("US distance input"), aSerial);
+#  endif
+#  if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
+    pinMode(DISTANCE_TONE_FEEDBACK_ENABLE_PIN, INPUT_PULLUP);
+    printConfigPinInfo(DISTANCE_TONE_FEEDBACK_ENABLE_PIN, F("distance feedback"), aSerial);
+#  endif
 #endif
 }
 
@@ -158,36 +175,6 @@ void initRobotCarPWMMotorControl() {
 #endif
 }
 
-#if defined(CAR_HAS_DISTANCE_SENSOR)
-#include "Distance.h"
-unsigned int getDistanceAndPlayTone() {
-    /*
-     * Get distance
-     */
-#  if !defined(USE_IR_REMOTE)
-#    if defined(US_DISTANCE_SENSOR_ENABLE_PIN)
-    // if US_DISTANCE_SENSOR_ENABLE_PIN is connected to ground we use the US distance as fallback. Useful for testing the difference between both sensors.
-    if (digitalRead(US_DISTANCE_SENSOR_ENABLE_PIN) == HIGH) {
-        sDistanceSourceMode = DISTANCE_SOURCE_MODE_IR_OR_TOF;
-    } else {
-        sDistanceSourceMode = DISTANCE_SOURCE_MODE_US;
-    }
-#    endif
-#    if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
-    if (digitalRead(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) == HIGH) {
-        sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-        noTone(PIN_BUZZER);
-    } else {
-        sDistanceFeedbackMode = DISTANCE_FEEDBACK_MODE;
-    }
-#    endif
-#  endif // !defined(USE_IR_REMOTE)
-
-    unsigned int tCentimeter = getDistanceAsCentimeterAndPlayTone(DISTANCE_TIMEOUT_CM_FOLLOWER, true); // timeout at 150 cm
-    return tCentimeter;
-}
-#endif
-
 /************************************
  * Functions to monitor VIN voltage
  ************************************/
@@ -204,7 +191,7 @@ bool isVINVoltageDividerAttached(uint8_t aPin) {
     pinModeFast(aPin, INPUT);
     readVINVoltageAndAdjustDriveSpeedAndPrint();
     bool tDividerAttached = sVINVoltage > 3.0;
-#  if !defined(NO_APPLICATON_INFO) // requires 1504 bytes program space
+#  if defined(USE_ARDUINO_SERIAL) // requires 1504 bytes program space
     Serial.print(F("VIN voltage divider"));
     if (!tDividerAttached) {
         Serial.print(F("not "));
@@ -246,7 +233,7 @@ bool readVINVoltage() {
 #  endif
 
 #if defined(TRACE)
-#  if defined(ROBOT_CAR_BLUE_DISPLAY)
+#  if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
     BlueDisplay1.debug("VINRawSum=", tVINRawSum);
 #  else
     Serial.print(F("VINRawSum="));
@@ -288,7 +275,7 @@ void readVINVoltageAndAdjustDriveSpeedAndPrint() {
         /*
          * Adjust DriveSpeedPWMFor2Volt according to voltage
          */
-#  if defined(ROBOT_CAR_BLUE_DISPLAY)
+#  if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
         uint8_t tOldDriveSpeedPWM = RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt;
         RobotCar.setDriveSpeedPWMFor2Volt(sVINVoltage);
         sprintf_P(sStringBuffer, PSTR("2 volt PWM %3d -> %3d"), tOldDriveSpeedPWM, RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
@@ -306,16 +293,31 @@ void readVINVoltageAndAdjustDriveSpeedAndPrint() {
 }
 
 /*
- * Start motors direction forward, get voltage after 400 ms and call setDriveSpeedPWMFor2Volt()
+ * Start motors, get voltage after 400 ms and call setDriveSpeedPWMFor2Volt()
  */
 void calibrateDriveSpeedPWMAndPrint() {
 #if defined(MONITOR_VIN_VOLTAGE)
     if (sVINVoltageDividerIsAttached) { // sVINVoltageDividerIsAttached is constant true if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
-        RobotCar.setSpeedPWMAndDirection(MAX_SPEED_PWM / 2);
+        // Turn right to get VIN value under load
+#  if defined(CAR_HAS_4_MECANUM_WHEELS)
+        RobotCar.startRotate(42, TURN_IN_PLACE); // 42 since we just turn for 400 ms
+#  else
+        RobotCar.setSpeedPWM(DEFAULT_DRIVE_SPEED_PWM, -DEFAULT_DRIVE_SPEED_PWM);
+#  endif
         delay(400);
         readVINVoltageAndAdjustDriveSpeedAndPrint();
         RobotCar.stop();
-#  if defined(ROBOT_CAR_BLUE_DISPLAY)
+        delay(400);
+        // Now turn back left
+#  if defined(CAR_HAS_4_MECANUM_WHEELS)
+        RobotCar.startRotate(-42, TURN_IN_PLACE);
+#  else
+        RobotCar.setSpeedPWM(-DEFAULT_DRIVE_SPEED_PWM, DEFAULT_DRIVE_SPEED_PWM);
+#  endif
+        delay(400);
+        RobotCar.stop();
+
+#  if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
         isPWMCalibrated = true;
 #  endif
     }
@@ -325,17 +327,21 @@ void calibrateDriveSpeedPWMAndPrint() {
 /*
  * For remote control, but not for 2WD car with encoder motor.
  */
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 /*
- * Start a 720 degree turn to be sure to reach 360 degree.
+ * Start a 2 * 360 degree turn (4 * 360 for 2 wheel cars, which turn faster) to be sure to reach 360 degree.
  * The user should press the stop button when 360 degree was reached.
  * Then compute the MillimeterPer256Degreee value used for rotations.
+ *
  * If a IR stop command is received in the first 4 seconds after start of rotation, it is taken as abort command.
+ * If no IR command is received, it is also taken as abort. This enable an easy check
+ * if calibration is correct, i.e. if the 720 degree are reached.
+ *
  * @return true if aborted or timeout
  */
 bool calibrateRotation(turn_direction_t aTurnDirection) {
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
 #  if VERSION_BLUE_DISPLAY_HEX >= VERSION_HEX_VALUE(3, 0, 3)
 #    if defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS)
     BlueDisplay1.debug(F("Press stop button at 360 deg.")); // Message must be less than 32 bytes
@@ -352,8 +358,8 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
     TouchButtonRobotCarStartStop.setValueAndDraw(true);
 #  endif
     receivedStopForCalibration = false; // Init
-#else // defined(ROBOT_CAR_BLUE_DISPLAY)
-#  if !defined(NO_APPLICATON_INFO) || defined(LOCAL_DEBUG)
+#else // defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
+#  if defined(USE_ARDUINO_SERIAL) || defined(LOCAL_DEBUG)
 // requires 1504 bytes program space
 #    if defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS)
     Serial.println(F("Press stop button at 360 degree"));
@@ -362,7 +368,7 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
 #    endif
 #  endif
     IRDispatcher.requestToStopReceived = false;
-#endif // defined(ROBOT_CAR_BLUE_DISPLAY)
+#endif // defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
     /*
      * Initialize
      */
@@ -378,7 +384,7 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
     RobotCar.startRotate(1440, aTurnDirection);
 #endif
     while (RobotCar.updateMotors()) { // wait for 720 degree
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
         if (receivedStopForCalibration) {
 #else
         if (IRDispatcher.requestToStopReceived) {
@@ -388,10 +394,10 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
              * Here we received a stop key from user. The stop command doStop() is NOT executed, it is scheduled.
              */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-            uint16_t tNewMillimeterPer256Degree = RobotCar.rightCarMotor.getCurrentDistanceMillimeter();
+            uint16_t tNewMillimeterPer256Degree = RobotCar.rightCarMotor.getDistanceMillimeter();
 #else
             unsigned long tMillisPer360Degree = millis() - tStartMillis;
-#  if defined(LOCAL_DEBUG) && !defined(ROBOT_CAR_BLUE_DISPLAY)
+#  if defined(LOCAL_DEBUG) && !defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
             Serial.print(F("Millis for 360 degree="));
             Serial.println(tMillisPer360Degree);
 #  endif
@@ -420,7 +426,7 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
             } else {
                 RobotCar.MillimeterPer256Degree = tNewMillimeterPer256Degree;
             }
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
             BlueDisplay1.debug("mm/256deg=", tNewMillimeterPer256Degree);
 #else
             Serial.print(F("MillimeterPer256Degreee="));
@@ -428,18 +434,18 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
 #endif
 
             RobotCar.stop();
-#if !defined(ROBOT_CAR_BLUE_DISPLAY)
+#if !defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
             IRDispatcher.requestToStopReceived = false; // to end this loop we receive a stop command
 #endif
             return false;
         }
-#if defined(ROBOT_CAR_BLUE_DISPLAY)
+#if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
         checkAndHandleEvents();
 #endif
     }
     return true;
 }
-#endif // #if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+#endif // #if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 
 /*
  * Check VIN every 2 seconds (PRINT_VOLTAGE_PERIOD_MILLIS) and print if changed
@@ -461,7 +467,7 @@ void checkVinPeriodicallyAndPrintIfChanged() {
              * Check if voltage has changed (44 bytes)
              */
             if (readVINVoltage()) {
-#    if !defined(NO_APPLICATON_INFO) // requires 1504 bytes program space
+#    if defined(USE_ARDUINO_SERIAL) // requires 1504 bytes program space
                 Serial.print(F("VIN="));
                 Serial.print(sVINVoltage);
                 Serial.println(F("V"));

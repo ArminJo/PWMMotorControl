@@ -39,7 +39,7 @@
 //#define TBB6612_4WD_4NIMH_VIN_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 NiMh + VIN voltage divider.
 //#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 2 Li-ion.
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define TBB6612_4WD_2LI_ION_DIRECT_BASIC_CONFIGURATION // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN
+//#define TBB6612_4WD_2LI_ION_DIRECT_BASIC_CONFIGURATION // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN and not to UNO power jack
 //#define TBB6612_4WD_2LI_ION_DIRECT_VIN_CONFIGURATION  // China set with TB6612 mosfet bridge + 2 Li-ion direct + VIN voltage divider
 //#define L298_2WD_4AA_BASIC_CONFIGURATION              // China 2WD set with L298 bridge and Uno board with series diode for VIN + 4 AA batteries. DEFAULT.
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
@@ -68,6 +68,7 @@
 //#define US_SENSOR_SUPPORTS_1_PIN_MODE   // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones.
 //                                           Modify HC-SR04 by connecting 10kOhm between echo and trigger and then use only trigger pin.
 //#define CAR_HAS_IR_DISTANCE_SENSOR      // A Sharp GP2Y0A21YK / 1080 IR distance sensor is mounted.
+//#define CAR_HAS_3_IR_FOR_LINE_FOLLOWER  // A CTRT5000 3 channel IR track sensor is mounted.
 //#define CAR_HAS_TOF_DISTANCE_SENSOR     // A VL53L1X TimeOfFlight distance sensor is mounted.
 //#define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars). 0 is right, 180 is left.
 //#define CAR_HAS_ENCODERS                // 2 slot type slot-type photo interrupter are mounted and connected with pin 2 and 3.
@@ -103,7 +104,7 @@
  * Disable features of RobotCarBlueDisplay to save program memory
  */
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes - is enabled by default
-//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 //#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 /**************************
  * START OF CONFIGURATIONS
@@ -117,7 +118,7 @@
 #define CAR_HAS_MPU6050_IMU                 // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define L298_IR_DISTANCE_CONFIGURATION
 #define CONFIG_NAME         "2WD + L298 + 2 Li-ion + IR distance" // BASIC_CONFIG_NAME and CONFIG_NAME is printed by printConfigInfo()
@@ -131,7 +132,7 @@
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define L298_2WD_2LI_ION_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + IR distance + VIN divider"
@@ -167,7 +168,7 @@
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+#define DO_NOT_USE_ARDUINO_SERIAL         // Saves up to 2886 bytes
 //#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define TBB6612_4WD_4AA_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + VIN divider + MPU6050"
@@ -184,7 +185,7 @@
 #endif
 
 /*
- * TBB6612_4WD_4AA_VIN_CONFIGURATION with 2 Li-ion instead of 4AA. Power supply is connected direct to VIN.
+ * TBB6612_4WD_4AA_VIN_CONFIGURATION with 2 Li-ion instead of 4AA. Power supply is connected direct to VIN and not to UNO power jack.
  * !!! You must cut connection of VIN to servo row and instead connect servo row to 5 volt (at analog row) on Sensor Shield!!!
  * The Uno board has a series diode at the power jack connector which we avoid here.
  */
@@ -236,7 +237,7 @@
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
 #define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + encoder + TOF distance + MPU6050"
@@ -251,7 +252,7 @@
 #define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
 #define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define DO_NOT_USE_ARDUINO_SERIAL     // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION
 #define CONFIG_NAME         " + encoder + IR distance"
@@ -295,7 +296,7 @@
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
 #define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 #define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #define BASIC_CONFIG_NAME   "4WD + Breadboard TB6612  + 2 Li-ion + VIN divider + servo head down + MPU6050"
 #endif
@@ -449,7 +450,7 @@
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
-//#define NO_APPLICATON_INFO              // Saves up to 2886 bytes
+//#define DO_NOT_USE_ARDUINO_SERIAL     // Saves up to 2886 bytes
 //#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
 #  if !defined(BASIC_CONFIG_NAME)
 #define BASIC_CONFIG_NAME   "2WD + L298 + 4 AA"

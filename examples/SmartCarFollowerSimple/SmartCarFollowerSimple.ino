@@ -47,7 +47,7 @@
 //#define TRACE
 //#define DEBUG
 //#define INFO
-#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+#include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
@@ -68,7 +68,7 @@
 #else
 #include <Servo.h>
 #endif
-#include "HCSR04.h"
+#include "HCSR04.hpp"
 #include "CarPWMMotorControl.hpp"
 
 Servo DistanceServo;

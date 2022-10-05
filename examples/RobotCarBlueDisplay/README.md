@@ -10,7 +10,7 @@
 - To overcome the drawbacks of ultrasonic sensors, an additional IR or TOF (TimeOfFlight) sensor can be mounted to the servo.
 - Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
 
-**Just overwrite the function doUserCollisionDetection() to test your own skill**.
+**Just overwrite the function doUserCollisionAvoiding() to test your own skill**.
 You may also overwrite the function fillAndShowForwardDistancesInfo(), if you use your own scanning method.
 
 This example requires the **[PWMMotorControl library](https://github.com/ArminJo/PWMMotorControl)** to control the motors,
@@ -26,6 +26,8 @@ the **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** for Smartp
 | ![Encoder fork sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg) | ![Servo mounting](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ServoAtTopBack.jpg) |
 | VIN sensing with motor shield | Red car with Sharp GP2Y0A21YK distance sensor |
 | ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg) | https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg  |
+| Youtube video of mecanum demo | Youtube video of mecanum car controlled by the accelerator sensors of the tablet |
+| [![Arduino Mecanum Wheel Car Demo](https://i.ytimg.com/vi/https://youtu.be/VX92jeqr8_g/hqdefault.jpg)](https://www.youtube.com/watch?v=https://youtu.be/VX92jeqr8_g) | [![Arduino Mecanum Wheel Car Sensor Drive Demo](https://i.ytimg.com/vi/lhlxLTj9Mrg/hqdefault.jpg)](https://www.youtube.com/watch?v=lhlxLTj9Mrg) |
 
 # SCREENSHOTS
 | Start page | Test page |
@@ -41,7 +43,7 @@ Automatic control page with detected wall at right
 - Red bars are distanced below the distance of one ride per scan (default 20 cm) -> collision during next "scan and ride" cycle if obstacle is ahead.
 - Yellow bars are the values between the 2 thresholds (default 20 cm to 40 cm).
 - The tiny white bars are the distances computed by the doWallDetection() function. They overlay the green (assumed timeout) values.
-- The tiny black bar is the rotation chosen by doCollisionDetection() function.
+- The tiny black bar is the rotation chosen by doCollisionAvoiding() function.
 
 # Wall detection
 Ultrasonic distance measurement has a problem with walls.

@@ -1,5 +1,5 @@
 /*
- * PWMDCMotor.h
+ * PWMDcMotor.h
  *
  * Motor control has 2 parameters:
  * 1. SpeedPWM / PWM which is ignored for BRAKE or RELEASE. This library also accepts signed speed (including the direction as sign).
@@ -196,10 +196,10 @@
  * The value must be low enough to avoid spinning wheels
  * I measured maximum brake acceleration with blocking wheels as 320 to 350 cm/s^2 on varnished wood. 6 to 7 cm/s every 20 ms.
  * I measured maximum positive acceleration with spinning wheels as 2000 to 2500 mm/s^2 on varnished wood. 4 to 5 cm/s every 20 ms.
- * Measured values up:   1V -> 1600mm/s^2, 2.5V -> 2000mm/s^2, the optimum.
+ * Measured values up:   1V -> 1600mm/s^2, 2.5V -> 2000mm/s^2, the optimum. 3000 leads to spinning wheels.
  * Measured values down: 2.5V -> 2500mm/s^2
  */
-#define RAMP_UP_VALUE_OFFSET_MILLIVOLT   2000 // Experimental value, 2500 seems to be optimum. 3000 leads to spinning wheels.
+#define RAMP_UP_VALUE_OFFSET_MILLIVOLT   2200 // Above DEFAULT_DRIVE_MILLIVOLT to avoid ramps for turns
 #define RAMP_UP_VALUE_OFFSET_SPEED_PWM   ((RAMP_UP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
 #define RAMP_DOWN_VALUE_OFFSET_MILLIVOLT 2500 // Experimental value. 3000 may be optimum.
 #define RAMP_DOWN_VALUE_OFFSET_SPEED_PWM ((RAMP_UP_VALUE_OFFSET_MILLIVOLT * (long)MAX_SPEED_PWM) / FULL_BRIDGE_OUTPUT_MILLIVOLT)
@@ -411,7 +411,7 @@ public:
      * Currently SpeedPWMCompensation is in steps of 2 and only one motor can have a positive value, the other is set to zero.
      * Value is computed in EncoderMotor::synchronizeMotor()
      */
-    uint8_t SpeedPWMCompensation;   // Positive value!
+    uint8_t SpeedPWMCompensation;   // Positive value to be subtracted from TargetPWM
     uint8_t RequestedSpeedPWM; // Last PWM requested for motor. Stopped if RequestedSpeedPWM == 0. It is always >= CurrentCompensatedSpeedPWM
     uint8_t CurrentCompensatedSpeedPWM; // RequestedSpeedPWM - SpeedPWMCompensation.
     uint8_t CurrentDirection; // Used for speed and distance. Contains DIRECTION_FORWARD, DIRECTION_BACKWARD but NOT STOP_MODE_BRAKE, STOP_MODE_RELEASE.

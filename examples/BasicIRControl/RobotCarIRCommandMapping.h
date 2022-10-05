@@ -299,6 +299,9 @@ const struct IRToCommandMappingStruct IRMapping[] = {
         { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING, &doCalibrate, calibrate }, /**/
 #endif
 
+        { COMMAND_STOP, IR_COMMAND_FLAG_BLOCKING, &doStop, stop }, /**/
+        { COMMAND_RESET, IR_COMMAND_FLAG_BLOCKING, &doReset, reset }, /**/
+
         /*
          * Commands, which can be executed always, since the are short. Like set mode etc.
          */
@@ -319,10 +322,6 @@ const struct IRToCommandMappingStruct IRMapping[] = {
         { COMMAND_BACKWARD, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &goBackward, backward }, /**/
         { COMMAND_RIGHT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnRight, right }, /**/
         { COMMAND_LEFT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnLeft, left }, /**/
-        { COMMAND_DEFAULT_SPEED, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &doDefaultSpeed, speedDefault }, /**/
-        { COMMAND_STOP, IR_COMMAND_FLAG_IS_STOP_COMMAND, &doStop, stop }, /**/
-        { COMMAND_RESET, IR_COMMAND_FLAG_IS_STOP_COMMAND, &doReset, reset }
-
-};
+        { COMMAND_DEFAULT_SPEED, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &doDefaultSpeed, speedDefault } };
 
 #endif // _IR_COMMAND_MAPPING_H

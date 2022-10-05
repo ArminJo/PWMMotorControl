@@ -44,17 +44,17 @@
  *
  * Motor Control
  * PIN  I/O Function
- *   2  I   Right motor encoder interrupt input
- *   3  I   Left motor encoder interrupt input / fallback to US distance sensor if IR distance sensor available
- *   4  O   Right motor fwd
- *   5  O   Right motor PWM
- *   6  O   Left motor PWM
- *   7  O   Right motor back
- *   8  O   Left motor fwd
- *   9  O/I Left motor back / IR remote control signal in - on Adafruit Motor Shield marked as Servo Nr. 2
+ *   2  I   Right motor encoder interrupt input | Force use of US distance sensor if IR distance sensor is available
+ *   3  I   Left motor encoder interrupt input  | Distance tone feedback enable pin
+ *   4  O   Right motor fwd     | Line follower sensor left
+ *   5  O   Right motor PWM     | Line follower sensor middle
+ *   6  O   Left motor PWM      | Line follower sensor right
+ *   7  O   Right motor back    | Force use of US distance sensor enable pin
+ *   8  O   Left motor fwd      | Distance tone feedback enable pin
+ *   9  O/I Left motor back     | IR remote control signal in - on Adafruit Motor Shield marked as Servo Nr. 2
  *
  * PIN  I/O Function
- *  10  O   Servo US distance - on Adafruit Motor Shield marked as Servo Nr. 1
+ *  10  O   Servo distance sensor - on Adafruit Motor Shield marked as Servo Nr. 1
  *  11  I/O IR remote control signal in / Servo laser pan
  *  12  O   Buzzer for UNO board / Servo laser tilt
  *  13  O   Laser power
@@ -70,22 +70,33 @@
  *  A7  O   Only on NANO - VIN/11, 1MOhm to VIN, 100kOhm to ground
  */
 
-#if defined(USE_ENCODER_MOTOR_CONTROL)
+#if defined(CAR_HAS_ENCODERS)
 // This is the default and only required for direct use of EncoderMotor class
-#define RIGHT_MOTOR_INTERRUPT       INT0 // Pin 2
-#define LEFT_MOTOR_INTERRUPT        INT1 // Pin 3
+#define RIGHT_MOTOR_INTERRUPT       INT0 // on pin 2
+#define LEFT_MOTOR_INTERRUPT        INT1 // on pin 3
 #else
-#  if defined(CAR_HAS_US_DISTANCE_SENSOR) && defined(CAR_HAS_IR_DISTANCE_SENSOR)
-#define US_DISTANCE_SENSOR_ENABLE_PIN   3 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
-#  else
+#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#define US_DISTANCE_SENSOR_ENABLE_PIN       2 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+# endif
+#  if defined(CAR_HAS_DISTANCE_SENSOR)
 #define DISTANCE_TONE_FEEDBACK_ENABLE_PIN   3 // If this pin is connected to ground, enable distance feedback
-#  endif
-#endif // defined(USE_ENCODER_MOTOR_CONTROL)
+# endif
+#endif
 
 #if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-#define IR_INPUT_PIN                9 // on Adafruit Motor Shield marked as Servo Nr. 2
+// here pin 4 to 9 are available
+#define LINE_FOLLOWER_LEFT_SENSOR_PIN   4
+#define LINE_FOLLOWER_MID_SENSOR_PIN    5
+#define LINE_FOLLOWER_RIGHT_SENSOR_PIN  6
+#  if defined(CAR_HAS_ENCODERS)             // pin 2 and 3 are already occupied by encoder interrupts
+#    if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#define US_DISTANCE_SENSOR_ENABLE_PIN   7   // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+#    endif
+#define DISTANCE_TONE_FEEDBACK_ENABLE_PIN 8 // If this pin is connected to ground, enable distance feedback
+#  endif
+#define IR_INPUT_PIN                    9   // on Adafruit Motor Shield marked as Servo Nr. 2
 #else
 //2 + 3 are reserved for encoder input
 #define RIGHT_MOTOR_FORWARD_PIN     4 // IN4 <- Label on the L298N board

@@ -129,6 +129,7 @@ public:
     void moveStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveFullStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
+    void moveCenteredSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveRectangle(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveHexagon(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveTriangle0(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
@@ -136,7 +137,7 @@ public:
     void moveBigPlus(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveRhombus(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveTrapezium(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
-    void moveTestDistances(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
+    void moveThreeDirectionsForManualCalibration(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
 
     void doDemo();
 

@@ -20,7 +20,9 @@
 #ifndef _ROBOT_CAR_GUI_HPP
 #define _ROBOT_CAR_GUI_HPP
 
+#if !defined(USE_BLUE_DISPLAY_GUI)
 #define USE_BLUE_DISPLAY_GUI
+#endif
 
 #include "RobotCarGui.h"
 

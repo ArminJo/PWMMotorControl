@@ -18,8 +18,6 @@
 #ifndef _ROBOT_CAR_GUI_H
 #define _ROBOT_CAR_GUI_H
 
-#define USE_BLUE_DISPLAY_GUI
-
 #include "BlueDisplay.h"
 #include "AutonomousDrive.h"
 
@@ -168,7 +166,7 @@ extern BDButton TouchButtonInfo;
 //#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
 extern bool isPWMCalibrated;
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 void calibrateRotation();
 #endif

@@ -19,12 +19,17 @@
 #ifndef _AUTONOMOUS_DRIVE_H
 #define _AUTONOMOUS_DRIVE_H
 
+// These are the default values as defined in Distances.h
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER        22 // If measured distance is less than this value, go backwards
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER        30 // If measured distance is greater than this value, go forward
+#define FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER        70 // Do not accept target with distance greater than this value
+
 /*
  * Different autonomous driving modes
  */
 #define MODE_MANUAL_DRIVE               0
 #define MODE_COLLISION_AVOIDING_BUILTIN 1
-#define MODE_COLLISION_AVOIDING_USER    2 // like MODE_COLLISION_AVOIDING_BUILTIN but use doUserCollisionDetection()
+#define MODE_COLLISION_AVOIDING_USER    2 // like MODE_COLLISION_AVOIDING_BUILTIN but use doUserCollisionAvoiding()
 #define MODE_FOLLOWER                   3
 extern uint8_t sDriveMode;
 
@@ -37,11 +42,6 @@ extern uint8_t sDriveMode;
 extern uint8_t sStepMode;
 extern bool sDoStep;
 
-#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER      22
-#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER      30
-#define FOLLOWER_DISTANCE_DELTA_CENTIMETER   (FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER - FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
-#define FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER  70 // search if target moved to side
-
 /*
  * Used for adaptive collision detection
  */
@@ -51,7 +51,7 @@ extern uint8_t sCentimetersDrivenPerScan; // Encoder counts per US scan in auton
 extern const uint8_t sCentimetersDrivenPerScan; // 20 cm
 #endif
 
-int postProcessAndCollisionDetection();
+int postProcessAndCollisionAvoidingAndDraw();
 void driveAutonomousOneStep();
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
 void driveCollisonAvoidingOneStep();

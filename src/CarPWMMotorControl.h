@@ -74,7 +74,7 @@ struct EepromCarInfoStruct {
 
 // turn directions
 typedef enum turn_direction {
-    TURN_IN_PLACE, TURN_FORWARD, TURN_BACKWARD
+    TURN_IN_PLACE = DIRECTION_STOP, TURN_FORWARD = DIRECTION_FORWARD, TURN_BACKWARD = DIRECTION_BACKWARD
 } turn_direction_t;
 //#define TURN_FORWARD    DIRECTION_FORWARD  // 1
 //#define TURN_BACKWARD   DIRECTION_BACKWARD // 2
@@ -135,7 +135,7 @@ public:
      * For car direction handling
      */
     uint8_t getCarDirection();
-    uint8_t CarDirection;
+    uint8_t CarDirection; // One of DIRECTION_STOP, DIRECTION_FORWARD, DIRECTION_BACKWARD. Exclusively changed by checkAndHandleDirectionChange()
 
     /*
      * Functions for moving a fixed distance
@@ -161,7 +161,7 @@ public:
     void setMillimeterPer256Degree(uint16_t aMillimeterPerDegree);
     void setMillimeterPer256DegreeInPlace(uint16_t aMillimeterPerDegreeInPlace);
 
-    uint16_t MillimeterPer256Degree;
+    uint16_t MillimeterPer256Degree; // Use value for 256 degree to have a better resolution and faster division
     uint16_t MillimeterPer256DegreeInPlace;
 
     bool readCarValuesFromEeprom();
@@ -203,6 +203,7 @@ public:
      * Functions, which directly call motor functions for both motors
      */
     void setSpeedPWM(uint8_t aRequestedSpeedPWM);
+    void setSpeedPWM(int aRequestedSpeedPWMForLeftMotor, int aRequestedSpeedPWMForRightMotor);
     void setDirection(uint8_t aRequestedDirection);
 
     void setSpeedPWMAndDirection(int aRequestedSpeedPWM);

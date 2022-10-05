@@ -25,6 +25,9 @@
 #ifndef _ROBOT_CAR_COMMON_GUI_HPP
 #define _ROBOT_CAR_COMMON_GUI_HPP
 
+#include "HCSR04.h"
+#include "Distance.h"
+
 // A string buffer for BD info output
 char sStringBuffer[128];
 
@@ -161,14 +164,6 @@ void readAndShowDistancePeriodically() {
         if (millis() - sLastDistanceMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
             sLastDistanceMeasurementMillis = millis();
             getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM, false); // use long distance timeout here
-#  if defined(USE_BLUE_DISPLAY_GUI)
-#    if defined(CAR_HAS_US_DISTANCE_SENSOR)
-            showUSDistance();
-#    endif
-#    if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-            showIROrTofDistance();
-#    endif
-#  endif
         }
     }
 }
@@ -177,7 +172,7 @@ void readAndShowDistancePeriodically() {
 #if defined(CAR_HAS_DISTANCE_SERVO)
 void doUSServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
     (void) aTheTouchedSlider; // for the compiler to be happy
-    DistanceServoWriteAndDelay(aValue);
+    DistanceServoWriteAndWaitForStop(aValue);
 }
 #endif
 
@@ -213,7 +208,7 @@ void startStopRobotCar(bool aDoStart) {
          * Stop car
          */
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
-        DistanceServoWriteAndDelay(90);
+        DistanceServoWriteAndWaitForStop(90);
         sDriveMode = MODE_MANUAL_DRIVE;
 #endif
         RobotCar.stop(STOP_MODE_RELEASE);
@@ -283,7 +278,7 @@ bool delayMillisAndCheckForEvent(unsigned long aDelayMillis) {
 }
 #endif // VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
 
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 void calibrateRotation() {
     /*

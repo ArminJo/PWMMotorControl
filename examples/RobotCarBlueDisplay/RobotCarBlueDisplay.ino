@@ -7,7 +7,7 @@
  *  Enables autonomous driving of a 2 or 4 wheel car with an Arduino and a Adafruit Motor Shield V2.
  *  To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the area.
  *  Manual control is by a GUI implemented with a Bluetooth HC-05 Module and the BlueDisplay library.
- *  Just overwrite the 2 functions myOwnFillForwardDistancesInfo() and doUserCollisionDetection() to test your own skill.
+ *  Just overwrite the 2 functions myOwnFillForwardDistancesInfo() and doUserCollisionAvoiding() to test your own skill.
  *
  *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
  *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
@@ -53,6 +53,8 @@
 //#define TBB6612_4WD_4NIMH_VIN_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 NiMh + VIN voltage divider.
 //#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 2 Li-ion.
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
+//#define TBB6612_4WD_2LI_ION_DIRECT_BASIC_CONFIGURATION // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN and not to UNO power jack
+//#define TBB6612_4WD_2LI_ION_DIRECT_VIN_CONFIGURATION  // China set with TB6612 mosfet bridge + 2 Li-ion direct + VIN voltage divider
 //#define L298_2WD_4AA_BASIC_CONFIGURATION              // China 2WD set with L298 bridge and Uno board with series diode for VIN + 4 AA batteries. DEFAULT.
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
@@ -64,13 +66,13 @@
  * For moving exact distances and turns you may modify this values according to your actual car configuration
  */
 //#define DEFAULT_CIRCUMFERENCE_MILLIMETER     220  // The circumference of your wheel in millimeter
-#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+#include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
 /*
  * Enabling program features dependent on car configuration
  */
-#define ROBOT_CAR_BLUE_DISPLAY       // The program name, used by RobotCarUtils.hpp
+#define ROBOT_CAR_BLUE_DISPLAY_PROGRAM       // The program name, used by RobotCarUtils.hpp
 
 #if defined(CAR_HAS_ENCODERS)
 #define USE_ENCODER_MOTOR_CONTROL   // Enable if by default, if available
@@ -94,15 +96,20 @@ Servo TiltServo;
 /*
  * Enable functionality of this program
  */
-#if defined(NO_APPLICATON_INFO)     // Disables printing of any info with Serial.print. Saves 1748 bytes of program memory
+#if defined(DO_NOT_USE_ARDUINO_SERIAL)     // No printing of any info with Serial.print or we get "multiple definition of __vector_18". Saves 1748 bytes of program memory
 #define USE_SIMPLE_SERIAL           // We can use simple serial here, since no Serial.print are active. Saves 1224 bytes
+#else
+#define USE_ARDUINO_SERIAL          // To avoid the double negation !defined(DO_NOT_USE_ARDUINO_SERIAL)
 #endif
 #define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
-//#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
+// Must be before #include "BlueDisplay.hpp"
+#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#endif
 #define PRINT_VOLTAGE_PERIOD_MILLIS         500 // we only print if changed
 #define VOLTAGE_LIPO_LOW_THRESHOLD          6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
 #define VOLTAGE_USB_THRESHOLD               5.5
-#define VOLTAGE_USB_THRESHOLD_MILLIVOLT     5500 // required for preprocessor condition
+#define VOLTAGE_USB_UPPER_THRESHOLD_MILLIVOLT 5200 // Assume USB powered, if voltage is lower, -> disable auto move after timeout.
 #define VOLTAGE_TOO_LOW_DELAY_ONLINE        3000 // display VIN every 500 ms for 3 seconds
 #define VOLTAGE_TOO_LOW_DELAY_OFFLINE       1000 // wait for 1 seconds after double beep
 
@@ -116,14 +123,6 @@ Servo TiltServo;
 //#define TEST_TIMING
 
 /*
- * Configuration / correction values supported by this program
- */
-#if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
-// Must be before #include "BlueDisplay.hpp"
-#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L    // Value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
-#endif
-
-/*
  * Values used in distance.hpp
  */
 //#define IR_SENSOR_TYPE_430            // 4 to 30 cm, 18 ms, GP2YA41SK0F
@@ -132,7 +131,7 @@ Servo TiltServo;
 //#define IR_SENSOR_TYPE_100550         // 100 to 550 cm, 18 ms, GP2Y0A710K0F
 //#define TOF_OFFSET_MILLIMETER      10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
 //#define DISTANCE_SERVO_TRIM_DEGREE  5 // This value is internally added to all servo writes.
-int doUserCollisionDetection();
+int doUserCollisionAvoiding();
 
 #include "CarPWMMotorControl.hpp"   // include source of library
 
@@ -173,19 +172,19 @@ void initServos();
 #define MINIMUM_DISTANCE_TO_SIDE 21
 #define MINIMUM_DISTANCE_TO_FRONT 35
 
-int doUserCollisionDetection() {
+int doUserCollisionAvoiding() {
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
-// if left three distances are all less than 21 centimeter then turn right.
+    // If left three distances are all less than 21 centimeter, then turn right.
     if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT] <= MINIMUM_DISTANCE_TO_SIDE
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT - 1] <= MINIMUM_DISTANCE_TO_SIDE
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_LEFT - 2] <= MINIMUM_DISTANCE_TO_SIDE) {
-        return -90;
-        // check right three distances are all less then 21 centimeter than turn left.
+        return -20;
+        // If right three distances are all less then 21 centimeter than turn left.
     } else if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_RIGHT] <= MINIMUM_DISTANCE_TO_SIDE
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_RIGHT + 1] <= MINIMUM_DISTANCE_TO_SIDE
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_RIGHT + 2] <= MINIMUM_DISTANCE_TO_SIDE) {
-        return 90;
-        // check front distance is longer then 35 centimeter than do not turn.
+        return 20;
+        // If front distance is longer then 35 centimeter than do not turn.
     } else if (sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_1] >= MINIMUM_DISTANCE_TO_FRONT
             && sForwardDistancesInfo.ProcessedDistancesArray[INDEX_FORWARD_2] >= MINIMUM_DISTANCE_TO_FRONT) {
         return 0;
@@ -194,8 +193,7 @@ int doUserCollisionDetection() {
          * here front distance is less then 35 centimeter:
          * go to max side distance
          */
-        // formula to convert index to degree.
-        return DEGREES_PER_STEP * sForwardDistancesInfo.IndexOfMaxDistance + START_DEGREES - 90;
+        return sForwardDistancesInfo.DegreeOfMaxDistance;
     } else {
         // Turn backwards.
         return 180;
@@ -240,7 +238,7 @@ void setup() {
 
     tone(PIN_BUZZER, 2200, 50); // GUI initialized (if connected)
 
-#if !defined(NO_APPLICATON_INFO)
+#if defined(USE_ARDUINO_SERIAL)
     if (BlueDisplay1.isConnectionEstablished())
 #else
     if (true)
@@ -253,7 +251,7 @@ void setup() {
 
 
     } else {
-#if !defined(NO_APPLICATON_INFO) // requires 1504 bytes program space
+#if defined(USE_ARDUINO_SERIAL) // requires 1504 bytes program space
 #  if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
 #    if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/|| defined(SERIALUSB_PID) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
@@ -348,7 +346,7 @@ void loop() {
         RobotCar.readCarValuesFromEeprom();
         displayRotationValues();
         calibrateDriveSpeedPWMAndPrint();
-#  if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+#  if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 
 #    if defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS)
@@ -375,7 +373,7 @@ void loop() {
      */
     if (!sTimeoutDemoDisable && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)
 #if defined(MONITOR_VIN_VOLTAGE) && (FULL_BRIDGE_INPUT_MILLIVOLT > VOLTAGE_USB_THRESHOLD_MILLIVOLT)
-            && (sVINVoltage > (VOLTAGE_USB_THRESHOLD_MILLIVOLT / 1000.0))
+            && (sVINVoltage > (VOLTAGE_USB_UPPER_THRESHOLD_MILLIVOLT / 1000.0))
 #endif
             ) {
         sTimeoutDemoDisable = true;
@@ -386,7 +384,7 @@ void loop() {
         playRandomMelody();
         delayAndLoopGUI(1000);
 #endif
-#if !defined(NO_APPLICATON_INFO)
+#if defined(USE_ARDUINO_SERIAL)
         Serial.println(F("Timeout -> running follower demo"));
 #endif
         // check again, maybe we are connected now
@@ -496,7 +494,7 @@ ISR(TIMER2_COMPB_vect) {
 void resetServos() {
 #if defined(CAR_HAS_DISTANCE_SERVO)
     sLastDistanceServoAngleInDegrees = 0; // to force setting of 90 degree
-    DistanceServoWriteAndDelay(90, false);
+    DistanceServoWriteAndWaitForStop(90, false);
 #endif
 #if defined(CAR_HAS_PAN_SERVO)
     PanServo.write(90);

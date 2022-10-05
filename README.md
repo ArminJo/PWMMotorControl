@@ -128,6 +128,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | `DO_NOT_SUPPORT_RAMP` | disabled | Enabling saves 378 bytes program memory. |
 | `DO_NOT_SUPPORT_AVERAGE_SPEED` | disabled | Enabling disables the function getAverageSpeed() and saves 44 bytes RAM per motor and 156 bytes program memory. |
 | `USE_SOFT_I2C_MASTER` | disabled | Saves up to 2110 bytes program memory and 200 bytes RAM for I2C communication compared with Arduino Wire. |
+| `ENABLE_MOTOR_LIST_FUNCTIONS` | disabled | Enables the convenience functions `*AllMotors*()` and `*forAll()`. Requires up to additional 80 bytes program space and 7 bytes RAM. |
 
 ## Default car geometry dependent values used in this library
 These values are for a standard 2 WD car as can be seen on the pictures below.

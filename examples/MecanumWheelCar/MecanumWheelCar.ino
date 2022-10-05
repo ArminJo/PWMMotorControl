@@ -24,14 +24,13 @@
 
 #include <Arduino.h>
 
-#define MECANUM_BASIC_CONFIGURATION               // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
-#include "RobotCarConfigurations.h" // sets e.g. USE_ENCODER_MOTOR_CONTROL, USE_ADAFRUIT_MOTOR_SHIELD
+#define MECANUM_BASIC_CONFIGURATION         // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
+#include "RobotCarConfigurations.h"         // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
-#define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available
+#define MONITOR_VIN_VOLTAGE                 // Enable monitoring of VIN voltage for exact movements, if available
 
 #include "CarPWMMotorControl.hpp"
-//#include "MecanumWheelCarPWMMotorControl.hpp"
 
 #include "RobotCarUtils.hpp" // for initRobotCarPWMMotorControl
 
@@ -39,6 +38,9 @@
 #define DURATION_OF_SUB_MOVEMENTS_MILLIS    1500
 #define DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS  500
 #define DELAY_BETWEEN_MOVES_MILLIS          4000
+
+void doTurnDemo();
+void doSquareAndStar();
 
 void setup() {
 // initialize the digital pin as an output.
@@ -58,21 +60,20 @@ void setup() {
      * Tone feedback for end of boot
      */
     tone(PIN_BUZZER, 2200, 100);
-    RobotCar.setSpeedPWMAndDirection(0);
+    RobotCar.stop(0);
     delay(2000);
 
     /*
-     * Move car forward and measure voltage with load to enable exact turns
+     * Move car and measure voltage with load to enable exact turns
      */
     calibrateDriveSpeedPWMAndPrint();
-
     delay(2000);
 
-    // Test distances
-//    RobotCar.moveTriangle45(DEMO_SPEED, 4000, 2000);
-//    delay(10000);
-//    RobotCar.moveTestDistances(DEMO_SPEED, 4000, 5000);
-//    delay(5000);
+    // Test different directions for manual calibration
+    //    RobotCar.moveThreeDirectionsForManualCalibration(DEMO_SPEED, 4000, 5000);
+    //    delay(5000);
+    //    RobotCar.moveTriangle45(DEMO_SPEED, 4000, 2000);
+    //    delay(10000);
 
     Serial.println(F("End of setup"));
 }
@@ -81,68 +82,64 @@ void loop() {
     checkVinPeriodicallyAndPrintIfChanged();
 
     /*
-     * do demo
+     * Do moves
      */
     Serial.println(F("Start demo"));
     tone(PIN_BUZZER, 2200, 100);
     delay(200);
-    RobotCar.moveSqare(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_MOVES_MILLIS);
+    doSquareAndStar();
 
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    RobotCar.moveStar(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_MOVES_MILLIS);
-
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    RobotCar.moveTrapezium(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_MOVES_MILLIS);
+    //    delay(DELAY_BETWEEN_MOVES_MILLIS);
+    //    RobotCar.moveTrapezium(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
     /*
      * Do turns
      */
     tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    Serial.println(F("Turn right"));
-    RobotCar.rotate(-180, TURN_IN_PLACE);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_STOP | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-
-    Serial.println(F("Turn left"));
-    RobotCar.rotate(180, TURN_IN_PLACE);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_STOP | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-
-    Serial.println(F("Turn front right"));
-    RobotCar.rotate(-90, TURN_FORWARD);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_FORWARD | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-
-    Serial.println(F("Turn front left"));
-    RobotCar.rotate(90, TURN_FORWARD);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_FORWARD | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-
-    Serial.println(F("Turn back left"));
-    RobotCar.rotate(90, TURN_BACKWARD);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_BACKWARD | DIRECTION_LEFT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-
-    Serial.println(F("Turn back right"));
-    RobotCar.rotate(-90, TURN_BACKWARD);
-//    RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED,
-//    DIRECTION_BACKWARD | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    delay(DELAY_BETWEEN_MOVES_MILLIS);
-
+    delay(2000);
+    doTurnDemo();
     tone(PIN_BUZZER, 2200, 200);
     delay(400);
     tone(PIN_BUZZER, 2200, 200);
 
-    delay(60000);
+    delay(30000);
+}
+
+/*
+ * to keep moving area small we
+ */
+void doSquareAndStar() {
+    Serial.println(F("Move square 4 x " STR(DURATION_OF_SUB_MOVEMENTS_MILLIS) " ms"));
+    RobotCar.moveCenteredSqare(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    delay(DELAY_BETWEEN_MOVES_MILLIS);
+
+    Serial.println(F("Move star"));
+    RobotCar.moveStar(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+}
+
+void doTurnDemo() {
+    Serial.println(F("Turn right"));
+    RobotCar.rotate(-180, TURN_IN_PLACE);
+    // Direct command to turn is:
+    // RobotCar.setSpeedPWMAndDirectionAndDelay(DEMO_SPEED, DIRECTION_STOP | DIRECTION_RIGHT | DIRECTION_TURN, DURATION_OF_SUB_MOVEMENTS_MILLIS);
+    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+
+    Serial.println(F("Turn left"));
+    RobotCar.rotate(180, TURN_IN_PLACE);
+    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+
+    Serial.println(F("Turn front right"));
+    RobotCar.rotate(-90, TURN_FORWARD);
+    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+
+    Serial.println(F("Turn front left"));
+    RobotCar.rotate(90, TURN_FORWARD);
+    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+
+    Serial.println(F("Turn back left"));
+    RobotCar.rotate(90, TURN_BACKWARD);
+    delay(DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+
+    Serial.println(F("Turn back right"));
+    RobotCar.rotate(-90, TURN_BACKWARD);
 }

@@ -533,7 +533,7 @@ bool MecanumWheelCarPWMMotorControl::isStateRamp() {
 }
 
 /**
- * Set distances and SpeedPWM (DriveSpeedPWM or DEFAULT_START_SPEED_PWM) for 2 motors to turn the requested angle
+ * Set distances and SpeedPWM (DriveSpeedPWMFor2Volt or DEFAULT_START_SPEED_PWM) for 2 motors to turn the requested angle
  * @param  aRotationDegrees positive -> turn left, negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
  * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact
@@ -559,7 +559,7 @@ void MecanumWheelCarPWMMotorControl::startRotate(int aRotationDegrees, turn_dire
     }
     setDirection(tDirection | DIRECTION_TURN);
 
-    uint8_t tTurnSpeed = rightCarMotor.DriveSpeedPWM;
+    uint8_t tTurnSpeed = rightCarMotor.DriveSpeedPWMFor2Volt;
     if (aUseSlowSpeed) {
         tTurnSpeed = DEFAULT_START_SPEED_PWM;
     }
@@ -605,11 +605,11 @@ void MecanumWheelCarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDrivi
  *  | /
  *  |/
  *  o
- * Forward  82 cm
+ * Forward  82 cm @ 4 seconds
  * Right    62 cm
  * Diagonal 50 cm
  */
-void MecanumWheelCarPWMMotorControl::moveTestDistances(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+void MecanumWheelCarPWMMotorControl::moveThreeDirectionsForManualCalibration(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
         unsigned int aDelayBetweenMoves) {
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
     delay(aDelayBetweenMoves);
@@ -730,9 +730,9 @@ void MecanumWheelCarPWMMotorControl::moveRectangle(uint8_t aRequestedSpeedPWM, u
 }
 
 /*
- *  ->-
+ *  -<-
  *  | |
- *  o<-
+ *  o>-
  */
 void MecanumWheelCarPWMMotorControl::moveSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
         unsigned int aDelayBetweenMoves) {
@@ -744,6 +744,38 @@ void MecanumWheelCarPWMMotorControl::moveSqare(uint8_t aRequestedSpeedPWM, unsig
     delay(aDelayBetweenMoves);
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
 }
+
+/*
+ *  ---<---
+ *  |     |
+ *  |<-o  |
+ *  |     |
+ *  --->--^
+ *
+ *
+ */
+void MecanumWheelCarPWMMotorControl::moveCenteredSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    // leave center
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove * (MECANUM_FORWARD_TO_LATERAL_FACTOR / 2));
+    delay(aDelayBetweenMoves);
+    // 1/2 distance back
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove / 2);
+    delay(aDelayBetweenMoves);
+
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    delay(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove * MECANUM_FORWARD_TO_LATERAL_FACTOR);
+    delay(aDelayBetweenMoves);
+
+    // The other 1/2 distance back
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove / 2);
+    delay(aDelayBetweenMoves);
+    // go back to center
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove * (MECANUM_FORWARD_TO_LATERAL_FACTOR / 2));
+    delay(aDelayBetweenMoves);}
 
 /*
  *   /\

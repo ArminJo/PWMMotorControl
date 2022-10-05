@@ -147,11 +147,11 @@ void doChangeScanSpeed(BDButton *aTheTouchedButton, int16_t aValue) {
 
 void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sDriveMode == MODE_FOLLOWER) {
-        scanForTarget(FOLLOWER_DISTANCE_TARGET_SCAN_CENTIMETER);
+        scanTarget(FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER);
     } else {
         clearPrintedForwardDistancesInfos(true);
         fillAndShowForwardDistancesInfo(true, true);
-        postProcessAndCollisionDetection();
+        postProcessAndCollisionAvoidingAndDraw();
     }
 }
 
@@ -259,6 +259,10 @@ void drawAutonomousDrivePage(void) {
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
     TouchButtonFollower.drawButton();
     TouchButtonBack.drawButton();
+    SliderUSDistance.drawSlider(); // to show slider caption
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+    SliderIROrTofDistance.drawSlider(); // to show slider caption
+#endif
 }
 
 void startAutonomousDrivePage(void) {
@@ -325,6 +329,8 @@ void clearPrintedForwardDistancesInfos(bool aDoFullClear) {
 
 /*
  * Draws only if sCurrentPage == PAGE_AUTOMATIC_CONTROL
+ * Draw blue (red if backwards) rotation line. The default length is sCentimetersDrivenPerScan
+ * Prints result line if not just clearing the rotation line.
  */
 void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoClearVector) {
 
@@ -333,6 +339,7 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
         int tDegreeToDisplay = aDegreeToTurn;
 
         if (tDegreeToDisplay == 180) {
+            // indicate a go back with a red go forward line
             tColor = COLOR16_RED;
             tDegreeToDisplay = 0;
         }
@@ -340,6 +347,7 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
             tColor = COLOR16_WHITE;
         }
 
+        // draw blue (red if backwards) rotation line. The default length is sCentimetersDrivenPerScan
         BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, aLengthOfVector, tDegreeToDisplay + 90,
                 tColor);
         if (!aDoClearVector) {

@@ -70,7 +70,7 @@ bool sEnableKeepDistance; // Follower mode without a turn
 void doStop() {
     RobotCar.stop();
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-    DistanceServoWriteAndDelay(90);
+    DistanceServoWriteAndWaitForStop(90);
     sEnableFollower = false;
     sEnableKeepDistance = false;
 #endif
@@ -94,24 +94,28 @@ void doReset() {
 void goForward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
         // if repeat was pressed, we enable a "fast" stop
-        RobotCar.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
+        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
+                DIRECTION_FORWARD);
     } else {
-        RobotCar.startGoDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
+                DIRECTION_FORWARD);
     }
 }
 void goBackward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
-        RobotCar.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER / 4);
+        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
+                DIRECTION_BACKWARD);
     } else {
-        RobotCar.startGoDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
+        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
+                DIRECTION_BACKWARD);
     }
 }
 
 void turnLeft() {
-    RobotCar.startRotate(45, TURN_IN_PLACE, false);
+    RobotCar.startRotate(15, TURN_IN_PLACE);
 }
 void turnRight() {
-    RobotCar.startRotate(-45, TURN_IN_PLACE, false);
+    RobotCar.startRotate(-15, TURN_IN_PLACE);
 }
 
 void doDefaultSpeed() {
@@ -138,20 +142,23 @@ void doDecreaseSpeed() {
     RobotCar.rightCarMotor.printValues(&Serial);
 }
 
+/*
+ *
+ */
 void doCalibrate() {
     RobotCar.readCarValuesFromEeprom();
     calibrateDriveSpeedPWMAndPrint();
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY)) && !defined(USE_MPU6050_IMU) \
+#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
     delay(500);
     /*
-     * Start in place calibration
+     * Start in place rotation calibration
      */
-    if(calibrateRotation(TURN_IN_PLACE)){
+    if (calibrateRotation(TURN_IN_PLACE)) {
         return;
     }
     DELAY_AND_RETURN_IF_STOP(2000);
-    // now show 90 degree
+    // Now show 90 degree
     RobotCar.rotate(90, TURN_IN_PLACE);
     DELAY_AND_RETURN_IF_STOP(500);
     RobotCar.rotate(-90, TURN_IN_PLACE);
@@ -159,11 +166,11 @@ void doCalibrate() {
     /*
      * Start forward rotation calibration
      */
-    if(calibrateRotation(TURN_FORWARD)){
+    if (calibrateRotation(TURN_FORWARD)) {
         return;
     }
     DELAY_AND_RETURN_IF_STOP(2000);
-    // now show 90 degree
+    // Now show 90 degree
     RobotCar.rotate(90, TURN_FORWARD);
     DELAY_AND_RETURN_IF_STOP(500);
     RobotCar.rotate(-90, TURN_FORWARD);

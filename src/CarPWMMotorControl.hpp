@@ -321,6 +321,11 @@ void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
     leftCarMotor.setSpeedPWM(aRequestedSpeedPWM);
 }
 
+void CarPWMMotorControl::setSpeedPWM(int aRequestedSpeedPWMForLeftMotor, int aRequestedSpeedPWMForRightMotor) {
+    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWMForRightMotor);
+    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWMForLeftMotor);
+}
+
 void CarPWMMotorControl::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
     uint8_t tDirection;
     if (aRequestedSpeedPWM == 0) {
@@ -337,7 +342,7 @@ void CarPWMMotorControl::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
 }
 
 uint8_t CarPWMMotorControl::getCarDirection() {
-    return CarDirection;;
+    return CarDirection;
 }
 
 /*
@@ -634,6 +639,7 @@ void CarPWMMotorControl::waitUntilStopped(void (*aLoopCallback)(void)) {
     while (updateMotors(aLoopCallback)) {
         ;
     }
+    CarDirection = DIRECTION_STOP;
 }
 
 bool CarPWMMotorControl::isState(uint8_t aState) {
@@ -936,15 +942,20 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 #endif // defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 
 void CarPWMMotorControl::printCalibrationValues(Print *aSerial) {
-    aSerial->println(F("Calibration values"));
+    aSerial->println(F("Calibration values:"));
     aSerial->print(F("mm/256deg="));
     aSerial->print(RobotCar.MillimeterPer256Degree);
     aSerial->print(F(" inPlace="));
     aSerial->println(RobotCar.MillimeterPer256DegreeInPlace);
     aSerial->print(F("2 volt PWM right="));
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+    aSerial->println(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
+#else
     aSerial->print(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
     aSerial->print(F(" left="));
     aSerial->println(RobotCar.leftCarMotor.DriveSpeedPWMFor2Volt);
+#endif
+    aSerial->println();
 }
 
 /********************************************************************************************
@@ -958,26 +969,29 @@ bool CarPWMMotorControl::readCarValuesFromEeprom() {
 #if defined(E2END)
     EepromCarInfoStruct tEepromCarInfo;
     eeprom_read_block((void*) &tEepromCarInfo, 0, sizeof(EepromCarInfoStruct));
-#if defined(DEBUG)
-    Serial.print(F("EEPROM values="));
-    Serial.println(tEepromCarInfo.ValidMarker);
-#  if !defined(USE_MPU6050_IMU)
-    Serial.println(tEepromCarInfo.MillimeterPer256DegreeInPlace);
-    Serial.println(tEepromCarInfo.MillimeterPer256Degree);
+#  if defined(DEBUG)
+    Serial.print(F("EEPROM Marker(0xA5)="));
+    Serial.print(tEepromCarInfo.ValidMarker);
+#    if !defined(USE_MPU6050_IMU)
+    Serial.print(F(" mm/256Deg="));
+    Serial.print(tEepromCarInfo.MillimeterPer256Degree);
+    Serial.print(F(" InPlace="));
+    Serial.print(tEepromCarInfo.MillimeterPer256DegreeInPlace);
+#    endif
+    Serial.println();
 #  endif
-#endif
     if (tEepromCarInfo.ValidMarker == EEPROM_CAR_INFO_VALID_MARKER_VALUE
             && rightCarMotor.readMotorValuesFromInfoStructure(&tEepromCarInfo.rightMotorInfo)
             && leftCarMotor.readMotorValuesFromInfoStructure(&tEepromCarInfo.leftMotorInfo)
-#if !defined(USE_MPU6050_IMU)
+#  if !defined(USE_MPU6050_IMU)
             && tEepromCarInfo.MillimeterPer256Degree < 2000 && tEepromCarInfo.MillimeterPer256Degree > 600
             && tEepromCarInfo.MillimeterPer256DegreeInPlace < 1500 && tEepromCarInfo.MillimeterPer256DegreeInPlace > 400
-#endif
+#  endif
                     ) {
-#if !defined(USE_MPU6050_IMU)
+#  if !defined(USE_MPU6050_IMU)
         MillimeterPer256Degree = tEepromCarInfo.MillimeterPer256Degree;
         MillimeterPer256DegreeInPlace = tEepromCarInfo.MillimeterPer256DegreeInPlace;
-#endif
+#  endif
         return true;
     } else {
         setDefaultsForFixedDistanceDriving();
@@ -994,10 +1008,10 @@ void CarPWMMotorControl::writeCarValuesToEeprom() {
     EepromCarInfoStruct tEepromCarInfo;
     rightCarMotor.writeMotorValuesToInfoStructure(&tEepromCarInfo.rightMotorInfo);
     leftCarMotor.writeMotorValuesToInfoStructure(&tEepromCarInfo.leftMotorInfo);
-#if !defined(USE_MPU6050_IMU)
+#  if !defined(USE_MPU6050_IMU)
     tEepromCarInfo.MillimeterPer256Degree = MillimeterPer256Degree;
     tEepromCarInfo.MillimeterPer256DegreeInPlace = MillimeterPer256DegreeInPlace;
-#endif
+#  endif
     tEepromCarInfo.ValidMarker = EEPROM_CAR_INFO_VALID_MARKER_VALUE;
 
     eeprom_write_block((void*) &tEepromCarInfo, 0, sizeof(EepromCarInfoStruct));
