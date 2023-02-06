@@ -7,7 +7,9 @@
  *  Enables autonomous driving of a 2 or 4 wheel car with an Arduino and a Adafruit Motor Shield V2.
  *  To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the area.
  *  Manual control is by a GUI implemented with a Bluetooth HC-05 Module and the BlueDisplay library.
- *  Just overwrite the 2 functions myOwnFillForwardDistancesInfo() and doUserCollisionAvoiding() to test your own skill.
+ *
+ *  Define ENABLE_USER_PROVIDED_COLLISION_DETECTION and overwrite the 2 functions myOwnFillForwardDistancesInfo()
+ *  and doUserCollisionAvoiding() to test your own skill.
  *
  *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
  *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
@@ -21,8 +23,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -131,7 +133,9 @@ Servo TiltServo;
 //#define IR_SENSOR_TYPE_100550         // 100 to 550 cm, 18 ms, GP2Y0A710K0F
 //#define TOF_OFFSET_MILLIMETER      10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
 //#define DISTANCE_SERVO_TRIM_DEGREE  5 // This value is internally added to all servo writes.
+#if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
 int doUserCollisionAvoiding();
+#endif
 
 #include "CarPWMMotorControl.hpp"   // include source of library
 
@@ -163,6 +167,7 @@ void playRandomMelody();
 
 void initServos();
 
+#if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
 /*************************************************************************************
  * Extend this basic collision detection to test your own skill in autonomous driving
  *
@@ -202,6 +207,7 @@ int doUserCollisionAvoiding() {
     return 0;
 #endif
 }
+#endif
 
 /*
  * Start of robot car control program

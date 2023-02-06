@@ -16,8 +16,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -27,6 +27,7 @@
 
 #include "HCSR04.h"
 #include "Distance.h"
+#include "RobotCarConfigurations.h" // helps the formatter
 
 // A string buffer for BD info output
 char sStringBuffer[128];
@@ -133,13 +134,7 @@ void loopGUI(void) {
         }
 
 #if defined(CAR_HAS_DISTANCE_SENSOR)
-        if (sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST
-#if defined(CAR_HAS_DISTANCE_SERVO)
-                || (sCurrentPage == PAGE_AUTOMATIC_CONTROL && sDriveMode == MODE_MANUAL_DRIVE)
-#endif
-        ) {
-            readAndShowDistancePeriodically(); // show for auto drive page, if idle
-        }
+        readAndShowDistancePeriodically(); // show if idle
 #endif
 
 #if defined(ENABLE_PATH_INFO_PAGE)
@@ -159,11 +154,11 @@ void loopGUI(void) {
 void readAndShowDistancePeriodically() {
     static long sLastDistanceMeasurementMillis;
 
-    // Do not show distances during (time critical) acceleration or deceleration
-    if (!RobotCar.isStateRamp()) {
+    // Do not show distances during (time critical) acceleration or deceleration and during autonomous driving
+    if (!RobotCar.isStateRamp() && (sDriveMode == MODE_MANUAL_DRIVE || !sDoStep)) {
         if (millis() - sLastDistanceMeasurementMillis >= DISTANCE_DISPLAY_PERIOD_MILLIS) {
             sLastDistanceMeasurementMillis = millis();
-            getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM, false); // use long distance timeout here
+            getDistanceAsCentimeter(IDLE_DISTANCE_TIMEOUT_CENTIMETER, false); // use long distance timeout here
         }
     }
 }
@@ -552,8 +547,8 @@ void initCommonGui() {
 #endif // defined(CAR_HAS_PAN_SERVO) && defined(CAR_HAS_TILT_SERVO)
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
-    SliderDistanceServoPosition.init(POS_X_DISTANCE_POSITION_SLIDER - BUTTON_WIDTH_6, SLIDER_TOP_MARGIN, BUTTON_WIDTH_6, US_SLIDER_SIZE, 90, 90,
-    COLOR16_YELLOW, SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE, &doUSServoPosition);
+    SliderDistanceServoPosition.init(POS_X_DISTANCE_POSITION_SLIDER - BUTTON_WIDTH_6, SLIDER_TOP_MARGIN, BUTTON_WIDTH_6,
+            US_SLIDER_SIZE, 90, 90, COLOR16_YELLOW, SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE, &doUSServoPosition);
     SliderDistanceServoPosition.setBarThresholdColor(COLOR16_BLUE);
     SliderDistanceServoPosition.setScaleFactor(180.0 / US_SLIDER_SIZE); // Values from 0 to 180 degrees
     SliderDistanceServoPosition.setValueUnitString("\xB0"); // \xB0 is degree character
@@ -568,19 +563,19 @@ void initCommonGui() {
 #if defined(US_DISTANCE_SLIDER_IS_SMALL)
     // Small US distance slider with captions and without cm units
     SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
-            (BUTTON_WIDTH_10 / 2) - 2,
-            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
+            (BUTTON_WIDTH_10 / 2) - 2, DISTANCE_SLIDER_SIZE,
+            FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
-    SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW, 2,
-    COLOR16_BLACK, COLOR16_WHITE);
+    SliderUSDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_VALUE_CAPTION_ALIGN_LEFT | FLAG_SLIDER_VALUE_CAPTION_BELOW, 2,
+            COLOR16_BLACK, COLOR16_WHITE);
     SliderUSDistance.setCaption("US");
     // below caption - left aligned
-    SliderUSDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_CAPTION_ALIGN_LEFT | FLAG_SLIDER_CAPTION_BELOW,
+    SliderUSDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_VALUE_CAPTION_ALIGN_LEFT | FLAG_SLIDER_VALUE_CAPTION_BELOW,
             4 + TEXT_SIZE_10_HEIGHT, COLOR16_BLACK, COLOR16_WHITE);
 #else
 // Big US distance slider without caption but with cm units POS_X_THIRD_SLIDER because it is the position of the left edge
     SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, BUTTON_WIDTH_10,
-    DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
+    DISTANCE_SLIDER_SIZE, FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
     SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderUSDistance.setValueUnitString("cm");
 #endif
@@ -593,19 +588,18 @@ void initCommonGui() {
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     // Small IR distance slider with captions and without cm units
     SliderIROrTofDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
-            (BUTTON_WIDTH_10 / 2) - 2,
-            DISTANCE_SLIDER_SIZE, DISTANCE_TIMEOUT_CM_FOLLOWER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
+            (BUTTON_WIDTH_10 / 2) - 2, DISTANCE_SLIDER_SIZE,
+            FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT, NULL);
     SliderIROrTofDistance.setScaleFactor(DISTANCE_SLIDER_SCALE_FACTOR); // Slider is virtually 2 times larger, values were divided by 2
     SliderIROrTofDistance.setBarThresholdColor(DISTANCE_TIMEOUT_COLOR);
     // Caption properties
-    SliderIROrTofDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW, 2,
-    COLOR16_BLACK,
-    COLOR16_WHITE);
+    SliderIROrTofDistance.setCaptionProperties(TEXT_SIZE_10, FLAG_SLIDER_VALUE_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_VALUE_CAPTION_BELOW, 2,
+            COLOR16_BLACK, COLOR16_WHITE);
     // Captions
     SliderIROrTofDistance.setCaption("IR");
     // value below caption - right aligned
-    SliderIROrTofDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_CAPTION_BELOW,
+    SliderIROrTofDistance.setPrintValueProperties(TEXT_SIZE_11, FLAG_SLIDER_VALUE_CAPTION_ALIGN_RIGHT | FLAG_SLIDER_VALUE_CAPTION_BELOW,
             4 + TEXT_SIZE_10_HEIGHT, COLOR16_BLACK, COLOR16_WHITE);
 #endif
 
@@ -653,12 +647,10 @@ void forceDisplayOfVin() {
 }
 /*
  * Print VIN (used as motor supply) periodically
- * returns true if voltage was printed
+ * Adjust print position depending on page.
  */
 void readAndPrintVin() {
     if (readVINVoltage()) {
-        PWMDcMotor::MotorPWMHasChanged = true; // to force a new display of motor voltage
-
         char tDataBuffer[18];
         char tVCCString[5];
 
@@ -700,7 +692,7 @@ void checkForLowVoltage() {
         if (BlueDisplay1.isConnectionEstablished()) {
             drawCommonGui();
             BlueDisplay1.drawText(10, 50, F("Battery voltage"), TEXT_SIZE_33, COLOR16_RED, COLOR16_WHITE);
-            // print current "too low" voltage
+            // Print current "too low" voltage
             char tDataBuffer[18];
             char tVCCString[6];
             dtostrf(sVINVoltage, 4, 2, tVCCString);
@@ -736,7 +728,6 @@ void readCheckAndPrintVinPeriodically() {
         sMillisOfLastVCCInfo = tMillis;
         readAndPrintVin();
         checkForLowVoltage();
-//        PWMDcMotor::MotorControlValuesHaveChanged = true; // to signal, that PWM voltages may have changed
     }
 }
 #endif // defined(MONITOR_VIN_VOLTAGE)
@@ -782,9 +773,8 @@ void printMotorValuesPeriodically() {
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage) , 4, 2, tPWMVoltageString);
 #else
                     // we can merely use a constant value here
-                    dtostrf(
-                            PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
-                                    FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
+                    dtostrf(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
+                    FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                     BlueDisplay1.drawText((MOTOR_INFO_START_X + TEXT_SIZE_11_WIDTH) - 1, MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11),
                             tPWMVoltageString);
@@ -796,9 +786,8 @@ void printMotorValuesPeriodically() {
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage), 4, 2, tPWMVoltageString);
 #else
                     // we can merely use a constant value here
-                    dtostrf(
-                            PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM,
-                                    FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
+                    dtostrf(PWMDcMotor::getMotorVoltageforPWMAndMillivolt(RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM,
+                    FULL_BRIDGE_INPUT_MILLIVOLT), 4, 2, tPWMVoltageString);
 #endif
                     BlueDisplay1.drawText((MOTOR_INFO_START_X + (7 * TEXT_SIZE_11_WIDTH)) - 3,
                             MOTOR_INFO_START_Y + (2 * TEXT_SIZE_11), tPWMVoltageString);
@@ -919,9 +908,6 @@ void printIMUOffsetValues() {
 #if defined(CAR_HAS_US_DISTANCE_SENSOR)
 void showUSDistance() {
     auto tUSDistanceCentimeter = sUSDistanceCentimeter;
-    if(tUSDistanceCentimeter == DISTANCE_TIMEOUT_RESULT) {
-        tUSDistanceCentimeter = sUSDistanceTimeoutCentimeter;
-    }
     if (sSliderUSLastCentimeter != tUSDistanceCentimeter) {
         sSliderUSLastCentimeter = tUSDistanceCentimeter;
         SliderUSDistance.setValueAndDrawBar(tUSDistanceCentimeter);

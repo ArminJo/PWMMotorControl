@@ -8,8 +8,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -84,7 +84,7 @@ void insertToPath(int aLength, int aDegree, bool aAddEntry);
 // from AutonomousDrivePage
 extern BDButton TouchButtonStep;
 extern BDButton TouchButtonScanSpeed;
-extern BDButton TouchButtonDistanceFeedbackMode;
+//extern BDButton TouchButtonDistanceFeedbackMode;
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 extern BDButton TouchButtonScanMode;
 #endif
@@ -154,8 +154,8 @@ extern BDButton TouchButtonReset;
 extern BDButton TouchButtonRobotCarStartStop;
 void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
-void doStartStopRobotCar(BDButton *aTheTochedButton, int16_t aDoStart);
-void doReset(BDButton *aTheTochedButton, int16_t aValue);
+void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart);
+void doReset(BDButton *aTheTouchedButton, int16_t aValue);
 #if VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
 bool delayMillisAndCheckForEvent(unsigned long aDelayMillis);
 #endif

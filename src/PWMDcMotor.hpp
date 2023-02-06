@@ -32,8 +32,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -824,6 +824,20 @@ void PWMDcMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     }
 }
 
+uint32_t PWMDcMotor::convertMillimeterToMillis(uint8_t aSpeedPWM, unsigned int aRequestedDistanceMillimeter) {
+    return ((uint32_t) aRequestedDistanceMillimeter * MillisPerCentimeter * DriveSpeedPWMFor2Volt)
+            / ((uint_fast16_t) MILLIMETER_IN_ONE_CENTIMETER * aSpeedPWM);
+}
+
+unsigned int PWMDcMotor::convertMillisToMillimeter(uint8_t aSpeedPWM, unsigned int aMillis) {
+    return ((uint32_t) aMillis * aSpeedPWM * MILLIMETER_IN_ONE_CENTIMETER)
+            / ((uint_fast16_t) MillisPerCentimeter * DriveSpeedPWMFor2Volt);
+}
+
+unsigned int PWMDcMotor::convertMillisToCentimeterFor2Volt(unsigned int aMillis) {
+    return aMillis / MillisPerCentimeter;
+}
+
 /*
  * If motor is already running, just update speed and new stop time
  */
@@ -848,8 +862,7 @@ void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned 
      * Compute milliseconds for distance by using MillisPerCentimeter (which is measured for 2 volt)
      * and scaling it for the requested aRequestedSpeedPWM
      */
-    uint32_t tComputedMillisOfMotorForDistance = (((uint32_t) tDistanceMillimeterDriveSpeed * MillisPerCentimeter
-            * DriveSpeedPWMFor2Volt) / ((uint_fast16_t) MILLIMETER_IN_ONE_CENTIMETER * aRequestedSpeedPWM));
+    uint32_t tComputedMillisOfMotorForDistance = convertMillimeterToMillis(aRequestedSpeedPWM, tDistanceMillimeterDriveSpeed);
 
     if (isStopped()) {
         // add startup time for the centimeter, we subtracted above

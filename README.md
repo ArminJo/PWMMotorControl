@@ -58,8 +58,8 @@ This library was tested with the bipolar full bridge IC L298 and the MOSFET IC T
 | ![L298 output voltages](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.5V_L298-PWM87-2Channel.bmp) | ![TB6612 motor voltage](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_TB6612-PWM67.bmp) |
 
 # PWM period
-- PWM period is 600 µs (1.6 kHz) for Adafruit Motor Shield V2 using PCA9685.
-- PWM period is 1030 µs (970 Hz) for AnalogWrite on pin 5 + 6.
+- PWM period is 600 &micro;s (1.6 kHz) for Adafruit Motor Shield V2 using PCA9685.
+- PWM period is 1030 &micro;s (970 Hz) for AnalogWrite on pin 5 + 6.
 
 # [Examples](tree/master/examples)
 ## Start

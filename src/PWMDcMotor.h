@@ -26,8 +26,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -358,6 +358,9 @@ public:
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
             uint8_t aRequestedDirection);
+    uint32_t convertMillimeterToMillis(uint8_t aSpeedPWM, unsigned int aRequestedDistanceMillimeter);
+    unsigned int convertMillisToMillimeter(uint8_t aSpeedPWM, unsigned int aMillis);
+    unsigned int convertMillisToCentimeterFor2Volt(unsigned int aMillis);
     bool updateMotor();
 
     /*

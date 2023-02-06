@@ -16,8 +16,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -45,20 +45,25 @@ extern Servo DistanceServo;     // The pan servo instance for distance sensor
 #  endif
 #endif // defined(CAR_HAS_SERVO)
 
-
 /*
- * Default values for the behavior of the follower
+ * Default distances for the behavior of the follower
  */
 #if !defined(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
-#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER        22 // If measured distance is less than this value, go backwards
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER            22 // If measured distance is less than this value, go backwards
 #endif
 #if !defined(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER)
-#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER        30 // If measured distance is greater than this value, go forward
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER            30 // If measured distance is greater than this value, go forward
 #endif
-#if !defined(FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER)
-#define FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER        70 // Do not accept target with distance greater than this value
+#if !defined(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER)
+#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     60 // Do not accept target with distance greater than this value
 #endif
-#define FOLLOWER_DISTANCE_DELTA_CENTIMETER          (FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER - FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
+#if !defined(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER)
+#  if defined(USE_BLUE_DISPLAY_GUI)
+#define FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER   100 // Do not measure and display distances greater than this
+#  else
+#define FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER   120 // Do not measure and give tone feedback for distances greater than this
+#  endif
+#endif
 
 #include "PWMDcMotor.h" // for DIRECTION_STOP etc.
 typedef enum distance_range {
@@ -106,15 +111,15 @@ extern uint8_t sDistanceSourceMode;
 /*
  * Constants for fillAndShowForwardDistancesInfo(), doWallDetection etc.
  */
-#define NUMBER_OF_DISTANCES             10
-#define DEGREES_PER_STEP                18
-#define DEGREES_PER_TARGET_SCAN_STEP    20  // 20 -> sinus is 0.34. At a distance of 60 cm this is 20 cm; 10 degree -> 10 cm
-#define STEPS_PER_SCAN      (NUMBER_OF_DISTANCES - 1) // -> 162 degrees for 18 DEGREES_PER_STEP, 153 for 17 degrees
+#define NUMBER_OF_DISTANCES                 10
+#define DEGREES_PER_STEP                    18
+#define DEGREES_PER_TARGET_SCAN_STEP        20  // 20 -> sinus is 0.34. At a distance of 60 cm this is 20 cm; 10 degree -> 10 cm
+#define STEPS_PER_SCAN                      (NUMBER_OF_DISTANCES - 1) // -> 162 degrees for 18 DEGREES_PER_STEP, 153 for 17 degrees
 #define START_DEGREES       ((180 - (DEGREES_PER_STEP * STEPS_PER_SCAN)) / 2) // 9 for 18, 13,5 for 17 - we need it symmetrical in the 180 degrees range
+#define AUTONOMOUS_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER  110 // Do not measure distances greater than this
+#define AUTONOMOUS_DRIVE_DISTANCE_TIMEOUT_CENTIMETER    100 // do not process distances greater than this
 
-#define DISTANCE_TIMEOUT_CM                     200 // do not measure distances greater than 200 cm
-#define DISTANCE_TIMEOUT_CM_FOLLOWER            150 // do not measure and process distances greater than 150 cm
-#define DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE    100 // do not measure and process distances greater than 100 cm
+#define IDLE_DISTANCE_TIMEOUT_CENTIMETER    200 // do not measure distances greater than 200 cm
 
 #define DISTANCE_MAX_FOR_WALL_DETECTION_CM      40
 
@@ -170,8 +175,8 @@ extern int sLastDegreesTurned;
 void initDistance();
 void printDistanceIfChanged(Print *aSerial);
 void playDistanceFeedbackTone(uint8_t aCentimeter);
-unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter = DISTANCE_TIMEOUT_CM_AUTONOMOUS_DRIVE,
-        bool aWaitForCurrentMeasurementToEnd = false, uint8_t aMinimumUSDistanceForMinimumMode = 0);
+unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd = false,
+        uint8_t aMinimumUSDistanceForMinimumMode = 0, bool aDoShow = true);
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
 #define NO_TARGET_FOUND     360     // return value of scanTarget()
@@ -187,8 +192,23 @@ void postProcessDistances(uint8_t aDistanceThreshold);
 int doBuiltInCollisionAvoiding();
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+#  if !defined(IR_SENSOR_TYPE_100550) && !defined(IR_SENSOR_TYPE_20150) && !defined(IR_SENSOR_TYPE_1080) && !defined(IR_SENSOR_TYPE_430)
+#define IR_SENSOR_TYPE_1080                    // default is 10 to 80 cm, GP2Y0A21YK0F
+#  endif
+#  if defined(IR_SENSOR_TYPE_100550)
+#define IR_SENSOR_TIMEOUT_CENTIMETER       255 // End here to guarantee an 8 bit result
+#  elif defined(IR_SENSOR_TYPE_20150)
+#define IR_SENSOR_TIMEOUT_CENTIMETER       160 // Values above this are handled as timeouts
+#  elif defined(IR_SENSOR_TYPE_1080)
+#define IR_SENSOR_TIMEOUT_CENTIMETER        90 // Values above this are handled as timeouts
+#  elif defined(IR_SENSOR_TYPE_430)
+#define IR_SENSOR_TIMEOUT_CENTIMETER        35 // Values above this are handled as timeouts
+#  endif
+#define IR_SENSOR_NEW_MEASUREMENT_THRESHOLD  2 // If the output value changes by this amount, we can assume that a new measurement is started
+#define IR_SENSOR_MEASUREMENT_TIME_MILLIS   41 // the IR sensor takes 39 ms for one measurement
+
 uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd = false);
-#endif
+#endif // defined(CAR_HAS_IR_DISTANCE_SENSOR)
 
 #if defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 #include "vl53l1x_class.h"

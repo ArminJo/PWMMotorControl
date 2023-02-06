@@ -17,8 +17,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -30,10 +30,10 @@
 /*
  * Values to configure the behavior of the follower
  */
-#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER        20 // If measured distance is less than this value, go backwards
-#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER        30 // If measured distance is greater than this value, go forward
-#define FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER        70 // Do not accept target with distance greater than this value
-#define FOLLOWER_DISTANCE_DELTA_CENTIMETER          (FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER - FOLLOWER_DISTANCE_MINIMUM_CENTIMETER)
+#define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER            22 // If measured distance is less than this value, go backwards
+#define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER            30 // If measured distance is greater than this value, go forward
+#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     60 // Do not accept target with distance greater than this value
+#define FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER   120 // Do not measure and give tone feedback for distances greater than this
 
 /*
  * Car configuration
@@ -215,10 +215,10 @@ void loop() {
     if (sEnableKeepDistance || sEnableFollower) {
         doFollowerOneStep();
     } else {
-        getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true); // timeout at 150 cm
+        getDistanceAsCentimeter(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER, true); // timeout at 150 cm
         playDistanceFeedbackTone(sEffectiveDistanceCentimeter);
         printDistanceIfChanged(&Serial); // prints "Distance=XXcm" with or "Distance timeout" without a newline{
-        if (sDistanceJustChanged) {
+        if (sEffectiveDistanceJustChanged) {
             Serial.println(); // Terminate line "Distance=57cm ->  SpeedPWM=255" etc.
         }
     }
@@ -272,7 +272,7 @@ void doFollowerOneStep() {
     /*
      * Scan target at 70, 90 and 110 degree
      */
-    tRotationDegree = scanTarget(FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER);
+    tRotationDegree = scanTarget(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER);
     printForwardDistanceInfo(&Serial);
     tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_TARGET_DISTANCE_MAXIMUM_CENTIMETER
 
@@ -282,9 +282,9 @@ void doFollowerOneStep() {
          * Just delay and then get one value, do not scan.
          */
         delay(50);
-        tForwardCentimeter = getDistanceAsCentimeter(DISTANCE_TIMEOUT_CM_FOLLOWER, true);
+        tForwardCentimeter = getDistanceAsCentimeter(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER, true);
         if (tForwardCentimeter == DISTANCE_TIMEOUT_RESULT) {
-            tForwardCentimeter = DISTANCE_TIMEOUT_CM_FOLLOWER;
+            tForwardCentimeter = FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER;
         }
     }
 #endif
@@ -299,10 +299,10 @@ void doFollowerOneStep() {
     if (tRotationDegree != 0) {
         // Do a cast, since the values of tRange and rotation match!
         RobotCar.rotate(tRotationDegree, static_cast<turn_direction_t>(tRange));
-        sRawForwardDistancesArray[INDEX_TARGET_FORWARD] = 0; // Force sDistanceJustChanged to be true at next loop, since we have stopped here.
+        sRawForwardDistancesArray[INDEX_TARGET_FORWARD] = 0; // Force sEffectiveDistanceJustChanged to be true at next loop, since we have stopped here.
         // Make a fresh scan, before moving
 
-    } else if (sDistanceJustChanged) {
+    } else if (sEffectiveDistanceJustChanged) {
         /*
          * No turn, compute new speed depending on the forward distance
          */

@@ -89,10 +89,10 @@ jobs:
 
       # First of all, we clone the repo using the `checkout` action.
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Checkout new BlueDisplay library
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: ArminJo/Arduino-BlueDisplay
           ref: master

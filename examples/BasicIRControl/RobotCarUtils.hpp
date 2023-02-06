@@ -15,8 +15,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -209,7 +209,7 @@ bool isVINVoltageDividerAttached(uint8_t aPin) {
 #endif
 
 /*
- * Read multiple samples during a PWM period and adjust DriveSpeedPWMFor2Volt
+ * Read 10 samples covering a complete PWM period
  * @return true if voltage changed
  */
 bool readVINVoltage() {
@@ -263,7 +263,7 @@ bool readVINVoltage() {
 }
 
 /*
- * Read multiple samples during a PWM period and adjust DriveSpeedPWMFor2Volt
+ * Read multiple samples covering a complete PWM period and adjust DriveSpeedPWMFor2Volt
  */
 void readVINVoltageAndAdjustDriveSpeedAndPrint() {
 #if defined(MONITOR_VIN_VOLTAGE)
@@ -278,6 +278,8 @@ void readVINVoltageAndAdjustDriveSpeedAndPrint() {
 #  if defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)
         uint8_t tOldDriveSpeedPWM = RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt;
         RobotCar.setDriveSpeedPWMFor2Volt(sVINVoltage);
+        PWMDcMotor::MotorPWMHasChanged = true; // to force a new display of motor voltage
+
         sprintf_P(sStringBuffer, PSTR("2 volt PWM %3d -> %3d"), tOldDriveSpeedPWM, RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
         BlueDisplay1.debug(sStringBuffer);
 #  else

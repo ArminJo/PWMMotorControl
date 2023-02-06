@@ -16,8 +16,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -462,6 +462,13 @@
  */
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 #define CAR_HAS_4_WHEELS
+#endif
+
+#if defined(CAR_HAS_IR_DISTANCE_SENSOR)
+//#define IR_SENSOR_TYPE_430            // 4 to 30 cm, 18 ms, GP2YA41SK0F
+#define IR_SENSOR_TYPE_1080             // 10 to 80 cm, GP2Y0A21YK0F - default IR sensor for all my cars
+//#define IR_SENSOR_TYPE_20150          // 20 to 150 cm, 18 ms, GP2Y0A02YK0F
+//#define IR_SENSOR_TYPE_100550         // 100 to 550 cm, 18 ms, GP2Y0A710K0F
 #endif
 
 #if defined(CAR_HAS_US_DISTANCE_SENSOR) || defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)

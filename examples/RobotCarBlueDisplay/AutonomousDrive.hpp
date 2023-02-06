@@ -14,8 +14,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -47,7 +47,7 @@ int sLastDegreesTurned = 0; // Storage of last turning for insertToPath()
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Encoder counts per US scan in autonomous mode
 #else
-uint8_t const sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Constant
+uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Constant
 #endif
 
 void driveAutonomousOneStep() {
@@ -80,19 +80,17 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         sDriveMode = aDriveMode;
 
         // decide which button called us
+#if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
         if (aDriveMode == MODE_COLLISION_AVOIDING_USER) {
             // User mode always starts in mode SINGLE_STEP
             setStepMode (MODE_SINGLE_STEP);
 
-        } else if (aDriveMode == MODE_FOLLOWER) {
-            DistanceServoWriteAndWaitForStop(90); // reset Servo
-            // Show distance sliders
-//            SliderUSDistance.drawSlider();
-            TouchButtonDistanceFeedbackMode.drawButton();
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-//            SliderIROrTofDistance.drawSlider();
-#  endif
-        }
+        } else
+#endif
+//        if (aDriveMode == MODE_FOLLOWER) {
+//            DistanceServoWriteAndWaitForStop(90); // reset Servo
+//            TouchButtonDistanceFeedbackMode.drawButton();
+//        }
 
     } else {
         /*
@@ -107,7 +105,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
         DistanceServoWriteAndWaitForStop(90);
         sDriveMode = MODE_MANUAL_DRIVE;
         RobotCar.stop(STOP_MODE_RELEASE);
-        TouchButtonDistanceFeedbackMode.removeButton(COLOR16_WHITE);
+//        TouchButtonDistanceFeedbackMode.removeButton(COLOR16_WHITE);
     }
 
     // manage 3 on off buttons
@@ -132,12 +130,16 @@ int postProcessAndCollisionAvoidingAndDraw() {
     postProcessDistances(sCentimetersDrivenPerScan);
 
     int tNextDegreesToTurn;
+#if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
     if (sDriveMode == MODE_COLLISION_AVOIDING_USER) {
         // User provided result
         tNextDegreesToTurn = doUserCollisionAvoiding();
     } else {
         tNextDegreesToTurn = doBuiltInCollisionAvoiding();
     }
+#else
+    tNextDegreesToTurn = doBuiltInCollisionAvoiding();
+#endif
     drawCollisionDecision(tNextDegreesToTurn, sCentimetersDrivenPerScan, false);
     return tNextDegreesToTurn;
 }
@@ -180,7 +182,7 @@ int doBuiltInCollisionAvoiding() {
 //                 * !!! Currently the same as above
 //                 */
 //                tDegreeToTurn = sForwardDistancesInfo.DegreeOfMaxDistance;
-//            } else {
+            } else {
                 /*
                  * Distances are all shorter than sCentimetersDrivenPerScan => must turn and go back
                  */
@@ -254,6 +256,8 @@ void driveCollisonAvoidingOneStep() {
          */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
         uint16_t tStepStartDistanceCount = RobotCar.rightCarMotor.EncoderCount; // get count before distance scanning
+#else
+        auto tMillisAtStepStart = millis();
 #endif
         /*
          * The magic happens HERE
@@ -263,7 +267,8 @@ void driveCollisonAvoidingOneStep() {
             return; // User canceled autonomous drive, ForwardDistancesInfo may be incomplete then
         }
 
-        drawCollisionDecision(sNextRotationDegree, sCentimetersDrivenPerScan, true); // Clear old decision marker by redrawing it with a white line
+        // First clear old decision marker by redrawing it with a white line
+        drawCollisionDecision(sNextRotationDegree, sCentimetersDrivenPerScan, true);
         sNextRotationDegree = postProcessAndCollisionAvoidingAndDraw();
 
         /*
@@ -273,17 +278,22 @@ void driveCollisonAvoidingOneStep() {
         if (!RobotCar.isStopped() && sStepMode != MODE_SINGLE_STEP) {
             /*
              * No stop here => distance is valid
-             * One encoder count is 11 mm so just take the count as centimeter here :-)
              */
 #if defined(USE_ENCODER_MOTOR_CONTROL)
+            // One encoder count is 11 mm so just take the count as centimeter here :-)
             sCentimetersDrivenPerScan = RobotCar.rightCarMotor.EncoderCount - tStepStartDistanceCount;
+#else
+            sCentimetersDrivenPerScan = (millis() - tMillisAtStepStart) / RobotCar.rightCarMotor.MillisPerCentimeter;
 #endif
+
+#if !defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
             if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                 char tStringBuffer[6];
-                sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm");
-                BlueDisplay1.drawText(0, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11, COLOR16_BLACK,
-                        COLOR16_WHITE);
+                sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm/scan");
+                BlueDisplay1.drawText(TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_HEIGHT - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11,
+                        COLOR16_BLACK, COLOR16_WHITE);
             }
+#endif
         }
 
         /*
@@ -345,7 +355,7 @@ void driveFollowerModeOneStep() {
          * We have NO pending turn no more, scan target at 70, 90 and 110 degree
          */
 //        clearPrintedForwardDistancesInfos(false); // clear area for next scan results
-        int8_t tNextRotationDegree = scanTarget(FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER);
+        int8_t tNextRotationDegree = scanTarget(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER);
         unsigned int tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER
         sDistanceRange = getDistanceRange(tForwardCentimeter);
 

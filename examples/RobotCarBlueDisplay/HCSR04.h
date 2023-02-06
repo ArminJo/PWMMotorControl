@@ -21,8 +21,8 @@
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *  See the GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 
-#define DISTANCE_TIMEOUT_RESULT                0
+#define DISTANCE_TIMEOUT_RESULT                   0
 #define US_DISTANCE_DEFAULT_TIMEOUT_MICROS    20000
 #define US_DISTANCE_DEFAULT_TIMEOUT_CENTIMETER  343   // Timeout of 20000L is 3.43 meter
 

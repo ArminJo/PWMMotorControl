@@ -240,6 +240,12 @@
 #define __digitalPinToPINReg(P) ((P) <= 5 ? &VPORTB.IN : ((P) <= 9 ? &VPORTC.IN : ((P) <= 16 ? &VPORTA.IN : ((P) <= 18 ? &VPORTB.IN : &VPORTC.IN))))
 #define __digitalPinToBit(P) ( (P) <= 3 ? (3 - P) : ((P) <= 5 ? (P) : ((P) <= 9 ? (P - 6) : ((P) <= 16 ? ((P) - 9) : ((P) <= 18 ? ((P) - 11) : ((P) - 15))))) )
 
+#elif defined(__AVR_ATtiny1614__)
+#define __digitalPinToPortReg(P) ((P) <= 3 ? &VPORTA.OUT : ((P) <= 7 ? &VPORTB.OUT : &VPORTA.OUT))
+#define __digitalPinToDDRReg(P) ((P) <= 3 ? &VPORTA.DIR : ((P) <= 7 ? &VPORTB.DIR : &VPORTA.DIR))
+#define __digitalPinToPINReg(P) ((P) <= 3 ? &VPORTA.IN : ((P) <= 7 ? &VPORTB.IN : &VPORTA.IN))
+#define __digitalPinToBit(P) ( (P) <= 3 ? (P + 4) : ((P) <= 7 ? (7 - P) : ((P) <= 10 ? (P - 7) : (P) - 11)) )
+
 #elif  defined(__AVR_ATtiny816__)
 // https://github.com/Arduino-IRremote/Arduino-IRremote/discussions/1029
 #define __digitalPinToPortReg(P) ((P) <= 3 ? &VPORTA.OUT : ((P) <= 9 ? &VPORTB.OUT : ((P) <= 13 ? &VPORTC.OUT : ((P) <= 17 ? &VPORTA.OUT : &VPORTC.OUT))))
@@ -272,7 +278,8 @@
 
 
 // --- ATtinyX4 + ATtinyX7 ---
-#elif  defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny87__) || defined(__AVR_ATtiny167__)
+#elif  defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) \
+    || defined(__AVR_ATtiny441__) || defined(__AVR_ATtiny841__) || defined(__AVR_ATtiny87__) || defined(__AVR_ATtiny167__)
 # if defined(ARDUINO_AVR_DIGISPARKPRO) || PIN_PA7 == 5
 // Strange enumeration of pins on Digispark board and core library
 #define __digitalPinToPortReg(P) (((P) <= 4) ? &PORTB : &PORTA)
@@ -285,6 +292,11 @@
 #define __digitalPinToPortReg(P) (((P) <= 7) ? &PORTA : &PORTB)
 #define __digitalPinToDDRReg(P)  (((P) <= 7) ? &DDRA : &DDRB)
 #define __digitalPinToPINReg(P)  (((P) <= 7) ? &PINA : &PINB)
+#  if  defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__) || defined(__AVR_ATtiny441__) || defined(__AVR_ATtiny841__)
+// https://github.com/SpenceKonde/ATTinyCore/blob/v2.0.0-devThis-is-the-head-submit-PRs-against-this/avr/variants/tinyx41_cw/pins_arduino.h#L334
+// Clockwise layout
+#define __digitalPinToBit(P)     (((P) <= 7) ? (P) : ((P) == 11 ? (3) : 10 - (P)))
+#  endif
 #define __digitalPinToBit(P)     (((P) <= 7) ? (P) : (P) - 8 )
 # endif
 
