@@ -1,20 +1,47 @@
-# Autonomous driving robot car
-### Version 2.0.0
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Commits since latest](https://img.shields.io/github/commits-since/ArminJo/Arduino-RobotCar/latest)](https://github.com/ArminJo/Arduino-RobotCar/commits/master)
-[![Build Status](https://github.com/ArminJo/Arduino-RobotCar/workflows/TestCompile/badge.svg)](https://github.com/ArminJo/Arduino-RobotCar/actions)
-![Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_Arduino-RobotCar)
 
-- Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.
-- To avoid obstacles a HC-SR04 ultrasonic sensor mounted on a SG90 Servo continuously scans the environment.
+<div align = center>
+
+# [Autonomous driving robot car](https://github.com/ArminJo/Arduino-RobotCar)
+Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.
+
+[![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
+ &nbsp; &nbsp;
+[![Badge Version](https://img.shields.io/github/v/release/ArminJo/Arduino-RobotCar?include_prereleases&color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/Arduino-RobotCar/releases/latest)
+ &nbsp; &nbsp;
+[![Badge Commits since latest](https://img.shields.io/github/commits-since/ArminJo/Arduino-RobotCar/latest?color=yellow)](https://github.com/ArminJo/Arduino-RobotCar/commits/master)
+ &nbsp; &nbsp;
+[![Badge Build Status](https://github.com/ArminJo/Arduino-RobotCar/workflows/TestCompile/badge.svg)](https://github.com/ArminJo/Arduino-RobotCar/actions)
+ &nbsp; &nbsp;
+![Badge Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_Arduino-RobotCar)
+<br/>
+<br/>
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://stand-with-ukraine.pp.ua)
+
+Available as [RobotCarBlueDisplay](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/RobotCarBlueDisplay) example of the Arduino library [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl).<br/>
+Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
+
+</div>
+
+#### If you find this program useful, please give it a star.
+
+<br/>
+
+# Features
+- Obstacles avoidance by a HC-SR04 ultrasonic sensor mounted on a SG90 Servo which continuously scans the environment.
 - To overcome the drawbacks of ultrasonic sensors, an additional IR or TOF (TimeOfFlight) sensor can be mounted to the servo.
-- Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
+- Manual control implemented by a GUI using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
 
 **Just overwrite the function doUserCollisionAvoiding() to test your own skill**.
 You may also overwrite the function fillAndShowForwardDistancesInfo(), if you use your own scanning method.
 
-This example requires the **[PWMMotorControl library](https://github.com/ArminJo/PWMMotorControl)** to control the motors,
-the **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** for Smartphone control and **[PlayRtttl library](https://github.com/ArminJo/PlayRtttl)** for the melody feature.
+# Installation
+- Install **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** with *Tools > Manage Libraries...* or *Ctrl+Shift+I*. Use "BlueDisplay" as filter string.<br/>
+- Install **[PWMMotorControl library](https://github.com/ArminJo/PWMMotorControl)** with *Tools > Manage Libraries...* or *Ctrl+Shift+I*. Use "PWMMotorControl" as filter string.<br/>
+- Open the example **[RobotCarBlueDisplay](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/RobotCarBlueDisplay)**, available at File > Examples > Examples from Custom Libraries / **PWMMotorControl**.
+
+Other examples of PWMMotorControl like **[SmartCarFollower](https://github.com/ArminJo/PWMMotorControl#smartcarfollower)** will also run on this robot car.
+
+<br/>
 
 # Pictures
 | 4WD car with IR receiver and Bluetooth module and 4 AA rechargeable batteries. | Instructable |
@@ -25,9 +52,11 @@ the **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** for Smartp
 | Encoder fork sensor | Servo mounted head down |
 | ![Encoder fork sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ForkSensor.jpg) | ![Servo mounting](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/ServoAtTopBack.jpg) |
 | VIN sensing with motor shield | Red car with Sharp GP2Y0A21YK distance sensor |
-| ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg) | https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg  |
-| Youtube video of mecanum demo | Youtube video of mecanum car controlled by the accelerator sensors of the tablet |
-| [![Arduino Mecanum Wheel Car Demo](https://i.ytimg.com/vi/https://youtu.be/VX92jeqr8_g/hqdefault.jpg)](https://www.youtube.com/watch?v=https://youtu.be/VX92jeqr8_g) | [![Arduino Mecanum Wheel Car Sensor Drive Demo](https://i.ytimg.com/vi/lhlxLTj9Mrg/hqdefault.jpg)](https://www.youtube.com/watch?v=lhlxLTj9Mrg) |
+| ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg) | ![Red car with Sharp GP2Y0A21YK distance sensor](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg)  |
+| **Youtube video** of MecanumWheelCar demo | **Youtube video** of mecanum car controlled by the accelerator sensors of the tablet |
+| [![MecanumWheelCar Demo](https://i.ytimg.com/vi/VX92jeqr8_g/hqdefault.jpg)](https://www.youtube.com/watch?v=VX92jeqr8_g) | [![Arduino Mecanum Wheel Car Sensor Drive Demo](https://i.ytimg.com/vi/lhlxLTj9Mrg/hqdefault.jpg)](https://www.youtube.com/watch?v=lhlxLTj9Mrg) |
+
+<br/>
 
 # SCREENSHOTS
 | Start page | Test page |
@@ -45,12 +74,16 @@ Automatic control page with detected wall at right
 - The tiny white bars are the distances computed by the doWallDetection() function. They overlay the green (assumed timeout) values.
 - The tiny black bar is the rotation chosen by doCollisionAvoiding() function.
 
+<br/>
+
 # Wall detection
 Ultrasonic distance measurement has a problem with walls.
 You can **only detect a wall** if the angle of the wall relative to sensor axis is approximately **between 70 and 110 degree**.
 For other angels the reflected ultrasonic beam cannot reach the receiver which leads to unrealistic great distances.<br/>
 The implemented wall detection function `doWallDetection()` takes samples every 18 degrees and if it gets 2 adjacent short distances below `DISTANCE_MAX_FOR_WALL_DETECTION_CM`, it assumes a wall determined by these 2 samples.
 The (invalid) values 18 degrees right and left of these samples are then extrapolated by `computeNeigbourValue()`.
+
+<br/>
 
 # Compile options / macros for this software
 To customize the software to different car configurations, there are some compile options / macros available.<br/>
@@ -61,7 +94,7 @@ Compile options for the used **PWMMotorControl library** like `USE_ENCODER_MOTOR
 | Name | Default value | Description |
 |-|-|-|
 | `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1 M&ohm; to VIN, 100 k&ohm; to ground. Required to show and monitor (for undervoltage) VIN voltage. |
-| `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for UNO | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the UNO boards, set it to 0.8. |
+| `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for Uno | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the Uno boards, set it to 0.8. |
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
 | `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10 k&ohm; between echo and trigger and then use only trigger pin. |
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |

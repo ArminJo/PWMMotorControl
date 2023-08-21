@@ -1,29 +1,56 @@
+<div align = center>
+
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
-Available as Arduino library "PWMMotorControl". Contains the [Arduino-RobotCar](https://github.com/ArminJo/Arduino-RobotCar) example.
+Arduino library to control brushed DC motors by PWM.<br/>
+It uses optional attached encoders to drive fixed distances. 
 
-### [Version 2.0.1](https://github.com/ArminJo/PWMMotorControl/archive/master.zip) - work in progress
+[![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
+ &nbsp; &nbsp;
+[![Badge Version](https://img.shields.io/github/v/release/ArminJo/PWMMotorControl?include_prereleases&color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/PWMMotorControl/releases/latest)
+ &nbsp; &nbsp;
+[![Badge Commits since latest](https://img.shields.io/github/commits-since/ArminJo/PWMMotorControl/latest?color=yellow)](https://github.com/ArminJo/PWMMotorControl/commits/master)
+ &nbsp; &nbsp;
+[![Badge Build Status](https://github.com/ArminJo/PWMMotorControl/workflows/LibraryBuild/badge.svg)](https://github.com/ArminJo/PWMMotorControl/actions)
+ &nbsp; &nbsp;
+![Badge Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_PWMMotorControl)
+<br/>
+<br/>
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://stand-with-ukraine.pp.ua)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Installation instructions](https://www.ardu-badge.com/badge/PWMMotorControl.svg?)](https://www.ardu-badge.com/PWMMotorControl)
-[![Commits since latest](https://img.shields.io/github/commits-since/ArminJo/PWMMotorControl/latest)](https://github.com/ArminJo/PWMMotorControl/commits/master)
-[![Build Status](https://github.com/ArminJo/PWMMotorControl/workflows/LibraryBuild/badge.svg)](https://github.com/ArminJo/PWMMotorControl/actions)
-![Hit Counter](https://visitor-badge.laobi.icu/badge?page_id=ArminJo_PWMMotorControl)
+Available as [Arduino library "PWMMotorControl"](https://www.arduinolibraries.info/libraries/pwm-motor-control).<br/>
+Contains the [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar) example.
 
+[![Button Install](https://img.shields.io/badge/Install-brightgreen?logoColor=white&logo=GitBook)](https://www.ardu-badge.com/PWMMotorControl)
+ &nbsp; &nbsp;
+[![Button API](https://img.shields.io/badge/API-yellow?logoColor=white&logo=OpenStreetMap)](https://github.com/ArminJo/PWMMotorControl#api)
+ &nbsp; &nbsp;
+[![Button Changelog](https://img.shields.io/badge/Changelog-blue?logoColor=white&logo=AzureArtifacts)](https://github.com/ArminJo/PWMMotorControl#revision-history)
 
+</div>
+
+#### If you find this library useful, please give it a star.
+
+<br/>
+
+# Features
 - The PWMDcMotor.cpp controls **brushed DC motors** by PWM using standard full bridge IC's like **[L298](https://www.instructables.com/L298-DC-Motor-Driver-DemosTutorial/)**, [**SparkFun Motor Driver - Dual TB6612FNG**](https://www.sparkfun.com/products/14451), or **[Adafruit_MotorShield](https://www.adafruit.com/product/1438)** (using PCA9685 -> 2 x TB6612).
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
 - The CarPWMMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
 - To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed PWM if you use the `setSpeedPWMCompensation()` functions. For car control, only compensation of one motor is required.
 
-#### The motor is mainly controlled by 2 dimensions:
+### The motor is mainly controlled by 2 dimensions:
 1. **Direction** / motor driver control. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
 2. **SpeedPWM** which is ignored for BRAKE or RELEASE. Some functions allow a signed speedPWM parameter, which includes the direction as sign (positive -> FORWARD).
 
+<br/>
+
+# API
 #### Basic commands are:
 - `init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin)`.
 - `setDirection(uint8_t aMotorDirection)`.
 - `setSpeedPWM(uint8_t aSpeedPWM)`.
-- `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)` or `setSpeedPWMAndDirection(int Signed_RequestedSpeedPWM)`.
+- `setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection)`.
+- `setSpeedPWMAndDirection(int SignedRequestedSpeedPWM)`.
 - `stop()` or `setSpeedPWMAndDirection(0)`.
 - `startRampUp(uint8_t aRequestedDirection)`.
 - `getSpeed()`, `getAverageSpeed()`,  `getDistanceMillimeter()` and `getBrakingDistanceMillimeter()` for **encoder motors or MPU6050 IMU** equipped cars.
@@ -36,20 +63,19 @@ For **non encoder motors, distance and drive speed PWM is used in a formula to c
 
 #### Functions for cars controlling 2 motors / motor sets from CarPWMMotorControl.hpp.
 - `rotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed, void (*aLoopCallback)(void))`.
-- All other functions from above, but they are working now on both motors.
+- Plus all functions from above like `setSpeedPWM()` etc. They now affect both motors.
 
+<br/>
+
+# Pictures
 | 4WD car with IR receiver and Bluetooth module and 4 AA rechargeable batteries. | Instructable |
 |-|-|
 | ![4 wheel car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/4WDInstructable.jpg) | [![Instructable](https://github.com/ArminJo/Arduino-OpenWindowAlarm/blob/master/pictures/instructables-logo-v2.png)](https://www.instructables.com/Arduino-4WD-Car-Assembly-and-Code-With-Optional-In/) |
 
-Arduino Plotter diagram of PWM, speed[rpm] and encoder count for USB 3.8 volt supply and a Mosfet bridge. Timebase is 50 ms per plotted value. Generated by the [PrintMotorDiagram](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/PrintMotorDiagram) example.
-![USB powered](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/PWM_Speed_USB.png)
-
-Diagram of PWM, speed[rpm] and encoder count for 2 Li-ion (7.5 volt) supply and a Mosfet bridge.
-![2 Li-ion powered](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/PWM_Speed_2Li-ions.png)
+<br/>
 
 # Full bridges
-This library was tested with the bipolar full bridge IC L298 and the MOSFET IC TB6612.
+This library was tested with the bipolar full bridge IC L298 and the (recommended) MOSFET full bridge IC TB6612.
 
 | The L298 has a loss of around 2 volt, which is the reason for the attached heat sink | The TB6612 has almost no loss |
 | :-: | :-: |
@@ -57,11 +83,17 @@ This library was tested with the bipolar full bridge IC L298 and the MOSFET IC T
 | L298 voltages at both motor pins @7.5 V | TB6612 effective motor voltage @7.6 V |
 | ![L298 output voltages](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.5V_L298-PWM87-2Channel.bmp) | ![TB6612 motor voltage](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_TB6612-PWM67.bmp) |
 
+<br/>
+
 # PWM period
 - PWM period is 600 &micro;s (1.6 kHz) for Adafruit Motor Shield V2 using PCA9685.
 - PWM period is 1030 &micro;s (970 Hz) for AnalogWrite on pin 5 + 6.
 
-# [Examples](tree/master/examples)
+<br/>
+
+# Examples for this library
+The examples are available at File > Examples > Examples from Custom Libraries / PWMMotorControl.<br/>
+
 ## Start
 One motor starts with DriveSpeedPWM / 2 for one second, then runs 1 second with DriveSpeedPWM.
 After stopping the motor, it tries to run for one full rotation (resulting in a 90 degree turn for a 2WD car). Then the other motor runs the same cycle.
@@ -71,15 +103,15 @@ For the next loop, the direction is switched to backwards.
 4 times drive 40 cm and 90 degree left turn. After the square, the car is turned by 180 degree and the direction is switched to backwards. Then the square starts again.
 
 ## PrintMotorDiagram
-Prints **PWM, speed and distance** diagram of an encoder motor. The encoder increment is inverted at falling PWM slope to show the quadratic kind of encoder graph.
+This example prints **PWM, speed and distance / encoder-count** diagram of an encoder motor. The encoder increment is inverted at falling PWM slope to show the quadratic kind of encoder graph. Timebase is 20 ms per plotted value.
 | Diagram for free running motor controlled by an MosFet bridge supplied by 7.0 volt | Diagram for free running motor controlled by an L298 bridge supplied by 7.6 volt |
 | :-: | :-: |
 | ![7.0V MosFet free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.0V_MosFet_FreeRun.png) | ![7.6V L298 free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.6V_L298_FreeRun.png) |
 | Here you see that the speed is proportional to the PWM, but the minimal power to start the motor is 33/255 = 13% PWM or 0.9 volt. | Due to losses and other effects in the L298, the start voltage is much higher. |
 | | |
-| **MosFet bridge supplied by 3.5 volt** | **Start diagram for L298 with 6.2 volt** |
+| **MosFet bridge supplied by only 3.5 volt** | **Start diagram for L298 with 6.2 volt** |
 | ![3.5V MosFet free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/3.5V_MosFet_FreeRun.png) | ![7.6V L298 free run](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/6.2V_L298_FreeRun.png) |
-
+| Here, the start voltage can be observed better.<br/>There is no stop at the same voltage, so the distance gets virtually negative. | Higher start voltage and a non linear speed / PWM ratio here. |
 
 ## TestMotorWithIMU
 Prints **PWM, speed and distance** diagram of the right (encoder) motor of a car equipped with a MPU6050 IMU.
@@ -90,7 +122,6 @@ It starts with `DEFAULT_DRIVE_SPEED_PWM` and doubles speed for next turn until `
 | Diagram for car controlled by an MosFet bridge | Diagram for car controlled by an L298 bridge |
 | :-: | :-: |
 | ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.4V_PrintCarValuesWithIMU_Encoder.png) | ![Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/Lafvin_Test.png) |
-
 
 ## RobotCarBasic
 Template for your RobotCar control. Currently implemented is: Drive until distance too low, then stop, go backwards and turn random amount.
@@ -104,13 +135,17 @@ The car tries to hold a distance between 30 and 40 cm to an obstacle. Only forwa
 The measured distance range is converted to a pitch as an acoustic feedback.
 
 ## SmartCarFollower
-The car tries to hold a distance between 30 and 40 cm to an target. 
+The car tries to hold a distance between 30 and 40 cm to an target.
 If the target vanishes, the distance sensor scans to get the vanished (or a new) target.
 
 ## [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar)
+Requires also the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
+
 Enables autonomous driving of a 2 or 4 wheel car with an Arduino.<br/>
 To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the environment.
 Manual control is implemented by a GUI using a Bluetooth HC-05 Module and the BlueDisplay library.
+
+<br/>
 
 # Compile options / macros for this library
 To customize the library to different requirements, there are some compile options / macros available.<br/>
@@ -154,13 +189,13 @@ These values are used by functions and some can be overwritten by set* functions
 | `DEFAULT_DRIVE_`<br/>`MILLIVOLT` | 2000 | The derived `DEFAULT_DRIVE_SPEED_PWM` is the speed PWM value used for fixed distance driving. |
 | `DEFAULT_MILLIMETER_`<br/>`PER_SECOND` | 320 | Value at DEFAULT_DRIVE_MILLIVOLT motor supply. A factor used to convert distance to motor on time in milliseconds using the formula:<br/>`MillisForDistance = 20 + (RequestedDistanceMillimeter * MillisPerMillimeter * DriveSpeedPWM / DEFAULT_DRIVE_SPEED_PWM)` |
 
-## Compile options / macros for RobotCar example
+## Compile options / macros for RobotCarBlueDisplay example
 To customize the software to different car configurations, there are some compile options / macros available.<br/>
 
 | Name | Default value | Description |
 |-|-|-|
 | `CAR_HAS_VIN_VOLTAGE_DIVIDER` | undefined | VIN/11 at A2, e.g. 1 M&ohm; to VIN, 100 k&ohm; to ground. Required to show and monitor (for undervoltage) VIN voltage. |
-| `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for UNO | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the UNO boards, set it to 0.8. |
+| `VIN_VOLTAGE_CORRECTION` | undefined or 0.8 for Uno | Voltage to be subtracted from VIN voltage for voltage monitoring. E.g. if there is a series diode between Li-ion and VIN as on the Uno boards, set it to 0.8. |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. The Servo direction is reverse then. |
 | `CAR_HAS_US_DISTANCE_SENSOR` | disabled | A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars). |
 | `US_SENSOR_SUPPORTS_1_PIN_MODE` | disabled | Use modified HC-SR04 modules or HY-SRF05 ones.</br>Modify HC-SR04 by connecting 10 k&ohm; between echo and trigger and then use only trigger pin. |
@@ -175,7 +210,7 @@ To customize the software to different car configurations, there are some compil
 | `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1 M&ohm; to VIN, 100 k&ohm; to ground. |
 | `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation and drive speed. |
 
-#### If you find this library useful, please give it a star.
+<br/>
 
 # Pictures
 Connection schematic of the L298 board for the examples. If motor drives in opposite direction, you must flip the motor to L298 connections.
@@ -199,6 +234,7 @@ Servo mounted head down
 VIN sensing
 ![VIN sensing](https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/SensingVIn.jpg)
 
+<br/>
 
 # Revision History
 ### Version 2.0.1 - work in progress

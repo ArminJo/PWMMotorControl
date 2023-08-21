@@ -321,24 +321,24 @@ void CarPWMMotorControl::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
     leftCarMotor.setSpeedPWM(aRequestedSpeedPWM);
 }
 
-void CarPWMMotorControl::setSpeedPWM(int aRequestedSpeedPWMForLeftMotor, int aRequestedSpeedPWMForRightMotor) {
-    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWMForRightMotor);
-    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWMForLeftMotor);
+void CarPWMMotorControl::setSpeedPWM(int aSignedRequestedSpeedPWMForLeftMotor, int aSignedRequestedSpeedPWMForRightMotor) {
+    rightCarMotor.setSpeedPWMAndDirection(aSignedRequestedSpeedPWMForRightMotor);
+    leftCarMotor.setSpeedPWMAndDirection(aSignedRequestedSpeedPWMForLeftMotor);
 }
 
-void CarPWMMotorControl::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
+void CarPWMMotorControl::setSpeedPWMAndDirection(int aSignedRequestedSpeedPWM) {
     uint8_t tDirection;
-    if (aRequestedSpeedPWM == 0) {
+    if (aSignedRequestedSpeedPWM == 0) {
         tDirection = DIRECTION_STOP;
-    } else if (aRequestedSpeedPWM < 0) {
-        aRequestedSpeedPWM = -aRequestedSpeedPWM;
+    } else if (aSignedRequestedSpeedPWM < 0) {
+        aSignedRequestedSpeedPWM = -aSignedRequestedSpeedPWM;
         tDirection = DIRECTION_BACKWARD;
     } else {
         tDirection = DIRECTION_FORWARD;
     }
     checkAndHandleDirectionChange(tDirection); // this sets CarDirection.
-    rightCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
-    leftCarMotor.setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
+    rightCarMotor.setSpeedPWMAndDirection(aSignedRequestedSpeedPWM, tDirection);
+    leftCarMotor.setSpeedPWMAndDirection(aSignedRequestedSpeedPWM, tDirection);
 }
 
 uint8_t CarPWMMotorControl::getCarDirection() {

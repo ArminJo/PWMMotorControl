@@ -56,7 +56,7 @@
  * PIN  I/O Function
  *  10  O   Servo distance sensor - on Adafruit Motor Shield marked as Servo Nr. 1
  *  11  I/O IR remote control signal in / Servo laser pan
- *  12  O   Buzzer for UNO board / Servo laser tilt
+ *  12  O   Buzzer for Uno board / Servo laser tilt
  *  13  O   Laser power
  *
  * PIN  I/O Function
@@ -163,7 +163,7 @@
 #endif
 
 // Temporarily definition for convenience
-#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
+#define CAR_IS_NANO_BASED               // We have an Arduino Nano instead of an Uno resulting in a different pin layout.
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 
 #if defined(CAR_IS_NANO_BASED)
@@ -217,7 +217,7 @@ void noTone(uint8_t _pin){
     ledcWriteTone(TONE_LEDC_CHANNEL, 0);
 }
 #else // NANO_BASED
-// UNO based
+// Uno based
 // Pin A0 for VCC monitoring - ADC channel 2
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_ATTENUATED_INPUT_CHANNEL    2 // = A2

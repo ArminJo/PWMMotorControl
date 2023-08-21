@@ -402,19 +402,19 @@ void PWMDcMotor::changeSpeedPWM(uint8_t aRequestedSpeedPWM) {
  * Signed speed
  *  @param  aRequestedSpeedPWM The 8-bit PWM value, 0 is off, 255 is on forward -255 is on backward
  */
-void PWMDcMotor::setSpeedPWMAndDirection(int aRequestedSpeedPWM) {
+void PWMDcMotor::setSpeedPWMAndDirection(int aSignedRequestedSpeedPWM) {
     uint8_t tDirection;
-    if (aRequestedSpeedPWM < 0) {
-        aRequestedSpeedPWM = -aRequestedSpeedPWM;
+    if (aSignedRequestedSpeedPWM < 0) {
+        aSignedRequestedSpeedPWM = -aSignedRequestedSpeedPWM;
         tDirection = DIRECTION_BACKWARD;
     } else {
         tDirection = DIRECTION_FORWARD;
     }
 
-    if (aRequestedSpeedPWM > MAX_SPEED_PWM) {
-        aRequestedSpeedPWM = MAX_SPEED_PWM;
+    if (aSignedRequestedSpeedPWM > MAX_SPEED_PWM) {
+        aSignedRequestedSpeedPWM = MAX_SPEED_PWM;
     }
-    setSpeedPWMAndDirection(aRequestedSpeedPWM, tDirection);
+    setSpeedPWMAndDirection(aSignedRequestedSpeedPWM, tDirection);
 }
 
 /*

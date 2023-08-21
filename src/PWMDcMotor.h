@@ -316,7 +316,7 @@ public:
     void setDirection(uint8_t aMotorDirection); // alias for setMotorDriverMode()
     void setSpeedPWM(uint8_t aRequestedSpeedPWM);
 
-    void setSpeedPWMAndDirection(int aRequestedSpeedPWM); // sign us used for direction
+    void setSpeedPWMAndDirection(int aSignedRequestedSpeedPWM); // sign us used for direction
     void changeSpeedPWM(uint8_t aRequestedSpeedPWM); // Keeps direction
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void setSpeedPWMAndDirectionWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);

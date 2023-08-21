@@ -203,10 +203,10 @@ public:
      * Functions, which directly call motor functions for both motors
      */
     void setSpeedPWM(uint8_t aRequestedSpeedPWM);
-    void setSpeedPWM(int aRequestedSpeedPWMForLeftMotor, int aRequestedSpeedPWMForRightMotor);
+    void setSpeedPWM(int aSignedRequestedSpeedPWMForLeftMotor, int aSignedRequestedSpeedPWMForRightMotor); // cannot be renamed to setSpeedPWMAndDirection()!
     void setDirection(uint8_t aRequestedDirection);
 
-    void setSpeedPWMAndDirection(int aRequestedSpeedPWM);
+    void setSpeedPWMAndDirection(int aSignedRequestedSpeedPWM);
     void setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection);
     void setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
             int8_t aSpeedPWMCompensationRightDelta);

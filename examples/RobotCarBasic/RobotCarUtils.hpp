@@ -203,7 +203,7 @@ bool isVINVoltageDividerAttached(uint8_t aPin) {
 }
 
 #if (MOTOR_PWM_PIN == 5) || (MOTOR_PWM_PIN == 6)
-#define NUMBER_OF_VIN_SAMPLES   10 // Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us for UNO/Nano pin 5 and 6.
+#define NUMBER_OF_VIN_SAMPLES   10 // Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us for Uno/Nano pin 5 and 6.
 #else
 #define NUMBER_OF_VIN_SAMPLES   20 // Get 20 samples lasting 2060 us, which is almost the PWM period of 2048 us.
 #endif

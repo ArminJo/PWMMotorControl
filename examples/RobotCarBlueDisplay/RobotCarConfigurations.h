@@ -39,7 +39,7 @@
 //#define TBB6612_4WD_4NIMH_VIN_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 NiMh + VIN voltage divider.
 //#define TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION       // China set with TB6612 mosfet bridge + 2 Li-ion.
 //#define TBB6612_4WD_2LI_ION_FULL_CONFIGURATION        // China set with TB6612 mosfet bridge + 2 Li-ion + VIN voltage divider + MPU6050.
-//#define TBB6612_4WD_2LI_ION_DIRECT_BASIC_CONFIGURATION // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN and not to UNO power jack
+//#define TBB6612_4WD_2LI_ION_DIRECT_BASIC_CONFIGURATION // TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION but power supply is connected direct to VIN and not to Uno power jack
 //#define TBB6612_4WD_2LI_ION_DIRECT_VIN_CONFIGURATION  // China set with TB6612 mosfet bridge + 2 Li-ion direct + VIN voltage divider
 //#define L298_2WD_4AA_BASIC_CONFIGURATION              // China 2WD set with L298 bridge and Uno board with series diode for VIN + 4 AA batteries. DEFAULT.
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
@@ -62,7 +62,7 @@
  * Distinct parameters for car control boards, sensors and extensions
  */
 //#define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. To show and monitor VIN voltage. Can be dynamically detected.
-//#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board.
+//#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board.
 //#define DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN // Activate this, if the distance servo is mounted head down to detect small obstacles.
 //#define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars).
 //#define US_SENSOR_SUPPORTS_1_PIN_MODE   // Activate it, if you use modified HC-SR04 modules or HY-SRF05 ones.
@@ -81,7 +81,7 @@
 //#define CAR_HAS_LASER
 //
 //#define USE_LIGHTWEIGHT_SERVO_LIBRARY   // LightweightServo library can control servos at pin 9 and 10. Saves up to 710 bytes program memory.
-//#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
+//#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an Uno resulting in a different pin layout.
 /*
  * Parameters for PWMMotorControl
  */
@@ -116,7 +116,7 @@
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
 #define CAR_HAS_MPU6050_IMU                 // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 //#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
 //#define DO_NOT_USE_ARDUINO_SERIAL       // Saves up to 2886 bytes
 #define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
@@ -185,7 +185,7 @@
 #endif
 
 /*
- * TBB6612_4WD_4AA_VIN_CONFIGURATION with 2 Li-ion instead of 4AA. Power supply is connected direct to VIN and not to UNO power jack.
+ * TBB6612_4WD_4AA_VIN_CONFIGURATION with 2 Li-ion instead of 4AA. Power supply is connected direct to VIN and not to Uno power jack.
  * !!! You must cut connection of VIN to servo row and instead connect servo row to 5 volt (at analog row) on Sensor Shield!!!
  * The Uno board has a series diode at the power jack connector which we avoid here.
  */
@@ -281,7 +281,7 @@
  * Nano Breadboard version with Arduino NANO, without shield and with pan/tilt servo and MPU camera and laser
  */
 #if defined(BREADBOARD_4WD_FULL_CONFIGURATION)
-#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
+#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an Uno resulting in a different pin layout.
 #define CAR_HAS_4_WHEELS
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
@@ -290,7 +290,7 @@
 #define CAR_HAS_CAMERA
 #define CAR_HAS_LASER
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define CAR_HAS_ENCODERS                // Activate this if you have encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_MPU6050_IMU             // Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning. Connectors point to the rear.
@@ -306,7 +306,7 @@
  * Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
  */
 #if defined(MECANUM_BASIC_CONFIGURATION)
-#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an UNO resulting in a different pin layout.
+#define CAR_IS_NANO_BASED               // We have an Arduino NANO instead of an Uno resulting in a different pin layout.
 #define CAR_HAS_4_MECANUM_WHEELS
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
@@ -360,14 +360,14 @@
  ************************************/
 /*
  * TBB6612_4WD_4AA_BASIC_CONFIGURATION with 2 Li-ion instead of 4AA.
- * Connect to UNO power jack and not to Sensor Shield, since 7.4 to 8.4 volt is far too much
+ * Connect to Uno power jack and not to Sensor Shield, since 7.4 to 8.4 volt is far too much
  * for the servo connected to the power input of the Sensor Shield!
  * Apply SEL jumper at Sensor Shield power input to connect the servo power with 5 volt.
  * Uno board has series diode at power jack connector.
  */
 #if defined(TBB6612_4WD_2LI_ION_BASIC_CONFIGURATION)
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 #define TBB6612_4WD_4AA_BASIC_CONFIGURATION // Use further settings of this configuration
 #define BASIC_CONFIG_NAME   "4WD + TB6612 + 2 Li-ion"
 #endif
@@ -412,7 +412,7 @@
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define VIN_2_LI_ION                    // Activate this, if you use 2 Li-ion cells (around 7.4 volt) as motor supply.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 #define BASIC_CONFIG_NAME   "2WD + L298 + 2 Li-ion"
 #endif
 
@@ -425,7 +425,7 @@
 #define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 #define BASIC_CONFIG_NAME   "2WD + L298 + 4 AA"
 #endif
 
@@ -446,7 +446,7 @@
  */
 #if defined(L298_2WD_4AA_BASIC_CONFIGURATION) || !defined(BASIC_CONFIG_NAME)         // use L298_2WD_4AA_BASIC_CONFIGURATION as default
 #define USE_L298_BRIDGE                 // Activate this, if you use a L298 bridge, which has higher losses than a recommended mosfet bridge like TB6612.
-#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the UNO board
+#define VIN_VOLTAGE_CORRECTION 0.81     // Correction for the series SI-diode in the VIN line of the Uno board
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)
 #define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes

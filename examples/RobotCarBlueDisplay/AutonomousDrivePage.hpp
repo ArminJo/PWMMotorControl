@@ -91,7 +91,7 @@ void doNextDistanceFeedbackMode(BDButton *aTheTouchedButton, int16_t aValue) {
 #endif
 
 void setStepModeButtonCaption() {
-    TouchButtonStepMode.setCaptionFromStringArrayPGM(sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
+    TouchButtonStepMode.setCaptionFromStringArray(sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
 }
 
 /*
@@ -133,7 +133,7 @@ void doStep(BDButton *aTheTouchedButton, int16_t aValue) {
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
 void setScanModeButtonCaption() {
-    TouchButtonScanMode.setCaptionFromStringArrayPGM(sDistanceSourceModeButtonCaptionStringArray, sDistanceSourceMode);
+    TouchButtonScanMode.setCaptionFromStringArray(sDistanceSourceModeButtonCaptionStringArray, sDistanceSourceMode);
 }
 
 void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
