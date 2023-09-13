@@ -237,7 +237,11 @@ VIN sensing
 <br/>
 
 # Revision History
-### Version 2.0.1 - work in progress
+### Version 2.1.0
+- Improved examples, especially follower examples.
+- Added convertMillimeterToMillis() etc.
+- Added Variable computedMillisOfMotorForDistance.
+- Added MillimeterPer256Degree and function setMillimeterPer256Degree() instead of using always constants.
 
 ### Version 2.0.0
 - Renamed instance from RobotCarPWMMotorControl to RobotCar.
