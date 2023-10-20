@@ -27,7 +27,7 @@ jobs:
 
     env:
       # Comma separated list without double quotes around the list.
-      REQUIRED_LIBRARIES: Servo,ServoEasing,Adafruit Motor Shield V2 Library,PlayRtttl
+      REQUIRED_LIBRARIES: Servo,ServoEasing,Adafruit Motor Shield V2 Library,PlayRtttl,BlueDisplay
 
     strategy:
       matrix:
@@ -70,7 +70,7 @@ jobs:
 
           - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
             platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-            required-libraries: ESP32Servo # contains analogWrite
+            required-libraries: ESP32Servo@0.13.0 # contains analogWrite.h
             sketches-exclude: PrintMotorDiagram,PrintCarValuesWithIMU,RobotCarBasic,RobotCarBlueDisplay,SmartCarFollower  # no Encoder support yet
             build-properties: # the flags were put in compiler.cpp.extra_flags
               All: -DCAR_IS_ESP32_CAM_BASED
@@ -91,12 +91,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Checkout new BlueDisplay library
-        uses: actions/checkout@v3
-        with:
-          repository: ArminJo/Arduino-BlueDisplay
-          ref: master
-          path: CustomLibrary # must contain string "Custom"
+#      - name: Checkout new BlueDisplay library
+#        uses: actions/checkout@v3
+#        with:
+#          repository: ArminJo/Arduino-BlueDisplay
+#          ref: master
+#          path: CustomLibrary # must contain string "Custom"
 
       - name: Compile all examples using the arduino-test-compile action
         uses: ArminJo/arduino-test-compile@master

@@ -62,7 +62,7 @@
  * PIN  I/O Function
  *  A0  O   US trigger (and echo in 1 pin US sensor mode) "URF 01 +" connector on the Arduino Sensor Shield
  *  A1  I   US echo on "URF 01 +" connector / IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
- *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE, camera supply control on NANO
+ *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE, camera supply control on NANO, IR in on Mecanum
  *  A3  I   IR distance, Buzzer on NANO
  *  A4  SDA I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
  *  A5  SCL I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
@@ -96,7 +96,7 @@
 #    endif
 #define DISTANCE_TONE_FEEDBACK_ENABLE_PIN 8 // If this pin is connected to ground, enable distance feedback
 #  endif
-#define IR_INPUT_PIN                    9   // on Adafruit Motor Shield marked as Servo Nr. 2
+#define IR_RECEIVE_PIN                    9   // on Adafruit Motor Shield marked as Servo Nr. 2
 #else
 //2 + 3 are reserved for encoder input
 #define RIGHT_MOTOR_FORWARD_PIN     4 // IN4 <- Label on the L298N board
@@ -107,7 +107,7 @@
 #define LEFT_MOTOR_BACKWARD_PIN     8 // IN2
 #define LEFT_MOTOR_PWM_PIN          6 // ENA - Must be PWM capable
 
-#define IR_INPUT_PIN               11
+#define IR_RECEIVE_PIN             11
 #endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
 //Servo pins
@@ -155,7 +155,7 @@
 #define PIN_TRIGGER_OUT                A0 // can we see the trigger signal?
 #define PIN_ECHO_IN                    A1
 
-#define IR_INPUT_PIN                   A2
+#define IR_RECEIVE_PIN                 A2
 
 #define PIN_DISTANCE_SERVO             13
 #if defined(CAR_HAS_LASER)

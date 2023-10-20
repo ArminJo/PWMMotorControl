@@ -1,11 +1,11 @@
 /*
- *  BasicIRControl.cpp
+ *  IRDispatcherControl.cpp
  *
  *  Implements basic car control, like move and turn by an IR remote.
- *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands are done with a big switch.
- *  To support mapping, the received IR code is printed at the serial output.
+ *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands can be done in IRCommandMapping.h.
+ *  To support mapping, the received IR code is printed at the serial output if `INFO` is defined.
  *
- *  Copyright (C) 2023  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2023  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -26,10 +26,14 @@
  */
 
 #include <Arduino.h>
+//#define DEBUG
+//#define INFO
 
 /*
- * If IR commands are received, you will see output like this:
+ * defining INFO enables output like this:
  * A=0x0 C=0x1D - Received IR data
+ * Run non blocking command: default speed - Called car command
+ * 5 CompensatedSpeedPWM=0 DriveSpeedPWM=106 SpeedPWMCompensation=0 CurrentDirection=S - Output of car command
  */
 
 /*
@@ -49,14 +53,30 @@
 //#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 //#define MECANUM_US_DISTANCE_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
+#define DO_NOT_SUPPORT_RAMP             // Ramps are anyway not used if drive speed voltage (default 2.0 V) is below 2.3 V. Saves 378 bytes program memory.
+#define USE_SOFT_I2C_MASTER             // Saves 2110 bytes program memory and 200 bytes RAM for I2C communication to Adafruit motor shield and MPU6050 IMU compared with Arduino Wire
+
 #include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
-#include "PWMDcMotor.hpp"
 
-#include "TinyIRReceiver.hpp"
+#include "CarPWMMotorControl.hpp"
 
-PWMDcMotor rightCarMotor;
-PWMDcMotor leftCarMotor;
+/*
+ * Choose remote
+ * For available IR commands see RobotCarIRCommands.hpp and for the mapping to remote buttons see RobotCarIRCommandMapping.h
+ * https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/RobotCarIRCommands.hpp
+ * https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/RobotCarIRCommandMapping.h
+ */
+//#define USE_KEYES_REMOTE_CLONE // With number pad above direction control, will be taken as default
+//#define USE_KEYES_REMOTE
+//#define USE_DVBT_STICK_REMOTE
+#define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
+#define INFO // Enable info just for IR dispatcher
+#include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
+#include "RobotCarIRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
+#include "IRCommandDispatcher.hpp"
+
+#include "RobotCarUtils.hpp" // Requires IR_REMOTE_NAME from IRCommandMappingRobotCar.h. For printConfigInfo(), initRobotCarPWMMotorControl()
 
 /*
  * Start of robot car control program
@@ -66,42 +86,27 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
+    printConfigInfo(&Serial);
 
-    // Specify the pins to use for PWM and direction
-    rightCarMotor.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN);
-    leftCarMotor.init(LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
+    initRobotCarPWMMotorControl();
+    RobotCar.setSpeedPWMCompensation(0); // If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
 
     /*
      * Tone feedback for end of boot
      */
     tone(PIN_BUZZER, 2200, 100);
 
-    initPCIInterruptForTinyReceiver(); // Enables the interrupt generation on change of IR input signal
-    Serial.println(F("Ready to receive NEC IR signals at pin " STR(IR_RECEIVE_PIN)));
+    // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
+    IRDispatcher.init();
+    Serial.print(F("Ready to receive NEC signals from IR remote of type "));
+    Serial.print(IR_REMOTE_NAME);
+    Serial.println(F(" at pin " STR(IR_RECEIVE_PIN)));
 }
 
 void loop() {
     /*
      * Check for IR commands and execute them.
      */
-    if (TinyIRReceiverData.justWritten) {
-        TinyIRReceiverData.justWritten = false;
-        printTinyReceiverResultMinimal(&Serial);
-
-        switch (TinyIRReceiverData.Command) {
-        case 0x46:
-            // Forward for 300 ms
-            rightCarMotor.setSpeedPWMAndDirection(100);
-            leftCarMotor.setSpeedPWMAndDirection(100);
-            delay(300);
-            break;
-        default:
-            Serial.print(F("Unknown command 0x"));
-            Serial.println(TinyIRReceiverData.Command, HEX);
-            break;
-        }
-    }
-    // Stop car after executing IR command
-    rightCarMotor.stop();
-    leftCarMotor.stop();
+    IRDispatcher.checkAndRunSuspendedBlockingCommands();
+    RobotCar.updateMotors();
 }

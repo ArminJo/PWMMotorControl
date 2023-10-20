@@ -104,7 +104,7 @@ void printProgramOptions(Print *aSerial) {
     // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
     aSerial->print(F("Listening to IR remote of type "));
     aSerial->print(IR_REMOTE_NAME);
-    aSerial->println(F(" at pin " STR(IR_INPUT_PIN)));
+    aSerial->println(F(" at pin " STR(IR_RECEIVE_PIN)));
 #  else
     aSerial->println(F("USE_IR_REMOTE: not defined"));
 #  endif

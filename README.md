@@ -153,7 +153,7 @@ These macros must be defined in your program **before** the line `#include <CarP
 Modify them by enabling / disabling them, or change the values if applicable.
 
 | Name | Default value | Description |
-|-|-|-|
+|-|-:|-|
 | `USE_ENCODER_MOTOR_CONTROL` | disabled | Use slot-type photo interrupter and an attached encoder disc to enable motor distance and speed sensing for closed loop control. |
 | `USE_MPU6050_IMU` | disabled | Use GY-521 MPU6050 breakout board connected by I2C for support of precise turning and speed / distance calibration. Connectors point to the rear. Requires up to 2850 bytes program memory if `USE_SOFT_I2C_MASTER` defined and 3756 bytes if `USE_SOFT_I2C_MASTER` is not defined. |
 | `USE_ACCELERATOR_Y_FOR_SPEED` | disabled | The y axis of the GY-521 MPU6050 breakout board points forward / backward, i.e. connectors are at the left / right side. |
@@ -162,7 +162,7 @@ Modify them by enabling / disabling them, or change the values if applicable.
 | `USE_STANDARD_LIBRARY_`<br/>`ADAFRUIT_MOTOR_SHIELD` | disabled | Enabling requires additionally 694 bytes program memory. |
 | `DO_NOT_SUPPORT_RAMP` | disabled | Enabling saves 378 bytes program memory. |
 | `DO_NOT_SUPPORT_AVERAGE_SPEED` | disabled | Enabling disables the function getAverageSpeed() and saves 44 bytes RAM per motor and 156 bytes program memory. |
-| `USE_SOFT_I2C_MASTER` | disabled | Saves up to 2110 bytes program memory and 200 bytes RAM for I2C communication compared with Arduino Wire. |
+| `USE_SOFT_I2C_MASTER` | disabled | Saves up to 2110 bytes program memory and 200 bytes RAM for I2C communication to Adafruit motor shield and MPU6050 IMU compared with Arduino Wire. |
 | `ENABLE_MOTOR_LIST_FUNCTIONS` | disabled | Enables the convenience functions `*AllMotors*()` and `*forAll()`. Requires up to additional 80 bytes program space and 7 bytes RAM. |
 
 ## Default car geometry dependent values used in this library

@@ -52,7 +52,7 @@ uint8_t sDistanceSourceMode = DISTANCE_SOURCE_MODE_DEFAULT;
 //#define TOF_OFFSET_MILLIMETER   10 // The offset measured manually or by calibrateOffset(). Offset = RealDistance - MeasuredDistance
 #  endif
 
-#  if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#  if defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
 #undef USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE // just in case...
 #include "SoftI2CMasterConfig.h"
 #include "SoftI2CMaster.h"
@@ -196,6 +196,8 @@ void printDistanceIfChanged(Print *aSerial) {
  */
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd,
         uint8_t aMinimumUSDistanceForMinimumMode, bool aDoShow) {
+    (void) aDoShow; // to avoid compiler warnings
+
 #if !defined(CAR_HAS_IR_DISTANCE_SENSOR)
     (void) aWaitForCurrentMeasurementToEnd; // suppress compiler warnings
 #endif

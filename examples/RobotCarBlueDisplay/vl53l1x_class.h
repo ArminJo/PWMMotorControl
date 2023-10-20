@@ -44,7 +44,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "Arduino.h"
 
-#if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#if defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
 #define USE_SOFT_I2C_MASTER_H_AS_PLAIN_INCLUDE
 #include "SoftI2CMaster.h"
 #else
@@ -121,7 +121,7 @@ typedef struct {
 typedef struct {
 
     uint8_t I2cDevAddr;
-#if !(defined(AVR) && defined(USE_SOFT_I2C_MASTER))
+#if !(defined(__AVR__) && defined(USE_SOFT_I2C_MASTER))
     TwoWire *I2cHandle;
 #endif
 
@@ -139,7 +139,7 @@ public:
      * @param[in] &pin_gpio1 pin Mbed InterruptIn PinName to be used as component GPIO_1 INT
      * @param[in] DevAddr device address, 0x52 by default
      */
-#if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#if defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
     VL53L1X(int pin, int pin_gpio1) :
         RangeSensor(), gpio0(pin), gpio1Int(pin_gpio1) {
 #else
@@ -531,7 +531,7 @@ public:
 
 protected:
 
-#if !(defined(AVR) && defined(USE_SOFT_I2C_MASTER))
+#if !(defined(__AVR__) && defined(USE_SOFT_I2C_MASTER))
     /* IO Device */
     TwoWire *dev_i2c;
 #endif

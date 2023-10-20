@@ -1,9 +1,7 @@
 /*
- *  BasicIRControl.cpp
+ *  BasicDistance.cpp
  *
- *  Implements basic car control, like move and turn by an IR remote.
- *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands are done with a big switch.
- *  To support mapping, the received IR code is printed at the serial output.
+ *  Implements basic car movements controlled by HCSR04 ultrasonic distance measurement.
  *
  *  Copyright (C) 2023  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
@@ -28,16 +26,11 @@
 #include <Arduino.h>
 
 /*
- * If IR commands are received, you will see output like this:
- * A=0x0 C=0x1D - Received IR data
- */
-
-/*
  * Car configuration
  * For a complete list of available configurations see RobotCarConfigurations.h
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/src/RobotCarConfigurations.h
  */
-//#define TBB6612_4WD_4AA_BASIC_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 AA.
+#define TBB6612_4WD_4AA_BASIC_CONFIGURATION           // China set with TB6612 mosfet bridge + 4 AA.
 //#define TBB6612_4WD_4AA_VIN_CONFIGURATION             // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider.
 //#define TBB6612_4WD_4AA_FULL_CONFIGURATION            // China set with TB6612 mosfet bridge + 4 AA + VIN voltage divider + MPU6050.
 //#define TBB6612_4WD_4NIMH_BASIC_CONFIGURATION         // China set with TB6612 mosfet bridge + 4 NiMh.
@@ -48,12 +41,10 @@
 //#define L298_2WD_2LI_ION_BASIC_CONFIGURATION          // China 2WD set with L298 bridge and Uno board with series diode for VIN + 2 Li-ion.
 //#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
-//#define MECANUM_US_DISTANCE_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
 #include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 #include "PWMDcMotor.hpp"
-
-#include "TinyIRReceiver.hpp"
+#include "HCSR04.hpp"
 
 PWMDcMotor rightCarMotor;
 PWMDcMotor leftCarMotor;
@@ -71,37 +62,31 @@ void setup() {
     rightCarMotor.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN);
     leftCarMotor.init(LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 
+    initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
+
     /*
      * Tone feedback for end of boot
      */
     tone(PIN_BUZZER, 2200, 100);
-
-    initPCIInterruptForTinyReceiver(); // Enables the interrupt generation on change of IR input signal
-    Serial.println(F("Ready to receive NEC IR signals at pin " STR(IR_RECEIVE_PIN)));
+    delay(5000); // Initial wait
+    tone(PIN_BUZZER, 2200, 100);
 }
 
 void loop() {
-    /*
-     * Check for IR commands and execute them.
-     */
-    if (TinyIRReceiverData.justWritten) {
-        TinyIRReceiverData.justWritten = false;
-        printTinyReceiverResultMinimal(&Serial);
+    unsigned int tDistanceCentimeter = getUSDistanceAsCentimeter();
+    Serial.print(F("Distance = "));
+    Serial.print(tDistanceCentimeter);
+    Serial.println(F(" cm"));
 
-        switch (TinyIRReceiverData.Command) {
-        case 0x46:
-            // Forward for 300 ms
-            rightCarMotor.setSpeedPWMAndDirection(100);
-            leftCarMotor.setSpeedPWMAndDirection(100);
-            delay(300);
-            break;
-        default:
-            Serial.print(F("Unknown command 0x"));
-            Serial.println(TinyIRReceiverData.Command, HEX);
-            break;
-        }
+    if (tDistanceCentimeter > 30) {
+        rightCarMotor.setSpeedPWMAndDirection(100);
+        leftCarMotor.setSpeedPWMAndDirection(100);
+    } else if (tDistanceCentimeter < 20) {
+        rightCarMotor.setSpeedPWMAndDirection(-100);
+        leftCarMotor.setSpeedPWMAndDirection(- 100);
+    } else {
+        rightCarMotor.stop();
+        leftCarMotor.stop();
     }
-    // Stop car after executing IR command
-    rightCarMotor.stop();
-    leftCarMotor.stop();
+    delay(200); // to avoid printing to fast
 }

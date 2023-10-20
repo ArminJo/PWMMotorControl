@@ -903,7 +903,7 @@ VL53L1X_ERROR VL53L1X::VL53L1_I2CWrite(uint8_t DeviceAddr, uint16_t RegisterAddr
    Serial.print("Writing port number ");
    Serial.println(RegisterAddr);
 #endif
-#if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#if defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
 //    i2c_write_buffer_to_16bit_register(DeviceAddr, RegisterAddr, pBuffer, NumByteToWrite); // unbelievable, but call costs 140 bytes (does it crash the optimizer?)
     i2c_start(DeviceAddr);
     i2c_write(RegisterAddr >> 8);
@@ -927,7 +927,7 @@ VL53L1X_ERROR VL53L1X::VL53L1_I2CWrite(uint8_t DeviceAddr, uint16_t RegisterAddr
     if (tStatus != 0) {
         return 1;
     }
-#endif // defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#endif // defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
     return 0;
 }
 
@@ -940,7 +940,7 @@ VL53L1X_ERROR VL53L1X::VL53L1_I2CRead(uint8_t DeviceAddr, uint16_t RegisterAddr,
    Serial.println(RegisterAddr);
 #endif
 
-#if defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#if defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
    i2c_read_buffer_from_16bit_register(DeviceAddr, RegisterAddr, pBuffer, NumByteToRead); // call saves 28 bytes
 //
 //    i2c_start(DeviceAddr);
@@ -980,7 +980,7 @@ VL53L1X_ERROR VL53L1X::VL53L1_I2CRead(uint8_t DeviceAddr, uint16_t RegisterAddr,
         pBuffer[i] = dev_i2c->read();
         i++;
     }
-#endif // defined(AVR) && defined(USE_SOFT_I2C_MASTER)
+#endif // defined(__AVR__) && defined(USE_SOFT_I2C_MASTER)
     return 0;
 }
 

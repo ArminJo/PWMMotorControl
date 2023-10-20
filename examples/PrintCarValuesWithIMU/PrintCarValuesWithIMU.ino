@@ -43,7 +43,7 @@
 
 //#define TRACE
 
-#define USE_SOFT_I2C_MASTER           // Saves 1044 bytes program memory and 99 bytes RAM compared with Arduino Wire
+#define USE_SOFT_I2C_MASTER             // Saves 2110 bytes program memory and 200 bytes RAM for I2C communication to Adafruit motor shield and MPU6050 IMU compared with Arduino Wire
 #include "RobotCarPinDefinitionsAndMore.h"
 
 #include "CarPWMMotorControl.hpp"
