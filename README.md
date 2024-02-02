@@ -2,7 +2,7 @@
 
 # [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl)
 Arduino library to control brushed DC motors by PWM.<br/>
-It uses optional attached encoders to drive fixed distances. 
+It uses optional attached encoders to drive fixed distances.
 
 [![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
  &nbsp; &nbsp;
@@ -29,6 +29,8 @@ Contains the [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar) 
 </div>
 
 #### If you find this library useful, please give it a star.
+
+&#x1F30E; [Google Translate](https://translate.google.com/translate?sl=en&u=https://github.com/ArminJo/PWMMotorControl)
 
 <br/>
 
@@ -127,16 +129,71 @@ It starts with `DEFAULT_DRIVE_SPEED_PWM` and doubles speed for next turn until `
 Template for your RobotCar control. Currently implemented is: Drive until distance too low, then stop, go backwards and turn random amount.
 
 ## BasicIRControl
-Implements basic car control by an IR remote. Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands can be done in IRCommandMapping.h.<br/>
+Implements basic car control by an IR remote.
+Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands can be done in IRCommandMapping.h.<br/>
 To support mapping, the received IR code is printed at the serial output if `INFO` is defined.
+
+| The 3 supported IR remotes | Back view of 2 IR remotes |
+|-|-|
+| ![IR front view](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/DifferentRemotesFront.jpg) | ![IR front view](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/DifferentRemotesBack.jpg) |
 
 ## SmartCarFollowerSimple
 The car tries to hold a distance between 30 and 40 cm to an obstacle. Only forward and back movement, no turn!
 The measured distance range is converted to a pitch as an acoustic feedback.
 
 ## SmartCarFollower
-The car tries to hold a distance between 30 and 40 cm to an target.
-If the target vanishes, the distance sensor scans to get the vanished (or a new) target.
+The car tries to hold a distance between 22 and 30 cm to an target.
+If the target vanishes, the distance sensor rotates and scans up to 60 cm to get the vanished (or a new) target.
+
+### IR commands
+If an IR Receiver is attached, the following IR commands are available:
+- Reset i.e. stop car and set all values to default.
+- Drive forward / backward for a complete wheel turn. Each repeat will extend the distance by another 1/4 of a wheel turn.
+- Increase / decrease driving speed PWM by 1/16 of max PWM, but clip at start speed PWM, which depends on motor supply voltage.
+- Set driving speed PWM to default, which depends on motor supply voltage.
+- Turn in place left / right by around 15 degree.
+- Toggle keep distance mode.
+- Toggle follower mode (the one that scans).
+- Step the distance feedback modes:
+  - No feedback tone (default).
+  - Pentatonic frequency feedback tone.
+  - Continuous frequency feeedback tone.
+- Switch distance source, if a IR distance (Sharp GP2Y0A21YK / 1080) as well as an ultrasonic distance (HC-SR04) sensor are connected.
+  - Use IR as distance sensor (default).
+  - Use US as distance sensor.
+  - Use minimum of both sensors as distance.
+  - Use maximum of both sensors as distance.
+- Toggle scan speed of distance servo.
+
+
+- TestRotate: **Check the current EEPROM stored values for rotation**.
+  1. Rotate left forward by 9 times 10 degree -> 90 degree.
+  2. Rotate right forward by 90 degree -> car has its initial direction but moved left forward.
+  - Do the same the other direction i.e. first right, then left.
+  - Do the same again, but turn in place.
+
+- TestDrive. Drive the car 2 times forward and and 2 times backward, each for a full wheel turn, to check the current values set for driving distance.
+
+- Test: Drive the car for 2 times 1/8, wheel turn, then 1/ and 1/2 wheel turn. First forward, then backward. If distance driving formula and values are correct, this results in 2 full wheel turns ending at the start position.
+
+- Calibrate speed and rotation.
+
+### Calibrating speed and rotation
+Motor speed depends from motor supply voltage at a given PWM value.
+
+First **measure the motor supply voltage under normal load**, i.e the fixed DEFAULT_DRIVE_SPEED_PWM,
+while turning in place and adjust PWM according to this voltage.
+
+Second **calibrate rotation**.<br/>
+1. Start a 2 * 360 degree turn (4 * 360 for 2 wheel cars, which turn faster) to be sure to reach 360 degree.
+2. The user should **press the stop button when 360 degree is reached**.
+3. Then compute the internal MillimeterPer256Degreee value used for rotations.
+4. Move 90 degree left and right using the new computed values.
+
+- If a IR command is received in the first 4 seconds after start of rotation, it is taken as abort command.
+- If no IR command is received, it is also taken as abort. This enable an easy check, i.e if calibration is correct, the 720 degree are reached.
+
+The steps 1 to 4 are first executed with turn in place, then with turn forward, since the values for both are different, so you must press the stop button twice for a complete calibration.
 
 ## [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar)
 Requires also the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
@@ -202,10 +259,10 @@ To customize the software to different car configurations, there are some compil
 | `CAR_HAS_IR_DISTANCE_SENSOR` | disabled | Use Sharp GP2Y0A21YK / 1080 IR distance sensor. |
 | `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
-| `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PIN_PAN_SERVO` pin. |
-| `CAR_HAS_TILT_SERVO` | disabled | Enables the tilt slider for the `TiltServo` at the `PIN_TILT_SERVO` pin. |
-| `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
-| `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
+| `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PAN_SERVO_PIN` pin. |
+| `CAR_HAS_TILT_SERVO` | disabled | Enables the tilt slider for the `TiltServo` at the `TILT_SERVO_PIN` pin. |
+| `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `CAMERA_SUPPLY_CONTROL_PIN` pin. |
+| `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `LASER_OUT_PIN` / `LED_BUILTIN` pin. |
 | `ENABLE_RTTTL_FOR_CAR` | undefined | Plays melody after initial timeout has reached. Enables the Melody button, which plays a random melody. |
 | `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1 M&ohm; to VIN, 100 k&ohm; to ground. |
 | `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation and drive speed. |
@@ -237,6 +294,9 @@ VIN sensing
 <br/>
 
 # Revision History
+### Version 2.1.1
+- Improved examples, especially follower examples.
+
 ### Version 2.1.0
 - Improved examples, especially follower examples.
 - Added convertMillimeterToMillis() etc.

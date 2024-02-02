@@ -3,7 +3,7 @@
  *
  *  Contains all distance measurement functions.
  *
- *  Copyright (C) 2016-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -55,7 +55,7 @@ extern Servo DistanceServo;     // The pan servo instance for distance sensor
 #define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER            30 // If measured distance is greater than this value, go forward
 #endif
 #if !defined(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER)
-#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     60 // Do not accept target with distance greater than this value
+#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     70 // Do not accept target with distance greater than this value
 #endif
 #if !defined(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER)
 #  if defined(USE_BLUE_DISPLAY_GUI)
@@ -67,10 +67,10 @@ extern Servo DistanceServo;     // The pan servo instance for distance sensor
 
 #include "PWMDcMotor.h" // for DIRECTION_STOP etc.
 typedef enum distance_range {
-    DISTANCE_OK = DIRECTION_STOP, // == TURN_IN_PLACE | 0
-    DISTANCE_TO_SMALL = DIRECTION_FORWARD, // == TURN_FORWARD | 1
-    DISTANCE_TO_GREAT = DIRECTION_BACKWARD, // == TURN_BACKWARD | 2
-    DISTANCE_TIMEOUT = 3
+    DISTANCE_OK = DIRECTION_STOP,           // 0 22 - 29 cm
+    DISTANCE_TO_SMALL = DIRECTION_FORWARD,  // 1 0 - 21 cm
+    DISTANCE_TO_GREAT = DIRECTION_BACKWARD, // 2 30 - 59 cm
+    DISTANCE_TARGET_NOT_FOUND = 3           // 3 60 - 120 cm
 } distance_range_t;
 distance_range_t getDistanceRange(uint8_t aCentimeter);
 extern const char RangeCharacterArray[];
@@ -96,9 +96,9 @@ extern uint8_t sDistanceFeedbackMode;
  * Different result types acquired at one scan
  */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-#define DISTANCE_SOURCE_MODE_MINIMUM    0 // Take the minimum of the US and IR or TOF values
-#define DISTANCE_SOURCE_MODE_MAXIMUM    1
-#define DISTANCE_SOURCE_MODE_US         2 // Take just US value
+#define DISTANCE_SOURCE_MODE_US         0 // Take just US value
+#define DISTANCE_SOURCE_MODE_MINIMUM    1 // Take the minimum of the US and IR or TOF values
+#define DISTANCE_SOURCE_MODE_MAXIMUM    2
 #define DISTANCE_SOURCE_MODE_IR_OR_TOF  3 // Take just IR or TOF value
 #define DISTANCE_LAST_SOURCE_MODE       DISTANCE_SOURCE_MODE_IR_OR_TOF
 #if !defined(DISTANCE_SOURCE_MODE_DEFAULT)
@@ -173,15 +173,17 @@ extern int sNextRotationDegree;
 extern int sLastDegreesTurned;
 
 void initDistance();
-void printDistanceIfChanged(Print *aSerial);
+void getDistanceModesFromPins();
+bool printDistanceIfChanged(Print *aSerial);
 void playDistanceFeedbackTone(uint8_t aCentimeter);
 unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aWaitForCurrentMeasurementToEnd = false,
         uint8_t aMinimumUSDistanceForMinimumMode = 0, bool aDoShow = true);
 
 #if defined(CAR_HAS_DISTANCE_SERVO)
-#define NO_TARGET_FOUND     360     // return value of scanTarget()
-int8_t scanTarget(uint8_t aMaximumTargetDistance);
+#define NO_TARGET_FOUND     360     // return value of scanForTargetAndPrint()
+int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance);
 void printForwardDistanceInfo(Print *aSerial);
+unsigned int moveServoAndGetDistance(uint8_t aTargetDegrees, uint8_t aDistanceTimeoutCentimeter);
 void DistanceServoWriteAndWaitForStop(uint8_t aValue, bool doDelay = false);
 bool fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan = false);
 void doWallDetection();

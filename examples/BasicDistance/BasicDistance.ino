@@ -2,8 +2,9 @@
  *  BasicDistance.cpp
  *
  *  Implements basic car movements controlled by HCSR04 ultrasonic distance measurement.
+ *  The car tries to hold a distance between 20 and 30 cm to the target to follow.
  *
- *  Copyright (C) 2023  Armin Joachimsmeyer
+ *  Copyright (C) 2023-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -45,6 +46,7 @@
 #include "RobotCarPinDefinitionsAndMore.h"
 #include "PWMDcMotor.hpp"
 #include "HCSR04.hpp"
+#include "ADCUtils.hpp" // to check if USB powered
 
 PWMDcMotor rightCarMotor;
 PWMDcMotor leftCarMotor;
@@ -62,14 +64,29 @@ void setup() {
     rightCarMotor.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN);
     leftCarMotor.init(LEFT_MOTOR_FORWARD_PIN, LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 
-    initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
+    initUSDistancePins(TRIGGER_OUT_PIN, ECHO_IN_PIN);
+
+#if defined(ADC_UTILS_ARE_AVAILABLE)
+    if (isVCCUSBPowered()) {
+        /*
+         * Avoid starting motors, if powered by USB
+         * Signal USB powering by a double beep every 10 seconds
+         */
+        while (true) {
+            tone(BUZZER_PIN, 2200, 100);
+            delay(200);
+            tone(BUZZER_PIN, 2200, 100);
+            delay(10000); // wait
+        }
+    }
+#endif
 
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
-    delay(5000); // Initial wait
-    tone(PIN_BUZZER, 2200, 100);
+    tone(BUZZER_PIN, 2200, 100);
+    delay(3000); // Initial wait
+    tone(BUZZER_PIN, 2200, 100);
 }
 
 void loop() {
@@ -79,14 +96,21 @@ void loop() {
     Serial.println(F(" cm"));
 
     if (tDistanceCentimeter > 30) {
+        // distance too high -> go forward (follow)
         rightCarMotor.setSpeedPWMAndDirection(100);
         leftCarMotor.setSpeedPWMAndDirection(100);
     } else if (tDistanceCentimeter < 20) {
+        // distance too low -> go backward
         rightCarMotor.setSpeedPWMAndDirection(-100);
-        leftCarMotor.setSpeedPWMAndDirection(- 100);
+        leftCarMotor.setSpeedPWMAndDirection(-100);
     } else {
+        // distance is acceptable -> stop and wait
         rightCarMotor.stop();
         leftCarMotor.stop();
     }
-    delay(200); // to avoid printing to fast
+
+    /*
+     * Minimal delay is around 10 to 20 ms to avoid receiving our ultrasonic signal sent in last loop! 10 ms is equivalent to a distance measurement of 1.71 m.
+     */
+    delay(200); // To avoid testing to fast
 }

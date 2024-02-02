@@ -63,7 +63,7 @@ void setup() {
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
+    tone(BUZZER_PIN, 2200, 100);
 
     delay(2000);
 }

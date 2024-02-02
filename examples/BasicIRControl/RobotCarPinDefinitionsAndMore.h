@@ -4,7 +4,7 @@
  *  Contains motor pin definitions for direct motor control with PWM and a dual full bridge e.g. TB6612 or L298.
  *  Used for PWMMotorControl examples for various platforms.
  *
- *  Copyright (C) 2021-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2021-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -62,7 +62,7 @@
  * PIN  I/O Function
  *  A0  O   US trigger (and echo in 1 pin US sensor mode) "URF 01 +" connector on the Arduino Sensor Shield
  *  A1  I   US echo on "URF 01 +" connector / IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
- *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for MONITOR_VIN_VOLTAGE, camera supply control on NANO, IR in on Mecanum
+ *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for readVINVoltage(), camera supply control on NANO, IR in on Mecanum
  *  A3  I   IR distance, Buzzer on NANO
  *  A4  SDA I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
  *  A5  SCL I2C for motor shield / VL35L1X TOF sensor / MPU6050 accelerator and gyroscope
@@ -75,58 +75,74 @@
 #define RIGHT_MOTOR_INTERRUPT       INT0 // on pin 2
 #define LEFT_MOTOR_INTERRUPT        INT1 // on pin 3
 #else
-#  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#  if !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
+#    if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)) && !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
 #define US_DISTANCE_SENSOR_ENABLE_PIN       2 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
-# endif
-#  if defined(CAR_HAS_DISTANCE_SENSOR)
+#    endif
+#    if !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)
 #define DISTANCE_TONE_FEEDBACK_ENABLE_PIN   3 // If this pin is connected to ground, enable distance feedback
-# endif
+#   endif
+# endif// !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
 #endif
 
 #if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 // here pin 4 to 9 are available
+#  if !defined(LINE_FOLLOWER_LEFT_SENSOR_PIN)
 #define LINE_FOLLOWER_LEFT_SENSOR_PIN   4
 #define LINE_FOLLOWER_MID_SENSOR_PIN    5
 #define LINE_FOLLOWER_RIGHT_SENSOR_PIN  6
+#  endif
 #  if defined(CAR_HAS_ENCODERS)             // pin 2 and 3 are already occupied by encoder interrupts
-#    if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
+#    if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)) && !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
 #define US_DISTANCE_SENSOR_ENABLE_PIN   7   // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
 #    endif
+#    if !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)
 #define DISTANCE_TONE_FEEDBACK_ENABLE_PIN 8 // If this pin is connected to ground, enable distance feedback
+#    endif
 #  endif
+#  if !defined(IR_RECEIVE_PIN)
 #define IR_RECEIVE_PIN                    9   // on Adafruit Motor Shield marked as Servo Nr. 2
+#  endif
 #else
 //2 + 3 are reserved for encoder input
 #define RIGHT_MOTOR_FORWARD_PIN     4 // IN4 <- Label on the L298N board
 #define RIGHT_MOTOR_BACKWARD_PIN    7 // IN3
+#  if !defined(LEFT_MOTOR_PWM_PIN)
 #define RIGHT_MOTOR_PWM_PIN         5 // ENB - Must be PWM capable
+#  endif
 
 #define LEFT_MOTOR_FORWARD_PIN      9 // IN1
 #define LEFT_MOTOR_BACKWARD_PIN     8 // IN2
+#  if !defined(LEFT_MOTOR_PWM_PIN)
 #define LEFT_MOTOR_PWM_PIN          6 // ENA - Must be PWM capable
+#  endif
 
+#  if !defined(IR_RECEIVE_PIN)
 #define IR_RECEIVE_PIN             11
+#  endif
 #endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
 //Servo pins
-#define PIN_DISTANCE_SERVO         10 // Servo Nr. 2 on Adafruit Motor Shield - if pin 10 can be controlled by Distance.hpp and LightweightServo library
-#if defined(CAR_HAS_PAN_SERVO)
-#define PIN_PAN_SERVO              11
+#define DISTANCE_SERVO_PIN         10 // Servo Nr. 2 on Adafruit Motor Shield - if pin 10 can be controlled by Distance.hpp and LightweightServo library
+#if defined(CAR_HAS_PAN_SERVO) && !defined(PAN_SERVO_PIN)
+#define PAN_SERVO_PIN              11
 #endif
-#if defined(CAR_HAS_TILT_SERVO)
-#define PIN_TILT_SERVO             12
+#if defined(CAR_HAS_TILT_SERVO) && !defined(TILT_SERVO_PIN)
+#define TILT_SERVO_PIN             12
 #endif
 
 // For HCSR04 ultrasonic distance sensor
-#define PIN_TRIGGER_OUT            A0 // "URF 01 +" Connector on the Arduino Sensor Shield
-#if !defined(US_SENSOR_SUPPORTS_1_PIN_MODE)
-#define PIN_ECHO_IN                A1
+#if !defined(TRIGGER_OUT_PIN)
+#define TRIGGER_OUT_PIN            A0 // "URF 01 +" Connector on the Arduino Sensor Shield
+#endif
+#if !defined(US_SENSOR_SUPPORTS_1_PIN_MODE) && !defined(ECHO_IN_PIN)
+#define ECHO_IN_PIN                A1
 #endif
 
-#if defined(CAR_HAS_LASER)
-#define PIN_LASER_OUT               LED_BUILTIN
+#if defined(CAR_HAS_LASER) && !defined(LASER_OUT_PIN)
+#define LASER_OUT_PIN               LED_BUILTIN
 #endif
 
 #endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
@@ -145,20 +161,26 @@
 #define FRONT_LEFT_MOTOR_FORWARD_PIN   11 // AIN1
 #define FRONT_LEFT_MOTOR_BACKWARD_PIN  12 // AIN2
 
-#if defined(CAR_HAS_PAN_SERVO)
+#if defined(CAR_HAS_PAN_SERVO) && !defined(PAN_SERVO_PIN)
 #undef CAR_HAS_PAN_SERVO                  // pin 11 is already in use
 #endif
-#if defined(CAR_HAS_TILT_SERVO)
+#if defined(CAR_HAS_TILT_SERVO) && !defined(TILT_SERVO_PIN)
 #undef CAR_HAS_TILT_SERVO                 // pin 12 is already in use
 #endif
 
-#define PIN_TRIGGER_OUT                A0 // can we see the trigger signal?
-#define PIN_ECHO_IN                    A1
+#if !defined(TRIGGER_OUT_PIN)
+#define TRIGGER_OUT_PIN                A0 // can we see the trigger signal?
+#endif
+#if !defined(ECHO_IN_PIN)
+#define ECHO_IN_PIN                    A1
+#endif
 
+#if !defined(IR_RECEIVE_PIN)
 #define IR_RECEIVE_PIN                 A2
+#endif
 
-#define PIN_DISTANCE_SERVO             13
-#if defined(CAR_HAS_LASER)
+#define DISTANCE_SERVO_PIN             13
+#if defined(CAR_HAS_LASER) && !defined(LASER_OUT_PIN)
 #undef CAR_HAS_LASER                      // pin 13 is used by distance servo
 #endif
 
@@ -167,42 +189,46 @@
 #endif // defined(CAR_HAS_4_MECANUM_WHEELS)
 
 #if defined(CAR_IS_NANO_BASED)
-#define PIN_BUZZER                     A3
-#define PIN_IR_DISTANCE_SENSOR         A6 // Sharp IR distance sensor
+#if !defined(BUZZER_PIN)
+#define BUZZER_PIN                     A3
+#endif
+#define IR_DISTANCE_SENSOR_PIN         A6 // Sharp IR distance sensor
 
 // Pin A0 for VCC monitoring - ADC channel 7
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_ATTENUATED_INPUT_CHANNEL    7 // = A7
-#define PIN_VIN_ATTENUATED_INPUT       A7
+#define VIN_ATTENUATED_INPUT_PIN       A7
 
 #  if defined(CAR_HAS_CAMERA)
-#define PIN_CAMERA_SUPPLY_CONTROL      A2
+#define CAMERA_SUPPLY_CONTROL_PIN      A2
 #  endif
 
 #elif defined(CAR_IS_ESP32_CAM_BASED)
-#define RIGHT_MOTOR_FORWARD_PIN    17 // IN4 <- Label on the L298N board
-#define RIGHT_MOTOR_BACKWARD_PIN   18 // IN3
-#define RIGHT_MOTOR_PWM_PIN        16 // ENB - Must be PWM capable
+#define RIGHT_MOTOR_FORWARD_PIN        17 // IN4 <- Label on the L298N board
+#define RIGHT_MOTOR_BACKWARD_PIN       18 // IN3
+#define RIGHT_MOTOR_PWM_PIN            16 // ENB - Must be PWM capable
 
 // Suited for ESP32-CAM
-#define LEFT_MOTOR_FORWARD_PIN     14 // IN1
-#define LEFT_MOTOR_BACKWARD_PIN    15 // IN2
-#define LEFT_MOTOR_PWM_PIN         13 // ENA - Must be PWM capable
+#define LEFT_MOTOR_FORWARD_PIN         14 // IN1
+#define LEFT_MOTOR_BACKWARD_PIN        15 // IN2
+#define LEFT_MOTOR_PWM_PIN             13 // ENA - Must be PWM capable
 
 // Not tested :-(
-#define RIGHT_MOTOR_INTERRUPT      12
-#define LEFT_MOTOR_INTERRUPT        2
+#define RIGHT_MOTOR_INTERRUPT          12
+#define LEFT_MOTOR_INTERRUPT            2
 
-#define PIN_TRIGGER_OUT            25
-#define PIN_ECHO_IN                26
-#define PIN_DISTANCE_SERVO         27
-#define PIN_BUZZER                 23
+#define TRIGGER_OUT_PIN                25
+#define ECHO_IN_PIN                    26
+#define DISTANCE_SERVO_PIN             27
+#if !defined(BUZZER_PIN)
+#define BUZZER_PIN                     23
+#endif
 
 // for ESP32 LED_BUILTIN is defined as: static const uint8_t LED_BUILTIN 2
 #  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
 #define LED_BUILTIN PB1
 #  endif
-#define TONE_LEDC_CHANNEL           1  // Using channel 1 makes tone() independent of receiving timer -> No need to stop receiving timer.
+#define TONE_LEDC_CHANNEL               1  // Using channel 1 makes tone() independent of receiving timer -> No need to stop receiving timer.
 void tone(uint8_t _pin, unsigned int frequency){
     ledcAttachPin(_pin, TONE_LEDC_CHANNEL);
     ledcWriteTone(TONE_LEDC_CHANNEL, frequency);
@@ -221,10 +247,12 @@ void noTone(uint8_t _pin){
 // Pin A0 for VCC monitoring - ADC channel 2
 // Assume an attached resistor network of 100k / 10k from VCC to ground (divider by 11)
 #define VIN_ATTENUATED_INPUT_CHANNEL    2 // = A2
-#define PIN_VIN_ATTENUATED_INPUT       A2
+#define VIN_ATTENUATED_INPUT_PIN       A2
 
-#define PIN_BUZZER                     12
-#define PIN_IR_DISTANCE_SENSOR         A3 // Sharp IR distance sensor
+#if !defined(BUZZER_PIN)
+#define BUZZER_PIN                     12
+#endif
+#define IR_DISTANCE_SENSOR_PIN         A3 // Sharp IR distance sensor
 #endif // CAR_IS_NANO_BASED
 
 #endif /* ROBOT_CAR_PIN_DEFINITIONS_AND_MORE_H */

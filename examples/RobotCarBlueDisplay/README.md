@@ -24,6 +24,8 @@ Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-Bl
 
 #### If you find this program useful, please give it a star.
 
+&#x1F30E; [Google Translate](https://translate.google.com/translate?sl=en&u=https://github.com/ArminJo/Arduino-RobotCar)
+
 <br/>
 
 # Features
@@ -101,10 +103,10 @@ Compile options for the used **PWMMotorControl library** like `USE_ENCODER_MOTOR
 | `CAR_HAS_TOF_DISTANCE_SENSOR` | disabled | Use VL53L1X TimeOfFlight distance sensor. |
 | `CAR_HAS_DISTANCE_SERVO` | disabled | Distance sensor is mounted on a pan servo (default for most China smart cars). |
 | `DISTANCE_SERVO_IS_MOUNTED_HEAD_DOWN` | disabled | Distance.h | The distance servo is mounted head down to detect even small obstacles. The Servo direction is reverse then. |
-| `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PIN_PAN_SERVO` pin. |
-| `CAR_HAS_TILT_SERVO` | disabled | Enables the tilt slider for the `TiltServo` at the `PIN_TILT_SERVO` pin. |
-| `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `PIN_CAMERA_SUPPLY_CONTROL` pin. |
-| `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `PIN_LASER_OUT` / `LED_BUILTIN` pin. |
+| `CAR_HAS_PAN_SERVO` | disabled | Enables the pan slider for the `PanServo` at the `PAN_SERVO_PIN` pin. |
+| `CAR_HAS_TILT_SERVO` | disabled | Enables the tilt slider for the `TiltServo` at the `TILT_SERVO_PIN` pin. |
+| `CAR_HAS_CAMERA` | disabled | Enables the `Camera` button for the `CAMERA_SUPPLY_CONTROL_PIN` pin. |
+| `CAR_HAS_LASER` | disabled | Enables the `Laser` button for the `LASER_OUT_PIN` / `LED_BUILTIN` pin. |
 | `ENABLE_RTTTL_FOR_CAR` | undefined | Plays melody after initial timeout has reached. Enables the Melody button, which plays a random melody. |
 | `MONITOR_VIN_VOLTAGE` | disabled | Shows VIN voltage and monitors it for undervoltage. VIN/11 at A2, 1 M&ohm; to VIN, 100 k&ohm; to ground. |
 | `ENABLE_EEPROM_STORAGE` | disabled | Activates the buttons to store compensation values. Normally they are stored after calibration. |

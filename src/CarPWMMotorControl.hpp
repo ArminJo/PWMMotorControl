@@ -6,7 +6,6 @@
  *
  *  Requires EncoderMotor.hpp
  *
- *  Created on: 12.05.2019
  *  Copyright (C) 2019-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
@@ -943,7 +942,7 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 
 void CarPWMMotorControl::printCalibrationValues(Print *aSerial) {
     aSerial->println(F("Calibration values:"));
-    aSerial->print(F("mm/256deg="));
+    aSerial->print(F("mm/256 deg="));
     aSerial->print(RobotCar.MillimeterPer256Degree);
     aSerial->print(F(" inPlace="));
     aSerial->println(RobotCar.MillimeterPer256DegreeInPlace);

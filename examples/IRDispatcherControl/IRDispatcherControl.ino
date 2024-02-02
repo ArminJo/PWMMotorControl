@@ -2,10 +2,10 @@
  *  IRDispatcherControl.cpp
  *
  *  Implements basic car control, like move and turn by an IR remote.
- *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands can be done in IRCommandMapping.h.
+ *  Mapping between keys of any IR remote sending NEC protocol (all the cheap china ones) and car commands are done in IRCommandMapping.h.
  *  To support mapping, the received IR code is printed at the serial output if `INFO` is defined.
  *
- *  Copyright (C) 2022-2023  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -26,15 +26,9 @@
  */
 
 #include <Arduino.h>
+
 //#define DEBUG
 //#define INFO
-
-/*
- * defining INFO enables output like this:
- * A=0x0 C=0x1D - Received IR data
- * Run non blocking command: default speed - Called car command
- * 5 CompensatedSpeedPWM=0 DriveSpeedPWM=106 SpeedPWMCompensation=0 CurrentDirection=S - Output of car command
- */
 
 /*
  * Car configuration
@@ -71,9 +65,15 @@
 //#define USE_KEYES_REMOTE
 //#define USE_DVBT_STICK_REMOTE
 #define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
-#define INFO // Enable info just for IR dispatcher
 #include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
 #include "RobotCarIRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
+/*
+ * defining LOCAL_INFO for IRCommandDispatcher.hpp enables output like this:
+ * A=0x0 C=0x9
+ * Run non blocking command: decrease speed
+ * 5 CurrentCompensatedSpeedPWM=0 DriveSpeedPWM=53 DriveSpeedPWMFor2Volt=64 SpeedPWMCompensation=0 CurrentDirection=S
+ */
+#define LOCAL_INFO // Enable info just for IRCommandDispatcher to show "A=0x0 C=0x1D - Received IR data" and "Run non blocking command: default speed - Called car command"
 #include "IRCommandDispatcher.hpp"
 
 #include "RobotCarUtils.hpp" // Requires IR_REMOTE_NAME from IRCommandMappingRobotCar.h. For printConfigInfo(), initRobotCarPWMMotorControl()
@@ -86,7 +86,7 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
-    printConfigInfo(&Serial);
+    printConfigInfo (&Serial);
 
     initRobotCarPWMMotorControl();
     RobotCar.setSpeedPWMCompensation(0); // If positive, this value is subtracted from the speed of the right motor -> the car turns slightly right.
@@ -94,7 +94,7 @@ void setup() {
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
+    tone(BUZZER_PIN, 2200, 100);
 
     // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
     IRDispatcher.init();

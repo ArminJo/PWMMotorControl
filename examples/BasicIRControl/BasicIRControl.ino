@@ -74,7 +74,7 @@ void setup() {
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
+    tone(BUZZER_PIN, 2200, 100);
 
     initPCIInterruptForTinyReceiver(); // Enables the interrupt generation on change of IR input signal
     Serial.println(F("Ready to receive NEC IR signals at pin " STR(IR_RECEIVE_PIN)));
@@ -93,6 +93,12 @@ void loop() {
             // Forward for 300 ms
             rightCarMotor.setSpeedPWMAndDirection(100);
             leftCarMotor.setSpeedPWMAndDirection(100);
+            delay(300);
+            break;
+        case 0x47:
+            // Backward for 300 ms
+            rightCarMotor.setSpeedPWMAndDirection(-100);
+            leftCarMotor.setSpeedPWMAndDirection(-100);
             delay(300);
             break;
         default:

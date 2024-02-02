@@ -41,6 +41,9 @@ PWMDcMotor frontLeftCarMotor;
 PWMDcMotor backRightCarMotor;
 PWMDcMotor backLeftCarMotor;
 
+void stopMotors();
+
+#define DURATION_OF_ONE_MOVE_MILLIS    1500
 /*
  * Start of robot car control program
  */
@@ -56,38 +59,89 @@ void setup() {
     backRightCarMotor.init(BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN);
     backLeftCarMotor.init(BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN);
 
-
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
-    delay(1000); // Initial wait
+    tone(BUZZER_PIN, 2200, 100);
+    delay(3000); // Initial wait
 
-    // Forward for 300 ms
-    frontRightCarMotor.setSpeedPWMAndDirection(100);
-    frontLeftCarMotor.setSpeedPWMAndDirection(100);
-    backRightCarMotor.setSpeedPWMAndDirection(100);
-    backLeftCarMotor.setSpeedPWMAndDirection(100);
-    delay(300);
+    // Forward
+    frontRightCarMotor.setDirection(DIRECTION_FORWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    backRightCarMotor.setDirection(DIRECTION_FORWARD);
+    backLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    frontRightCarMotor.setSpeedPWM(100); // Required only for one motor, since the speed pin is the same for all motors
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
 
-    // Borward for 300 ms
-    frontRightCarMotor.setSpeedPWMAndDirection(-100);
-    frontLeftCarMotor.setSpeedPWMAndDirection(-100);
-    backRightCarMotor.setSpeedPWMAndDirection(-100);
-    backLeftCarMotor.setSpeedPWMAndDirection(-100);
-    delay(300);
+    // Left
+    frontRightCarMotor.setDirection(DIRECTION_FORWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    backRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    backLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    // Backward
+    frontRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    backRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    backLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    // Right
+    frontRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    backRightCarMotor.setDirection(DIRECTION_FORWARD);
+    backLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    stopMotors();
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    // Diagonal right forward
+    frontRightCarMotor.setDirection(DIRECTION_STOP);
+    frontLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    backRightCarMotor.setDirection(DIRECTION_FORWARD);
+    backLeftCarMotor.setDirection(DIRECTION_STOP);
+    frontRightCarMotor.setSpeedPWM(100);
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    // Diagonal left backward
+    frontRightCarMotor.setDirection(DIRECTION_STOP);
+    frontLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    backRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    backLeftCarMotor.setDirection(DIRECTION_STOP);
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
 
     // Do not forget to stop motors :-)
-    frontRightCarMotor.stop();
-    frontLeftCarMotor.stop();
-    backRightCarMotor.stop();
-    backLeftCarMotor.stop();
+    stopMotors();
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
 }
 
 void loop() {
-    // Just to be sure that motors will stop after initial movement
+
+    // Turn right
+    frontRightCarMotor.setDirection(DIRECTION_FORWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    backRightCarMotor.setDirection(DIRECTION_FORWARD);
+    backLeftCarMotor.setDirection(DIRECTION_BACKWARD);
+    frontRightCarMotor.setSpeedPWM(100); // Required only for one motor, since the speed pin is the same for all motors
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
     frontRightCarMotor.stop();
-    frontLeftCarMotor.stop();
-    backRightCarMotor.stop();
-    backLeftCarMotor.stop();
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    // Turn left
+    frontRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    frontLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    backRightCarMotor.setDirection(DIRECTION_BACKWARD);
+    backLeftCarMotor.setDirection(DIRECTION_FORWARD);
+    frontRightCarMotor.setSpeedPWM(100); // Required only for one motor, since the speed pin is the same for all motors
+    delay(DURATION_OF_ONE_MOVE_MILLIS);
+
+    frontRightCarMotor.stop();
+    delay(30000); // wait 1/2 minute
+}
+
+void stopMotors() {
+    frontRightCarMotor.stop();
 }

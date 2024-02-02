@@ -82,7 +82,7 @@ void setup() {
     delay(500);
     DistanceServo.write(90);
 
-    tone(PIN_BUZZER, 2200, 200);
+    tone(BUZZER_PIN, 2200, 200);
     delay(1000);
 
     /*

@@ -59,17 +59,17 @@ void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue) {
 
 #if defined(CAR_HAS_LASER)
 void doLaserOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
-    digitalWrite(PIN_LASER_OUT, aValue);
+    digitalWrite(LASER_OUT_PIN, aValue);
 }
 #endif
 
 #if defined(CAR_HAS_CAMERA)
 void doCameraSupplyOnOff(BDButton * aTheTouchedButton, int16_t aValue) {
-    digitalWrite(PIN_CAMERA_SUPPLY_CONTROL, aValue);
+    digitalWrite(CAMERA_SUPPLY_CONTROL_PIN, aValue);
 }
 #elif defined(CAR_HAS_4_MECANUM_WHEELS)
 void doDemo(BDButton * aTheTouchedButton, int16_t aValue) {
-    RobotCar.doDemo(); // !!! Ultimate blocking command !!!
+    sEnableDemo = true;
 }
 #endif
 
@@ -103,13 +103,13 @@ void initHomePage(void) {
             false, &doCameraSupplyOnOff);
 #elif defined(CAR_HAS_4_MECANUM_WHEELS)
     TouchButtonDemo.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER), BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED,
-            F("Demo"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_TEST, &doDemo);
+            F("Demo"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doDemo); // sEnableDemo
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
     TouchButtonMelody.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Melody"), TEXT_SIZE_22,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sPlayMelody, &doPlayMelody);
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doPlayMelody); // sPlayMelody
 #endif
 
 #if defined(CAR_HAS_LASER)

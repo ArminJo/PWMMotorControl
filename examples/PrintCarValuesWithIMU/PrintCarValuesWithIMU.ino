@@ -90,7 +90,7 @@ void setup() {
     LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 
-    tone(PIN_BUZZER, 2200, 200);
+    tone(BUZZER_PIN, 2200, 200);
 
     // wait 5 seconds before start moving
     RobotCar.IMUData.delayAndReadIMUCarDataFromMPU6050FIFO(5000);
@@ -119,7 +119,7 @@ void loop() {
         bool tUseRamp = true;
         for (uint8_t i = 0; i < 2; ++i) {
             printCaption();
-            tone(PIN_BUZZER, 2200, 100);
+            tone(BUZZER_PIN, 2200, 100);
             delay(200);
             RobotCar.IMUData.resetOffsetFifoAndCarDataAndWait();
 #if defined(USE_ENCODER_MOTOR_CONTROL)
@@ -268,9 +268,9 @@ void delayAndPrintData(uint8_t aDataSetsToPrint, uint16_t aPeriodMillis, bool aW
     } // for (uint_fast8_t i = 0; i < aDataSetsToPrint;)
 }
 
-#if defined(CAR_HAS_VIN_VOLTAGE_DIVIDER)
+#if defined(VIN_11TH_IN_CHANNEL)
 uint16_t readVINVoltageMilliVolt() {
     uint16_t tVIN = waitAndReadADCChannelWithReferenceAndRestoreADMUXAndReference(VIN_11TH_IN_CHANNEL, INTERNAL);
     return ((ADC_INTERNAL_REFERENCE_MILLIVOLT * 11 * (uint32_t) tVIN) + 512) / 1023;
 }
-#endif // MONITOR_VIN_VOLTAGE
+#endif

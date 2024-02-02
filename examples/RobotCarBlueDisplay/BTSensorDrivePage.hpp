@@ -134,8 +134,8 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
                 tDirectionForward, SPEED_DEAD_BAND);
 
         //Print speedPWM as value of bottom slider
-        sprintf(sStringBuffer, "%3d", tForwardBackwardValue);
-        SliderBackward.printValue(sStringBuffer);
+        sprintf(sBDStringBuffer, "%3d", tForwardBackwardValue);
+        SliderBackward.printValue(sBDStringBuffer);
 
         /*
          * Left right handling
@@ -199,8 +199,8 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
         /*
          * Print speedPWM as value of bottom slider
          */
-        sprintf(sStringBuffer, "%4d", tSpeedPWMValue);
-        SliderBackward.printValue(sStringBuffer);
+        sprintf(sBDStringBuffer, "%4d", tSpeedPWMValue);
+        SliderBackward.printValue(sBDStringBuffer);
         if (tSpeedPWMValue < 0) {
             tLeftRightValue = -tLeftRightValue;
         }

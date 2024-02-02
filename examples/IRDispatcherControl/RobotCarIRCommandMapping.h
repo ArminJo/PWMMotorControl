@@ -3,7 +3,7 @@
  *
  * IR remote button codes, strings, and functions to call for robot car IR control
  *
- *  Copyright (C) 2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  */
@@ -74,6 +74,30 @@
 #define COMMAND_TEST_ROTATION   IR_7
 #define COMMAND_TEST_DRIVE      IR_8
 #define COMMAND_TEST            IR_9
+
+// IR Layout mirrored
+// for attaching at the back of the remote
+
+//-----------------------------
+// Speed  |  Speed   | Speed
+//   +    | default  |   -
+//-----------------------------
+//  Scan  | Follower | keep
+//  speed |          | distance
+//-----------------------------
+//  Test  |  Test    | Test
+//        |  drive   | rotation
+//-----------------------------
+//Distance|  Reset   | Sound
+// source |          | mode
+//-----------------------------
+//
+//          Forward
+//
+// Right     Stop      Left
+//  <-                  ->
+//          Backward
+//
 
 #endif // defined(USE_KEYES_REMOTE_CLONE)
 
@@ -149,12 +173,12 @@
 //   +    | default  |   -
 //-----------------------------
 //  Scan  | Follower | keep
-//  speed |          | dist.
+//  speed |          | distance
 //-----------------------------
 //  Test  |  Test    | Test
 //        |  drive   | rotation
 //-----------------------------
-// Dist.  |  Reset   | Sound
+//Distance|  Reset   | Sound
 // source |          | mode
 
 #  endif // defined(IR_REMOTE_NAME)
@@ -233,7 +257,7 @@
 // Sound. |  Dist.   | Reset
 // mode   |  source  |
 //-----------------------------
-//  Scan  | Forward  | Calibr.
+//  Scan  | Forward  |Calibrate
 //  speed |          |
 //-----------------------------
 // Right  |   Stop   | Left
@@ -289,28 +313,28 @@ const struct IRToCommandMappingStruct IRMapping[] = {
  * Commands, which must run exclusively and therefore must first stop other commands running.
  */
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-        { COMMAND_DISTANCE, IR_COMMAND_FLAG_BLOCKING, &doKeepDistance, distance }, /**/
-        { COMMAND_FOLLOWER, IR_COMMAND_FLAG_BLOCKING, &doFollower, follower }, /**/
+        { COMMAND_DISTANCE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doKeepDistance, distance }, /**/
+        { COMMAND_FOLLOWER, IR_COMMAND_FLAG_BLOCKING_BEEP, &doFollower, follower }, /**/
 #endif
-        { COMMAND_TEST_ROTATION, IR_COMMAND_FLAG_BLOCKING, &testRotation, rotate }, /**/
-        { COMMAND_TEST_DRIVE, IR_COMMAND_FLAG_BLOCKING, &testDrive, drive }, /**/
-        { COMMAND_TEST, IR_COMMAND_FLAG_BLOCKING, &testCommand, test }, /**/
+        { COMMAND_TEST_ROTATION, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestRotation, rotate }, /**/
+        { COMMAND_TEST_DRIVE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestDrive, drive }, /**/
+        { COMMAND_TEST, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestCommand, test }, /**/
 #if defined(COMMAND_CALIBRATE)
-        { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING, &doCalibrate, calibrate }, /**/
+        { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doCalibrate, calibrate }, /**/
 #endif
 
-        { COMMAND_STOP, IR_COMMAND_FLAG_BLOCKING, &doStop, stop }, /**/
-        { COMMAND_RESET, IR_COMMAND_FLAG_BLOCKING, &doReset, reset }, /**/
+        { COMMAND_STOP, IR_COMMAND_FLAG_BLOCKING_BEEP, &doStop, stop }, /**/
+        { COMMAND_RESET, IR_COMMAND_FLAG_BLOCKING_BEEP, &doReset, reset }, /**/
 
         /*
          * Commands, which can be executed always, since the are short. Like set mode etc.
          */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-        { COMMAND_DISTANCE_SOURCE, IR_COMMAND_FLAG_NON_BLOCKING, &stepDistanceSourceMode, stepDistanceSource }, /**/
+        { COMMAND_DISTANCE_SOURCE, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &stepDistanceSourceMode, stepDistanceSource }, /**/
 #endif
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
         { COMMAND_DISTANCE_FEEDBACK, IR_COMMAND_FLAG_NON_BLOCKING, &stepDistanceFeedbackMode, stepFeedback }, /**/
-        { COMMAND_SCAN_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &toggleDistanceScanSpeed, toggleScanSpeed }, /**/
+        { COMMAND_SCAN_SPEED, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &toggleDistanceScanSpeed, toggleScanSpeed }, /**/
 #endif
         { COMMAND_INCREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doIncreaseSpeed, speedIncrease }, /**/
         { COMMAND_DECREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doDecreaseSpeed, speedDecrease }, /**/

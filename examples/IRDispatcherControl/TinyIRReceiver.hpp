@@ -421,6 +421,17 @@ bool isTinyReceiverIdle() {
     return (TinyIRReceiverControl.IRReceiverState == IR_RECEIVER_STATE_WAITING_FOR_START_MARK);
 }
 
+/*
+ * Checks if IR_RECEIVE_PIN is connected and high
+ * @return true, if IR Receiver is attached
+ */
+bool isIRReceiverAttachedForTinyReceiver() {
+    pinModeFast(IR_RECEIVE_PIN, OUTPUT);
+    digitalWriteFast(IR_RECEIVE_PIN, LOW); // discharge pin capacity
+    pinModeFast(IR_RECEIVE_PIN, INPUT);
+    return digitalRead(IR_RECEIVE_PIN); // use slow digitalRead here, since the pin capacity is not fully charged again if we use digitalReadFast.
+}
+
 /**
  * Sets IR_RECEIVE_PIN mode to INPUT, and if IR_FEEDBACK_LED_PIN is defined, sets feedback LED output mode.
  * Then call enablePCIInterruptForTinyReceiver()

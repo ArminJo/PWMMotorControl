@@ -32,7 +32,7 @@
 #define PRINT_MOTOR_INFO_PERIOD_MILLIS 200
 
 // a string buffer for BD info output
-extern char sStringBuffer[128];
+extern char sBDStringBuffer[128];
 
 #define DISPLAY_WIDTH           DISPLAY_HALF_VGA_WIDTH   // 320
 #define DISPLAY_HEIGHT          DISPLAY_HALF_VGA_HEIGHT // 240
@@ -128,6 +128,10 @@ extern BDButton TouchButtonMelody;
 extern bool sPlayMelody;
 #endif
 
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+extern bool sEnableDemo;
+#endif
+
 extern void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
 extern void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
 
@@ -156,9 +160,6 @@ void setStartStopButtonValue();
 void startStopRobotCar(bool aDoStart);
 void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart);
 void doReset(BDButton *aTheTouchedButton, int16_t aValue);
-#if VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
-bool delayMillisAndCheckForEvent(unsigned long aDelayMillis);
-#endif
 
 extern BDButton TouchButtonDirection;
 extern BDButton TouchButtonInfo;
@@ -166,7 +167,7 @@ extern BDButton TouchButtonInfo;
 //#if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 extern BDButton TouchButtonCalibrate;
 extern bool isPWMCalibrated;
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
+#if defined(VERSION_BLUE_DISPLAY) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 void calibrateRotation();
 #endif
@@ -208,8 +209,6 @@ void printIMUOffsetValues();
 #endif
 
 void drawCommonGui(void);
-
-extern char sStringBuffer[128];
 
 void setupGUI(void);
 void loopGUI(void);

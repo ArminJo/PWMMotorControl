@@ -2,9 +2,9 @@
  *  SmartCarFollowerSimple.cpp
  *
  *  Enables follower mode driving of a 2 or 4 wheel car with an Arduino and a dual full bridge (e.g. TB6612 or L298) for motor control.
- *  The car tries to hold a distance between 20 and 30 cm to an obstacle. Only forward and back movement, no turn!
+ *  The car tries to hold a distance between 20 and 30 cm to a target. Only forward and back movement, no turn!
  *
- *  Copyright (C) 2020-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
@@ -43,7 +43,6 @@
 //#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 //#define MECANUM_US_DISTANCE_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels + US distance + servo
-
 //#define TRACE
 //#define DEBUG
 //#define INFO
@@ -69,13 +68,14 @@
 #include <Servo.h>
 #endif
 #include "HCSR04.hpp"
+#include "ADCUtils.hpp"
 #include "CarPWMMotorControl.hpp"
+#include "RobotCarUtils.hpp"
 
 Servo DistanceServo;
 
-void printConfigInfo();
-bool printDistanceIfChanged(unsigned int aCentimeter);
-void initRobotCarPWMMotorControl();
+bool hasDistanceChanged(unsigned int aCentimeter);
+void printDistance(unsigned int aCentimeter);
 
 /*
  * Start of robot car control program
@@ -85,7 +85,7 @@ void setup() {
 
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
-    printConfigInfo();
+    printConfigInfo(&Serial);
 
     initRobotCarPWMMotorControl();
     RobotCar.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
@@ -93,19 +93,34 @@ void setup() {
     /*
      * Set US servo to forward position and set US distance sensor pins
      */
-    DistanceServo.attach(PIN_DISTANCE_SERVO);
+    DistanceServo.attach(DISTANCE_SERVO_PIN);
     DistanceServo.write(90);
-    initUSDistancePins(PIN_TRIGGER_OUT, PIN_ECHO_IN);
+    initUSDistancePins(TRIGGER_OUT_PIN, ECHO_IN_PIN);
+
+#if defined(ADC_UTILS_ARE_AVAILABLE)
+    if (isVCCUSBPowered()) {
+        /*
+         * Avoid starting motors, if powered by USB
+         * Signal USB powering by a double beep every 10 seconds
+         */
+        while (true) {
+            tone(BUZZER_PIN, 2200, 100);
+            delay(200);
+            tone(BUZZER_PIN, 2200, 100);
+            delay(10000); // wait
+        }
+    }
+#endif
 
     /*
      * Tone feedback for end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
+    tone(BUZZER_PIN, 2200, 100);
 
     /*
      * Do not start immediately with driving
      */
-    delay(5000);
+    delay(2000);
 
     /*
      * Servo feedback for start of loop / driving
@@ -115,6 +130,9 @@ void setup() {
     DistanceServo.write(45);
     delay(500);
     DistanceServo.write(90);
+    delay(1000);
+
+    Serial.println(F("Start loop"));
 }
 
 void loop() {
@@ -122,10 +140,11 @@ void loop() {
      * Get and print distance
      */
     unsigned int tCentimeter = getUSDistanceAsCentimeter(9000); // 9000 is timeout for 1.5 meter
-    if (printDistanceIfChanged(tCentimeter)) {
+    if (hasDistanceChanged(tCentimeter)) {
         /*
          * Distance has changed here
          */
+        printDistance(tCentimeter);
         if (tCentimeter >= FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
             /*
              * Target too far -> drive forward
@@ -134,7 +153,6 @@ void loop() {
                 Serial.print(F(" -> go forward")); // print only once at direction change
             }
             RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_FORWARD);
-            tone(PIN_BUZZER, 1500);
 
             // tCentimeter == 0 is timeout
         } else if (tCentimeter > 0 && tCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
@@ -145,72 +163,44 @@ void loop() {
                 Serial.print(F(" -> go backward")); // print only once at direction change
             }
             RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, DIRECTION_BACKWARD);
-            tone(PIN_BUZZER, 666);
 
         } else {
             /*
              * Target is in the right distance -> stop
              */
             if (!RobotCar.isStopped()) {
-                Serial.print(F(" -> now stop")); // stop only once
+                Serial.print(F(" -> stop car")); // stop only once
                 RobotCar.stop(STOP_MODE_RELEASE);
-            }
-            if (tCentimeter == 0) {
-                // distance timeout here
-                noTone(PIN_BUZZER);
-            } else {
-                tone(PIN_BUZZER, 1000);
             }
         }
         Serial.println();
     }
 
-    delay(100);
+    delay(100); // Delay, to avoid receiving the US echo of last distance scan. 20 ms delay corresponds to an US echo from 3.43 m.
 }
 
 /*
- * Call RobotCar.init() with different sets of parameters
+ * @return true if distance has changed
  */
-void initRobotCarPWMMotorControl() {
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-    RobotCar.init();
-#elif defined(CAR_HAS_4_MECANUM_WHEELS)
-    RobotCar.init(FRONT_RIGHT_MOTOR_FORWARD_PIN, FRONT_RIGHT_MOTOR_BACKWARD_PIN, MOTOR_PWM_PIN,
-    FRONT_LEFT_MOTOR_FORWARD_PIN, FRONT_LEFT_MOTOR_BACKWARD_PIN, BACK_RIGHT_MOTOR_FORWARD_PIN, BACK_RIGHT_MOTOR_BACKWARD_PIN,
-    BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
-#else
-    RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
-    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
-#endif
-}
+bool hasDistanceChanged(unsigned int aCentimeter) {
+    static unsigned int sLastDistanceCentimeter;
 
-void printConfigInfo() {
-#if defined(BASIC_CONFIG_NAME)
-    Serial.print(F("Car configuration is: " BASIC_CONFIG_NAME));
-#endif
-#if defined(CONFIG_NAME)
-    Serial.print(F(CONFIG_NAME));
-#endif
-    Serial.println();
+    if (sLastDistanceCentimeter != aCentimeter) {
+        sLastDistanceCentimeter = aCentimeter;
+        return true;
+    }
+    return false;
 }
 
 /*
  * Print without a newline
- * @return true if distance has changed and was printed
  */
-bool printDistanceIfChanged(unsigned int aCentimeter) {
-    static unsigned int sLastPrintedDistanceCentimeter;
-
-    if (sLastPrintedDistanceCentimeter != aCentimeter) {
-        sLastPrintedDistanceCentimeter = aCentimeter;
-        if (aCentimeter == 0) {
-            Serial.print("Distance timeout ");
-        } else {
-            Serial.print("Distance=");
-            Serial.print(aCentimeter);
-            Serial.print("cm");
-        }
-        return true;
+void printDistance(unsigned int aCentimeter) {
+    if (aCentimeter == 0) {
+        Serial.print("Distance timeout ");
+    } else {
+        Serial.print("Distance=");
+        Serial.print(aCentimeter);
+        Serial.print("cm");
     }
-    return false;
 }

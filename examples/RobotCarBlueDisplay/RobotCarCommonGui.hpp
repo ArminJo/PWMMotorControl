@@ -30,7 +30,7 @@
 #include "RobotCarConfigurations.h" // helps the formatter
 
 // A string buffer for BD info output
-char sStringBuffer[128];
+char sBDStringBuffer[128];
 
 bool sSensorCallbacksEnabled;
 
@@ -233,47 +233,10 @@ void startStopRobotCar(bool aDoStart) {
  * Called by TouchButtonRobotCarStartStop
  */
 void doStartStopRobotCar(BDButton *aTheTouchedButton, int16_t aDoStart) {
-    if (doCalibration) {
-        receivedStopForCalibration = true;
-    } else {
-        startStopRobotCar(aDoStart);
-    }
+    startStopRobotCar(aDoStart);
 }
 
-#if VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
-/*
- * Special delay function for BlueDisplay. Returns prematurely if Event is received.
- * To be used in blocking functions as delay
- * @return  true - as soon as event received
- */
-bool delayMillisAndCheckForEvent(unsigned long aDelayMillis) {
-    sBDEventJustReceived = false;
-#if defined(ARDUINO)
-    unsigned long tStartMillis = millis();
-    while (millis() - tStartMillis < aDelayMillis) {
-#  if !defined(USE_SIMPLE_SERIAL) && defined(__AVR__)
-        // check for Arduino serial - copied code from arduino main.cpp / main()
-        if (serialEventRun) {
-            serialEventRun(); // this in turn calls serialEvent from BlueSerial.cpp
-        }
-#  endif
-#else // ARDUINO
-            unsigned long tStartMillis = getMillisSinceBoot();
-            while (getMillisSinceBoot() - tStartMillis < aTimeMillis) {
-#endif
-        checkAndHandleEvents();
-        if (sBDEventJustReceived) {
-            return true;
-        }
-#if defined(ESP8266)
-            yield(); // required for ESP8266
-#endif
-    }
-    return false;
-}
-#endif // VERSION_BLUE_DISPLAY_HEX < VERSION_HEX_VALUE(3, 0, 3)
-
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
+#if defined(VERSION_BLUE_DISPLAY) && !defined(USE_MPU6050_IMU) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 void calibrateRotation() {
     /*
@@ -488,10 +451,10 @@ void initCommonGui() {
             TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_HOME, &GUISwitchPages);
 
     TouchButtonCalibrate.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("CAL"),
-            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH, 1, &doCalibrate);
+            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doCalibrate);
 
     TouchButtonInfo.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("Info"),
-            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sShowInfo, &doToggleInfo);
+            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sShowInfo, &doToggleInfo); //
 
     TouchButtonDirection.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_GREEN,
             F("\x87"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, DIRECTION_FORWARD, &doSetDirection);
@@ -678,9 +641,9 @@ void readAndPrintVin() {
     }
 }
 
-void checkForLowVoltage() {
+void checkForVCCUnderVoltage() {
     static uint8_t sLowVoltageCount = 0;
-    if (sVINVoltage < VOLTAGE_LIPO_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD) {
+    if (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD) {
         sLowVoltageCount++;
     } else if (sLowVoltageCount > 1) {
         sLowVoltageCount--;
@@ -701,9 +664,9 @@ void checkForLowVoltage() {
             BlueDisplay1.drawText(10 + (4 * TEXT_SIZE_33_WIDTH), 50 + (2 * TEXT_SIZE_33_HEIGHT), F("too low"));
         }
 
-        tone(PIN_BUZZER, 2200, 100);
+        tone(BUZZER_PIN, 2200, 100);
         delay(200);
-        tone(PIN_BUZZER, 2200, 100);
+        tone(BUZZER_PIN, 2200, 100);
 
         if (BlueDisplay1.isConnectionEstablished()) {
             uint8_t tLoopCount = VOLTAGE_TOO_LOW_DELAY_ONLINE / 500; // 12
@@ -711,7 +674,7 @@ void checkForLowVoltage() {
                 delayMillisWithCheckAndHandleEvents(500); // and wait
                 tLoopCount--;
                 readAndPrintVin(); // print current voltage
-            } while (tLoopCount > 0 || (sVINVoltage < VOLTAGE_LIPO_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD));
+            } while (tLoopCount > 0 || (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD));
             // Switch to and refresh home page
             GUISwitchPages(NULL, PAGE_HOME);
         } else {
@@ -727,7 +690,7 @@ void readCheckAndPrintVinPeriodically() {
     if (tMillis - sMillisOfLastVCCInfo >= PRINT_VOLTAGE_PERIOD_MILLIS) {
         sMillisOfLastVCCInfo = tMillis;
         readAndPrintVin();
-        checkForLowVoltage();
+        checkForVCCUnderVoltage();
     }
 }
 #endif // defined(MONITOR_VIN_VOLTAGE)
@@ -756,9 +719,9 @@ void printMotorValuesPeriodically() {
             if (PWMDcMotor::MotorPWMHasChanged) {
                 PWMDcMotor::MotorPWMHasChanged = false;
                 // position below caption of speed slider
-                sprintf_P(sStringBuffer, PSTR("PWM  %3d %3d"), RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
+                sprintf_P(sBDStringBuffer, PSTR("PWM  %3d %3d"), RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM,
                         RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM);
-                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
+                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
                         COLOR16_BLACK, COLOR16_WHITE);
 
                 /*
@@ -798,15 +761,15 @@ void printMotorValuesPeriodically() {
                  */
                 if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-                    sprintf_P(sStringBuffer, PSTR("tcnt %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
+                    sprintf_P(sBDStringBuffer, PSTR("tcnt %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
                             RobotCar.rightCarMotor.LastTargetDistanceMillimeter);
-                    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sStringBuffer);
+                    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sBDStringBuffer);
 #else
                     if (RobotCar.rightCarMotor.CheckStopConditionInUpdateMotor
                             || RobotCar.leftCarMotor.CheckStopConditionInUpdateMotor) {
-                        sprintf_P(sStringBuffer, PSTR("%5d %5d"), RobotCar.leftCarMotor.computedMillisOfMotorForDistance,
+                        sprintf_P(sBDStringBuffer, PSTR("%5d %5d"), RobotCar.leftCarMotor.computedMillisOfMotorForDistance,
                                 RobotCar.rightCarMotor.computedMillisOfMotorForDistance);
-                        BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sStringBuffer,
+                        BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sBDStringBuffer,
                                 TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
                     }
 #endif
@@ -819,9 +782,9 @@ void printMotorValuesPeriodically() {
             if (PWMDcMotor::MotorControlValuesHaveChanged) {
                 PWMDcMotor::MotorControlValuesHaveChanged = false;
 //                if (RobotCar.leftCarMotor.SpeedPWMCompensation != 0 || RobotCar.rightCarMotor.SpeedPWMCompensation != 0) {
-                sprintf_P(sStringBuffer, PSTR("comp %3d %3d"), -RobotCar.leftCarMotor.SpeedPWMCompensation,
+                sprintf_P(sBDStringBuffer, PSTR("comp %3d %3d"), -RobotCar.leftCarMotor.SpeedPWMCompensation,
                         -RobotCar.rightCarMotor.SpeedPWMCompensation);
-                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (4 * TEXT_SIZE_11), sStringBuffer, TEXT_SIZE_11,
+                BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (4 * TEXT_SIZE_11), sBDStringBuffer, TEXT_SIZE_11,
                         COLOR16_BLACK, COLOR16_WHITE);
 //                }
             }
@@ -876,18 +839,18 @@ void printMotorSpeedSensorValues() {
     } else {
         tYPos = MOTOR_INFO_START_Y;
     }
-    sprintf_P(sStringBuffer, PSTR("cnt.%4d%4d"), RobotCar.leftCarMotor.EncoderCount,
+    sprintf_P(sBDStringBuffer, PSTR("cnt.%4d%4d"), RobotCar.leftCarMotor.EncoderCount,
             RobotCar.rightCarMotor.EncoderCount);
-    BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
+    BlueDisplay1.drawText(MOTOR_INFO_START_X, tYPos, sBDStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
 #  endif
 
 #  if defined(USE_MPU6050_IMU)
     /*
      * Print distance and rotation from IMU
      */
-    sprintf_P(sStringBuffer, PSTR("%5dcm%4d\xB0"), RobotCar.IMUData.getDistanceCm(),
+    sprintf_P(sBDStringBuffer, PSTR("%5dcm%4d\xB0"), RobotCar.IMUData.getDistanceCm(),
             RobotCar.CarTurnAngleHalfDegreesFromIMU / 2);
-    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y, sStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
+    BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y, sBDStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
 #  endif
 }
 
@@ -897,9 +860,9 @@ void printMotorSpeedSensorValues() {
 void printIMUOffsetValues() {
     if (RobotCar.IMUData.OffsetsJustHaveChanged) {
         RobotCar.IMUData.OffsetsJustHaveChanged = false;
-        sprintf_P(sStringBuffer, PSTR("off.%4d%4d"), RobotCar.IMUData.AcceleratorForwardOffset,
+        sprintf_P(sBDStringBuffer, PSTR("off.%4d%4d"), RobotCar.IMUData.AcceleratorForwardOffset,
                 RobotCar.IMUData.GyroscopePanOffset);
-        BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (5 * TEXT_SIZE_11), sStringBuffer, TEXT_SIZE_11,
+        BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (5 * TEXT_SIZE_11), sBDStringBuffer, TEXT_SIZE_11,
         COLOR16_BLACK, COLOR16_WHITE);
     }
 }

@@ -3,7 +3,7 @@
  *
  * includes all files of BlueDisplay GUI for robot car.
  *
- *  Copyright (C) 2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -19,10 +19,6 @@
 
 #ifndef _ROBOT_CAR_GUI_HPP
 #define _ROBOT_CAR_GUI_HPP
-
-#if !defined(USE_BLUE_DISPLAY_GUI)
-#define USE_BLUE_DISPLAY_GUI
-#endif
 
 #include "RobotCarGui.h"
 

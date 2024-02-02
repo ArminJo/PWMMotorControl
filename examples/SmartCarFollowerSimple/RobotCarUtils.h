@@ -3,7 +3,7 @@
  *
  *  Contains miscellaneous convenience utility functions for the robot cars.
  *
- *  Copyright (C) 2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -22,23 +22,34 @@
 
 #include <Arduino.h>
 
-bool isVINVoltageDividerAttached(uint8_t aPin);
+#include "RobotCarPinDefinitionsAndMore.h" // This is not necessary here, but helps the Eclipse indexer :-(
+
 void printConfigInfo(Print *aSerial);
 void printProgramOptions(Print *aSerial);
-void printConfigPinInfo(uint8_t aConfigPinNumber, const __FlashStringHelper *aConfigPinDescription, Print *aSerial);
+void printConfigPinInfo(Print *aSerial, uint8_t aConfigPinNumber, const __FlashStringHelper *aConfigPinDescription);
 
 void initRobotCarPWMMotorControl();
 
-// for MONITOR_VIN_VOLTAGE
+#if defined(VIN_ATTENUATED_INPUT_PIN)
+bool isVINProvided();
 extern uint16_t sLastVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
 extern float sVINVoltage;
 bool readVINVoltage();
 void readVINVoltageAndAdjustDriveSpeedAndPrint();
 void calibrateDriveSpeedPWMAndPrint();
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
+void checkVinPeriodicallyAndPrintIfChanged();
+#endif
+
+/*
+ * Test movements compatible wit IR dispatcher
+ */
+void testDriveTwoTurnsBothDirections();
+void testDriveTwoTurnsIn5PartsBothDirections();
+void testRotation();
+
+#if !defined(USE_MPU6050_IMU) && (defined(_IR_COMMAND_DISPATCHER_HPP) || defined(VERSION_BLUE_DISPLAY)) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
 bool calibrateRotation(turn_direction_t aTurnDirection);
 #endif
-void checkVinPeriodicallyAndPrintIfChanged();
 
 #endif // _ROBOT_CAR_UTILS_H

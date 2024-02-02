@@ -84,14 +84,14 @@ void doNextDistanceFeedbackMode(BDButton *aTheTouchedButton, int16_t aValue) {
     sDistanceFeedbackMode++;
     if (sDistanceFeedbackMode > DISTANCE_FEEDBACK_MAX) {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-        noTone(PIN_BUZZER);
+        noTone(BUZZER_PIN);
     }
     setDistanceFeedbackModeButtonCaption();
 }
 #endif
 
 void setStepModeButtonCaption() {
-    TouchButtonStepMode.setCaptionFromStringArray(sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
+    TouchButtonStepMode.setCaptionFromStringArray((const __FlashStringHelper* const*) sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
 }
 
 /*
@@ -153,7 +153,7 @@ void doChangeScanSpeed(BDButton *aTheTouchedButton, int16_t aValue) {
 
 void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sDriveMode == MODE_FOLLOWER) {
-        scanTarget(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER);
+        scanForTargetAndPrint(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER - 1); // -1 otherwise timeout is handled as found.
     } else {
         clearPrintedForwardDistancesInfos(true);
         fillAndShowForwardDistancesInfo(true, true);
@@ -371,9 +371,9 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
                 tColor);
         if (!aDoClearVector) {
             //Print result
-            sprintf_P(sStringBuffer, PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
+            sprintf_P(sBDStringBuffer, PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
                     aDegreeToTurn, sForwardDistancesInfo.WallRightAngleDegrees); // \xB0 is degree character
-            BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sStringBuffer, TEXT_SIZE_11,
+            BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
             COLOR16_BLACK, COLOR16_WHITE);
         }
     }

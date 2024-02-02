@@ -3,7 +3,7 @@
  *
  *  Implementation of all commands required for IRCommandMapping.h / accessible by IR remote.
  *
- *  Copyright (C) 2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -26,6 +26,8 @@
 #ifndef _ROBOT_CAR_IR_COMMANDS_HPP
 #define _ROBOT_CAR_IR_COMMANDS_HPP
 
+#include "RobotCarIRCommands.h"
+
 #include "IRCommandDispatcher.h" // for RETURN_IF_STOP
 #include "RobotCarUtils.h"
 
@@ -36,61 +38,45 @@
 #endif
 
 /*
- * Basic IR functions
- */
-void doStop();
-void doReset();
-void goForward();
-void goBackward();
-void turnLeft();
-void turnRight();
-void doDefaultSpeed();
-#define SPEED_PWM_CHANGE_VALUE  16
-void doIncreaseSpeed();
-void doDecreaseSpeed();
-
-void doCalibrate();
-
-void testRotation();
-void testDrive();
-
-/*
  * IR functions, which require code for distance measurement from Distance.hpp
  */
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-void doKeepDistance();
-void doFollower();
-void stepDistanceFeedbackMode();
-void stepDistanceSourceMode();
-void toggleDistanceScanSpeed();
-bool sEnableFollower; // Follower mode with turn
-bool sEnableKeepDistance; // Follower mode without a turn
+bool sEnableFollower;    // Follower mode activated
+bool sEnableScanAndTurn; // Follower mode with scan and turn
 #endif
 
 void doStop() {
     RobotCar.stop();
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-    DistanceServoWriteAndWaitForStop(90);
     sEnableFollower = false;
-    sEnableKeepDistance = false;
+    sEnableScanAndTurn = false;
+    DistanceServoWriteAndWaitForStop(90);
 #endif
 }
 
+/*
+ * Reset i.e. stop car and set all values to default.
+ */
 void doReset() {
     doStop();
     RobotCar.setDefaultsForFixedDistanceDriving();
 
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
+    sDoSlowScan = false;
     sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     sDistanceSourceMode = DISTANCE_SOURCE_MODE_DEFAULT;
 #  endif
-    sDoSlowScan = false;
-    sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
 #endif
-    noTone (PIN_BUZZER);
+#if defined(MILLIS_OF_INACTIVITY_BEFORE_ATTENTION)
+    sMillisOfLastMovement = 0; // to start follower without initial scanning
+#endif
+    noTone(BUZZER_PIN);
 }
 
+/*
+ * Drive forward / backward for a complete wheel turn. Each repeat will extend the distance by another 1/4 of a wheel turn.
+ */
 void goForward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
         // if repeat was pressed, we enable a "fast" stop
@@ -111,6 +97,9 @@ void goBackward() {
     }
 }
 
+/*
+ * Turn in place left / right by around 15 degree.
+ */
 void turnLeft() {
     RobotCar.startRotate(15, TURN_IN_PLACE);
 }
@@ -118,15 +107,21 @@ void turnRight() {
     RobotCar.startRotate(-15, TURN_IN_PLACE);
 }
 
+/*
+ * Set driving speed PWM to default, which depends on motor supply voltage.
+ */
 void doDefaultSpeed() {
-    RobotCar.setDefaultsForFixedDistanceDriving();
+    RobotCar.setDriveSpeedPWM(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
     RobotCar.rightCarMotor.printValues(&Serial);
 }
 
+/*
+ * Increase / decrease driving speed PWM by 1/16 of max PWM, but clip at start speed PWM, which depends on motor supply voltage.
+ */
 void doIncreaseSpeed() {
     uint8_t tNewSpeed = RobotCar.rightCarMotor.DriveSpeedPWM + SPEED_PWM_CHANGE_VALUE;
     if (tNewSpeed < SPEED_PWM_CHANGE_VALUE) {
-        // overflow happened here
+        // unsigned overflow happened here
         tNewSpeed = MAX_SPEED_PWM;
     }
     RobotCar.setDriveSpeedPWM(tNewSpeed);
@@ -143,13 +138,18 @@ void doDecreaseSpeed() {
 }
 
 /*
- *
+ * First measure the motor supply voltage under normal load, i.e the fixed DEFAULT_DRIVE_SPEED_PWM, while turning in place.
  */
 void doCalibrate() {
     RobotCar.readCarValuesFromEeprom();
+
+#if defined(VIN_ATTENUATED_INPUT_PIN)
     calibrateDriveSpeedPWMAndPrint();
-#if (defined(USE_IR_REMOTE) || defined(ROBOT_CAR_BLUE_DISPLAY_PROGRAM)) && !defined(USE_MPU6050_IMU) \
+#endif
+
+#if !defined(USE_MPU6050_IMU) && (defined(_IR_COMMAND_DISPATCHER_HPP) || defined(VERSION_BLUE_DISPLAY)) \
     && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
+    // Not for 4WD cars with IMU or 2WD car with encoder motor.
     delay(500);
     /*
      * Start in place rotation calibration
@@ -181,123 +181,93 @@ void doCalibrate() {
 }
 
 /*
- * Rotate by 9 times 10 degree in place with normal and with slow motion
+ * Drive first testDriveTwoTurnsBothDirections then testDriveTwoTurnsIn5PartsBothDirections.
  */
-void testRotation() {
-#define DEGREE_OF_TEST_ROTATION    10
-#define NUMBER_OF_TEST_ROTATIONS    9 // to have 90 degree at 9 times 10 degree rotation
-    Serial.println(F("Rotate forward 9 times for 10 degree"));
-    for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
-    // rotate back
-    DELAY_AND_RETURN_IF_STOP(1000);
-    Serial.println(F("Rotate back for 90 degree"));
-    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
-    DELAY_AND_RETURN_IF_STOP(3000);
-
-    Serial.println(F("Rotate backwards"));
-    for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_FORWARD);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
-    // rotate back
-    DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_FORWARD);
-    DELAY_AND_RETURN_IF_STOP(2000);
-
-    Serial.println(F("Rotate in place"));
-    for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
-    // rotate back
-    DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCar.rotate(-(DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE);
-    DELAY_AND_RETURN_IF_STOP(2000);
-
-    Serial.println(F("Rotate in place backwards"));
-    for (int i = 0; i < NUMBER_OF_TEST_ROTATIONS; ++i) {
-        RobotCar.rotate(-DEGREE_OF_TEST_ROTATION, TURN_IN_PLACE);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
-    // rotate back
-    DELAY_AND_RETURN_IF_STOP(1000);
-    RobotCar.rotate((DEGREE_OF_TEST_ROTATION * NUMBER_OF_TEST_ROTATIONS), TURN_IN_PLACE);
-    DELAY_AND_RETURN_IF_STOP(2000);
+void doTestDrive() {
+    testDriveTwoTurnsBothDirections();
+    delay(2000);
+    testDriveTwoTurnsIn5PartsBothDirections();
 }
 
-void testDrive() {
-#define NUMBER_OF_TEST_DRIVES       2
-    Serial.print(F("Move the wheels a full turn i.e. "));
-    Serial.print(DEFAULT_CIRCUMFERENCE_MILLIMETER);
-    Serial.println(F(" mm"));
-
-    for (int i = 0; i < NUMBER_OF_TEST_DRIVES; ++i) {
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
-    DELAY_AND_RETURN_IF_STOP(2000);
-
-    for (int i = 0; i < NUMBER_OF_TEST_DRIVES; ++i) {
-        RobotCar.goDistanceMillimeter(-DEFAULT_CIRCUMFERENCE_MILLIMETER);
-        DELAY_AND_RETURN_IF_STOP(500);
-    }
+/*
+ * Drive the car for 2 times 1/8, wheel turn, then 1/ and 1/2 wheel turn. First forward, then backward.
+ * If distance driving formula and values are correct, this results in 2 full wheel turns ending at the start position.
+ */
+void doTestCommand() {
+    testDriveTwoTurnsIn5PartsBothDirections();
 }
 
-void testCommand() {
-    uint8_t tDirection = DIRECTION_FORWARD;
-    for (int i = 0; i < 2; ++i) {
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
-        DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);
-        DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 4, tDirection);
-        DELAY_AND_RETURN_IF_STOP(2000);
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 2, tDirection);
-        DELAY_AND_RETURN_IF_STOP(1000);
-        RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER, tDirection);
-
-        DELAY_AND_RETURN_IF_STOP(2000);
-        tDirection = DIRECTION_BACKWARD;
-    }
+void doTestRotation() {
+    testRotation();
 }
 
-#if defined(_ROBOT_CAR_DISTANCE_HPP)
-void doBeepFeedback(bool aEnableFlag) {
-    tone(PIN_BUZZER, 2200, 50);
-    delay(100);
-    if (aEnableFlag) {
-        tone(PIN_BUZZER, 2200, 50);
+/*
+ * Beep once after a delay if false, resulting in
+ */
+void doAdditionalBeepFeedback(bool aDoBeep) {
+    if (aDoBeep) {
+        delay(100);
+        tone(BUZZER_PIN, 2200, 50);
         delay(50);
     }
 }
 
+#if defined(_ROBOT_CAR_DISTANCE_HPP)
 /*
  * Functions which require the include of Distance.hpp
  */
+/*
+ * Toggle keep distance mode.
+ */
 void doKeepDistance() {
-    sEnableKeepDistance = !sEnableKeepDistance;
-    doBeepFeedback(sEnableKeepDistance);
+    if(sEnableScanAndTurn) {
+        // the last command was doFollower
+        sEnableFollower = true;
+    } else {
+        sEnableFollower = !sEnableFollower;
+    }
+    sEnableScanAndTurn = false;
+    doAdditionalBeepFeedback(!sEnableFollower);
 }
 
+/*
+ * Toggle follower mode (the one that scans)
+ */
 void doFollower() {
-    sEnableFollower = !sEnableFollower;
-    doBeepFeedback(sEnableFollower);
+    if(!sEnableScanAndTurn) {
+        // the last command was doKeepDistance
+        sEnableFollower = true;
+    } else {
+        sEnableFollower = !sEnableFollower;
+    }
+    sEnableScanAndTurn = true;
+    doAdditionalBeepFeedback(!sEnableFollower);
 }
 
+/*
+ * This steps the distance feedback modes:
+ * - No feedback tone (default).
+ * - Pentatonic frequency feedback tone.
+ * - Continuous frequency feedback tone.
+ */
 void stepDistanceFeedbackMode() {
     sDistanceFeedbackMode++;
     if (sDistanceFeedbackMode > DISTANCE_FEEDBACK_MAX) {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-        noTone(PIN_BUZZER);
+        noTone(BUZZER_PIN);
     }
     Serial.print(F("DistanceFeedbackMode="));
     Serial.println(sDistanceFeedbackMode);
 }
 
 #  if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+/*
+ * Step distance source, if a IR distance (Sharp GP2Y0A21YK / 1080) as well as an ultrasonic distance (HC-SR04) sensor are connected.
+ *  - Use IR as distance sensor (default).
+ *  - Use US as distance sensor.
+ *  - Use minimum of both sensors as distance.
+ *  - Use maximum of both sensors as distance.
+ */
 void stepDistanceSourceMode() {
     sDistanceSourceMode++;
     Serial.print(F("DistanceSourceMode="));
@@ -321,9 +291,12 @@ void stepDistanceSourceMode() {
 }
 #  endif
 
+/*
+ * Toggle scan speed of distance servo
+ */
 void toggleDistanceScanSpeed() {
+    doAdditionalBeepFeedback(sDoSlowScan);
     sDoSlowScan = !sDoSlowScan;
-    doBeepFeedback(sDoSlowScan);
 }
 #endif // defined(_ROBOT_CAR_DISTANCE_HPP)
 

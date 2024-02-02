@@ -4,8 +4,14 @@
  *  Enables follower mode driving of a 2 or 4 wheel smart car with an Arduino.
  *  If the target vanishes, the distance sensor scans to get the vanished (or a new) target.
  *
+ *  IR commands:
+ *    Step the distance feedback modes:
+ *      - No feedback tone.
+ *      - Pentatonic frequency feedback tone.
+ *      - Continuous frequency feeedback tone.
  *
- *  Copyright (C) 2020-2022  Armin Joachimsmeyer
+ *
+ *  Copyright (C) 2020-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -30,9 +36,10 @@
 /*
  * Values to configure the behavior of the follower
  */
+// These are the default values as defined in Distances.h
 #define FOLLOWER_DISTANCE_MINIMUM_CENTIMETER            22 // If measured distance is less than this value, go backwards
 #define FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER            30 // If measured distance is greater than this value, go forward
-#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     60 // Do not accept target with distance greater than this value
+#define FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER     70 // Do not accept target with distance greater than this value
 #define FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER   120 // Do not measure and give tone feedback for distances greater than this
 
 /*
@@ -69,21 +76,27 @@
 /*
  * Enable functionality of this program
  */
-//#define USE_IR_REMOTE // enables control by an IR remote, see below
-// if CAR_HAS_VIN_VOLTAGE_DIVIDER is NOT specified, existence of voltage divider will be determined dynamically if MONITOR_VIN_VOLTAGE is enabled.
-#define MONITOR_VIN_VOLTAGE         // Enable monitoring of VIN voltage for exact movements, if available
 #define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
+#define MILLIS_OF_INACTIVITY_BEFORE_ATTENTION   60000   // 1 minute before attention
+uint32_t sMillisOfLastMovement = 0;                     // 0 is a marker, that follower was just started
+bool sVINProvided = false;
+
+/*
+ * IR remote code is included by default and activated, if IR receiver is attached
+ */
+//#define DO_NOT_USE_IR_REMOTE
+#if !defined(DO_NOT_USE_IR_REMOTE) && defined(IR_RECEIVE_PIN)
+#define _USE_IR_REMOTE // enables control by an IR remote. to avoid double negations
+#endif
 
 /*
  * Enabling program features dependent on car configuration
  * If IR or TOF distance sensors are available, they take precedence over the US sensor.
  */
-#define SMART_CAR_FOLLOWER_PROGRAM          // The program name, used by RobotCarUtils.hpp
-
 #if !defined(CAR_HAS_DISTANCE_SERVO)
 #error This program requires a distance servo mounted indicated by a #define CAR_HAS_DISTANCE_SERVO
-#define CAR_HAS_DISTANCE_SERVO // avoid subsequent errors
+#define CAR_HAS_DISTANCE_SERVO // To avoid subsequent errors
 #endif
 //#define DISTANCE_SERVO_TRIM_DEGREE (-10) // Value is added to all degrees in DistanceServoWriteAndWaitForStop()
 
@@ -92,9 +105,11 @@
 #endif
 
 #include "CarPWMMotorControl.hpp"
+
+#define DISTANCE_CHANGE_THRESHOLD_CENTIMETER    2 // set sEffectiveDistanceJustChanged to true if distance changed more than this threshold
 #include "Distance.hpp"  // provides DistanceServo definition and uses FOLLOWER_DISTANCE_MINIMUM_CENTIMETER definition
 
-#if defined(USE_IR_REMOTE)
+#if defined(_USE_IR_REMOTE)
 /*
  * Choose remote
  * For available IR commands see RobotCarIRCommands.hpp and for the mapping to remote buttons see IRCommandMapping.h
@@ -104,17 +119,29 @@
 //#define USE_KEYES_REMOTE_CLONE // With number pad above direction control, will be taken as default
 //#define USE_KEYES_REMOTE
 //#define USE_DVBT_STICK_REMOTE
-#define USE_TINY_IR_RECEIVER // Supports only NEC protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
-#include "RobotCarIRCommands.hpp" // requires #include "Distance.hpp"
+#define USE_TINY_IR_RECEIVER // Supports only NEC and FAST protocol. Must be specified before including IRCommandDispatcher.hpp to define which IR library to use
+#include "RobotCarIRCommands.h" // must be after optional #include "Distance.hpp"
 #include "RobotCarIRCommandMapping.h" // must be included before IRCommandDispatcher.hpp to define IR_ADDRESS and IRMapping and string "unknown".
-#define LOCAL_INFO // Enable info just for IRCommandDispatcher
+/*
+ * defining LOCAL_INFO for IRCommandDispatcher.hpp enables output like this:
+ * A=0x0 C=0x9
+ * Run non blocking command: decrease speed
+ * 5 CurrentCompensatedSpeedPWM=0 DriveSpeedPWM=53 DriveSpeedPWMFor2Volt=64 SpeedPWMCompensation=0 CurrentDirection=S
+ */
+#define LOCAL_INFO // Enable info just for IRCommandDispatcher to show "A=0x0 C=0x1D - Received IR data" and "Run non blocking command: default speed - Called car command"
 #include "IRCommandDispatcher.hpp"
+#include "IRCommandDispatcher.hpp" // must be before #include "RobotCarUtils.hpp"
+bool sIRReceiverIsAttached = false;
 #else
 // Tone only if no external control (here by IR) is enabled
 #define DISTANCE_FEEDBACK_MODE   DISTANCE_FEEDBACK_PENTATONIC // one of DISTANCE_FEEDBACK_CONTINUOUSLY or DISTANCE_FEEDBACK_PENTATONIC
 #endif
 
-#include "RobotCarUtils.hpp" // must be after #define MONITOR_VIN_VOLTAGE
+#define ENABLE_SERIAL_OUTPUT // To see serial output of RobotCarUtils functions
+#include "RobotCarUtils.hpp" // must be after optional #include "IRCommandDispatcher.hpp"
+#if defined(_USE_IR_REMOTE)
+#include "RobotCarIRCommands.hpp" // must be after  #include "IRCommandDispatcher.hpp" for calibrateRotation(), which is enabled by dispatcher include
+#endif
 
 /*
  * Speed compensation to enable driving straight ahead.
@@ -123,9 +150,18 @@
  */
 #define SPEED_PWM_COMPENSATION_RIGHT                0
 
-void getDistanceModesFromPins();
-void doFollowerOneStep();
+#if defined(_USE_IR_REMOTE)
+#define MILLIS_OF_INACTIVITY_BEFORE_SWITCH_TO_AUTO_MOVE     40000   // 40 seconds
+#else
+#define MILLIS_OF_INACTIVITY_BEFORE_SWITCH_TO_AUTO_MOVE     20000   // 20 seconds
+#endif
+
+void doFollowerOneStep(bool aEnableScanAndTurn);
+void doAttentionIfNotMoved();
+void doAttention();
+void signalUSBPowered(bool aIsUSBPowered, bool aLoopForeverIfUSBPowered = false);
 distance_range_t getDistanceRange(uint8_t aCentimeter);
+distance_range_t sLastRange;
 
 /*
  * Start of robot car control program
@@ -136,36 +172,52 @@ void setup() {
     // Just to know which program is running on my Arduino
     Serial.println(F("START " __FILE__ " from " __DATE__ "\r\nUsing library version " VERSION_PWMMOTORCONTROL));
 
-#if defined(USE_IR_REMOTE)
-    // For available IR commands see IRCommandMapping.h https://github.com/ArminJo/PWMMotorControl/blob/master/examples/SmartCarFollower/IRCommandMapping.h
-    IRDispatcher.init();
+#if defined(_USE_IR_REMOTE)
+    /*
+     * Detect IR receiver circuit and print IR info
+     */
+    sIRReceiverIsAttached = isIRReceiverAttachedForTinyReceiver();
+    if (sIRReceiverIsAttached) {
+        IRDispatcher.init();
+        IRDispatcher.printIRInfo(&Serial);
+    } else {
+        Serial.println(F("No IR receiver detected at pin " STR(IR_RECEIVE_PIN)));
+    }
 #endif
 
+    /*
+     * Print info about actual configuration of this car
+     */
     printConfigInfo(&Serial);
     printProgramOptions(&Serial);
     PWMDcMotor::printCompileOptions(&Serial);
 
+    /*
+     * Initialize motor PWM control and print calibration values read from EEPROM
+     */
     initRobotCarPWMMotorControl();
     RobotCar.printCalibrationValues(&Serial);
-
-    getDistanceModesFromPins();
-
     RobotCar.setSpeedPWMCompensation(SPEED_PWM_COMPENSATION_RIGHT); // Set left/right speed compensation
 
     /*
      * Initialize US servo and set to forward position
      */
     initDistance();
-    DistanceServoWriteAndWaitForStop(90);
+    DistanceServo.write(90);
 
     /*
-     * Tone feedback for end of boot
+     * Detect USB connection and signal end of boot
      */
-    tone(PIN_BUZZER, 2200, 100);
-    delay(200);
-    tone(PIN_BUZZER, 2200, 100);
+#if defined(VIN_ATTENUATED_INPUT_PIN)
+    sVINProvided = isVINProvided();
+    Serial.println();
+#else
+    sVINProvided = !isVCCUSBPowered(&Serial);
+#endif
+    signalUSBPowered(!sVINProvided, false);
 
-#if defined(US_DISTANCE_SENSOR_ENABLE_PIN) // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+#  if defined(US_DISTANCE_SENSOR_ENABLE_PIN) && (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+// If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
     pinMode(US_DISTANCE_SENSOR_ENABLE_PIN, INPUT_PULLUP);
 #endif
 
@@ -175,10 +227,10 @@ void setup() {
      * and then take offset values for 1/2 second
      */
     delay(1000);
-    tone(PIN_BUZZER, 2200, 50);
+    tone(BUZZER_PIN, 2200, 50);
     delay(100);
     RobotCar.calculateAndPrintIMUOffsets(&Serial);
-    tone(PIN_BUZZER, 2200, 50);
+    tone(BUZZER_PIN, 2200, 50);
 #endif
 
     /*
@@ -189,12 +241,8 @@ void setup() {
     /*
      * Servo feedback for start of loop
      */
-    DistanceServoWriteAndWaitForStop(135);
-    delay(500);
-    DistanceServoWriteAndWaitForStop(45);
-    delay(500);
-    DistanceServoWriteAndWaitForStop(90);
-    delay(1500);
+    doAttention();
+    delay(1000);
 
     Serial.println(F("Start loop"));
     Serial.println();
@@ -202,82 +250,96 @@ void setup() {
 }
 
 void loop() {
-#if defined(USE_IR_REMOTE)
-    RobotCar.updateMotors(); // enables going fixed distance
+#if defined(USE_ENCODER_MOTOR_CONTROL)
+    RobotCar.updateMotors();
+#endif
 
-    /*
-     * Check for IR commands and execute them.
-     * Returns only AFTER finishing of requested action
-     */
-    IRDispatcher.checkAndRunSuspendedBlockingCommands();
+#if defined(_USE_IR_REMOTE)
+    if (sIRReceiverIsAttached) {
+        /*
+         * IR mode her
+         */
+#if !defined(USE_ENCODER_MOTOR_CONTROL) // Call it here if not at start of loop
+        RobotCar.updateMotors(); // enables going fixed distance started by IR command
+#endif
+        /*
+         * Check for IR commands and execute them.
+         * Returns only AFTER finishing of requested action
+         */
+        IRDispatcher.checkAndRunSuspendedBlockingCommands();
 
-    // we can enable / disable follower / distance (no turn) mode by IR
-    if (sEnableKeepDistance || sEnableFollower) {
-        doFollowerOneStep();
-    } else {
-        getDistanceAsCentimeter(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER, true); // timeout at 150 cm
-        playDistanceFeedbackTone(sEffectiveDistanceCentimeter);
-        printDistanceIfChanged(&Serial); // prints "Distance=XXcm" with or "Distance timeout" without a newline{
-        if (sEffectiveDistanceJustChanged) {
-            Serial.println(); // Terminate line "Distance=57cm ->  SpeedPWM=255" etc.
+        // we can enable / disable follower / distance (no turn) mode by IR
+        if (sEnableFollower) {
+            doFollowerOneStep(sEnableScanAndTurn);
+        } else {
+            /*
+             * No follower mode, just get and print distance, play optional feedback
+             */
+            getDistanceAsCentimeter(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER, true); // timeout at 150 cm
+            playDistanceFeedbackTone(sEffectiveDistanceCentimeter);
+            if (printDistanceIfChanged(&Serial)) {
+                Serial.println(); // Terminate line "Distance=XXcm" with or "Distance timeout" without a newline
+            }
+        }
+
+        /*
+         * Check for auto move. Do auto move only if no IR command received and not connected to USB.
+         */
+        if (sVINProvided && (millis() > MILLIS_OF_INACTIVITY_BEFORE_SWITCH_TO_AUTO_MOVE)
+                && IRDispatcher.IRReceivedData.MillisOfLastCode == 0) {
+            Serial.println(F("Start auto move once"));
+            doTestDrive();
+            IRDispatcher.IRReceivedData.MillisOfLastCode = millis(); // disable second auto move, next attention in 1 minute
+        }
+
+        /*
+         * Check for attention
+         */
+        if (sEnableFollower && !sEnableScanAndTurn) {
+            doAttentionIfNotMoved();
+        } else if ((millis() - IRDispatcher.IRReceivedData.MillisOfLastCode > MILLIS_OF_INACTIVITY_BEFORE_ATTENTION)) {
+            IRDispatcher.IRReceivedData.MillisOfLastCode = millis();
+            doAttention();
+        }
+
+    } else
+#endif
+    {
+        /*
+         * No IR available here, perform follower if not connected to USB
+         */
+        getDistanceModesFromPins();
+        if (sVINProvided) {
+            doFollowerOneStep(true); // scan and turn
         }
     }
-#else
-    getDistanceModesFromPins();
-    doFollowerOneStep();
-#endif
 
-    checkVinPeriodicallyAndPrintIfChanged();
+    if (sVINProvided) {
+        checkVinPeriodicallyAndPrintIfChanged(); // checks internally for sVINProvided
+    }
 
-#if defined(USE_IR_REMOTE)
-#else
-    // No delay, we have a delay by scanning distances
-#  if defined(USE_ENCODER_MOTOR_CONTROL)
-    RobotCar.updateMotors();
-#  endif
-#endif
+    delay(20); // Delay, to avoid receiving the US echo of last distance scan. 20 ms delay corresponds to an US echo from 3.43 m.
 }
 
 /*
- * Evaluates the US_DISTANCE_SENSOR_ENABLE_PIN switching between IR and US sensor.
- * Evaluates the DISTANCE_TONE_FEEDBACK_ENABLE_PIN to suppress tone feedback.
+ * Do one distance measurement and then compute new speed to reach the desired distance.
+ * @param aDoScanAndTurn do a scan, if target is out of distance
+ *                       AND turn to target if found
+ *                       AND car has moved before, i.e. target in front was found at least once.
  */
-void getDistanceModesFromPins() {
-#  if defined(US_DISTANCE_SENSOR_ENABLE_PIN) && (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
-// If US_DISTANCE_SENSOR_ENABLE_PIN is connected to ground we use the US distance as fallback.
-// Useful for testing the difference between both sensors.
-    if (digitalRead(US_DISTANCE_SENSOR_ENABLE_PIN) == LOW) {
-        sDistanceSourceMode = DISTANCE_SOURCE_MODE_US;
-    } else {
-        sDistanceSourceMode = DISTANCE_SOURCE_MODE_IR_OR_TOF;
-    }
-#  endif
-#  if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
-    if (digitalRead(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) == LOW) {
-        sDistanceFeedbackMode = DISTANCE_FEEDBACK_MODE;
-    } else {
-        sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
-        noTone(PIN_BUZZER);
-    }
-#  endif
-}
-
-void doFollowerOneStep() {
+void doFollowerOneStep(bool aEnableScanAndTurn) {
     unsigned int tForwardCentimeter;
-    int8_t tRotationDegree = 0;
+    int8_t tRotationDegree = 0; // only set if sEnableFollower == true
 
-#if defined(USE_IR_REMOTE)
-    if (sEnableFollower) { // Scan for target only if FollowerMode enabled, and not if KeepDistance enabled
-#endif
-    /*
-     * Scan target at 70, 90 and 110 degree
-     */
-    tRotationDegree = scanTarget(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER);
-    printForwardDistanceInfo(&Serial);
-    tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_TARGET_DISTANCE_MAXIMUM_CENTIMETER
+    if (aEnableScanAndTurn && sLastRange == DISTANCE_TARGET_NOT_FOUND && sMillisOfLastMovement > 0) {
+        /*
+         * Scan for target at 70, 90 and 110 degree
+         */
+        tRotationDegree = scanForTargetAndPrint(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER - 1); // -1 otherwise timeout is handled as found.
+        // Read forward distance for the case that rotation is 0 and sEffectiveDistanceJustChanged is true, i.e. target was found ahead.
+        tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_TARGET_DISTANCE_MAXIMUM_CENTIMETER
 
-#if defined(USE_IR_REMOTE)
-    } else { // if (sEnableFollower)
+    } else {
         /*
          * Just delay and then get one value, do not scan.
          */
@@ -287,18 +349,24 @@ void doFollowerOneStep() {
             tForwardCentimeter = FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER;
         }
     }
-#endif
+
 
     distance_range_t tRange = getDistanceRange(tForwardCentimeter);
-    printDistanceRangeCharacter(tRange, &Serial);
-    Serial.print(' ');
+    sLastRange = tRange;
+//    /*
+//     * Print '=', '<', '>', '!'  character to show current distance range
+//     */
+//    if (aEnableScanAndTurn) {
+//        printDistanceRangeCharacter(tRange, &Serial);
+//        Serial.print(' ');
+//    }
 
     /*
      * Rotate if requested
      */
     if (tRotationDegree != 0) {
         // Do a cast, since the values of tRange and rotation match!
-        RobotCar.rotate(tRotationDegree, static_cast<turn_direction_t>(tRange));
+        RobotCar.rotate(tRotationDegree, TURN_FORWARD, false);
         sRawForwardDistancesArray[INDEX_TARGET_FORWARD] = 0; // Force sEffectiveDistanceJustChanged to be true at next loop, since we have stopped here.
         // Make a fresh scan, before moving
 
@@ -368,29 +436,82 @@ void doFollowerOneStep() {
                 tNewSpeedPWM = tMaxSpeed;
             }
             Serial.print(F("SpeedPWM="));
-            Serial.print(tNewSpeedPWM);
+            Serial.println(tNewSpeedPWM);
             /*
              * Set speed and direction
              */
             RobotCar.setSpeedPWMAndDirection(tNewSpeedPWM, tDirection);
 
+            sMillisOfLastMovement = millis();
         } else {
             /*
              * STOP - Target is in the right distance, or we have a timeout
              */
-            if (RobotCar.getCarDirection() != DIRECTION_STOP) {
+            if (!RobotCar.isStopped()) {
                 RobotCar.stop(STOP_MODE_RELEASE); // stop only once
-                Serial.print(F("stop car"));
+                Serial.println(F("stop car"));
             } else {
                 if (tRange == DISTANCE_OK) {
-                    Serial.print(F("ok"));
+                    Serial.println(F("ok"));
                 } else {
                     // tRange == DISTANCE_TIMEOUT here
-                    Serial.print(F("searching"));
+                    Serial.println(F("searching"));
+                    sMillisOfLastMovement = millis();
                 }
             }
         }
     }
-    Serial.println(); // Terminate line "Distance=57cm ->  SpeedPWM=255" etc.
 }
 
+void doAttentionIfNotMoved() {
+    if (millis() - sMillisOfLastMovement > MILLIS_OF_INACTIVITY_BEFORE_ATTENTION) {
+        sMillisOfLastMovement = millis();
+        doAttention();
+    }
+}
+
+/*
+ * Move Servo if available, otherwise do a beep
+ */
+void doAttention() {
+    Serial.println(F("Start attention"));
+#if defined(CAR_HAS_DISTANCE_SERVO)
+    DistanceServo.write(45);
+    delay(500);
+    DistanceServo.write(135);
+    delay(500);
+    DistanceServo.write(90);
+#else
+    tone(BUZZER_PIN, NOTE_C7, 40);
+    delay(100);
+    tone(BUZZER_PIN, NOTE_C7, 40);
+    delay(100);
+#endif
+}
+
+/*
+ * Signal USB powered with a lower 2 tone beep
+ * @param aLoopForeverIfUSBPowered play the beep every 2 minutes as a remainder
+ */
+// definition are from pitches.h and for the case it is not available or not included
+#define NOTE_C6  1047
+#define NOTE_G6  1568
+#define NOTE_C7  2093
+#define DELAY_OF_USB_CONNECTED_REMAINDER_BEEP_MILLIS   120000 // 2 minutes
+void signalUSBPowered(bool aIsUSBPowered, bool aLoopForeverIfUSBPowered) {
+    if (aIsUSBPowered) {
+        while (true) {
+            tone(BUZZER_PIN, NOTE_G6, 200);
+            delay(200);
+            tone(BUZZER_PIN, NOTE_C6, 400);
+            if (!aLoopForeverIfUSBPowered) {
+                break;
+            }
+            delay(120000); // wait 2 minutes
+        }
+    } else {
+        tone(BUZZER_PIN, NOTE_C7, 100);
+        delay(200);
+        tone(BUZZER_PIN, NOTE_C7, 100);
+    }
+}

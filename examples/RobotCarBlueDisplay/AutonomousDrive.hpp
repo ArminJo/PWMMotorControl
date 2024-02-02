@@ -66,7 +66,7 @@ void driveAutonomousOneStep() {
  * @param aDriveMode required if aDoStart is true otherwise sDriveMode = MODE_MANUAL_DRIVE;
  */
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
-    noTone (PIN_BUZZER); // for follower mode
+    noTone (BUZZER_PIN); // for follower mode
 
     if (aDoStart) {
         /*
@@ -290,8 +290,8 @@ void driveCollisonAvoidingOneStep() {
             if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
                 char tStringBuffer[6];
                 sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm/scan");
-                BlueDisplay1.drawText(TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_HEIGHT - TEXT_SIZE_11_DECEND, tStringBuffer, TEXT_SIZE_11,
-                        COLOR16_BLACK, COLOR16_WHITE);
+                BlueDisplay1.drawText(TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_HEIGHT - TEXT_SIZE_11_DECEND,
+                        tStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
             }
 #endif
         }
@@ -335,7 +335,7 @@ void driveCollisonAvoidingOneStep() {
  * Code for follower mode
  ***************************************************/
 /*
- * If mode == MODE_STEP_TO_NEXT_TURN, stop if the scan has requested a turn.
+ * If mode == MODE_STEP_TO_NEXT_TURN, stop if the call of scanForTargetAndPrint() results in a turn.
  * Start at next step with the turn until the next target has been searched for and found.
  */
 void driveFollowerModeOneStep() {
@@ -355,7 +355,7 @@ void driveFollowerModeOneStep() {
          * We have NO pending turn no more, scan target at 70, 90 and 110 degree
          */
 //        clearPrintedForwardDistancesInfos(false); // clear area for next scan results
-        int8_t tNextRotationDegree = scanTarget(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER);
+        int8_t tNextRotationDegree = scanForTargetAndPrint(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER -1); // -1 otherwise timeout is handled as found.
         unsigned int tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER
         sDistanceRange = getDistanceRange(tForwardCentimeter);
 
@@ -425,8 +425,12 @@ void driveFollowerModeOneStep() {
                 }
                 /*
                  * Set speed and direction
+                 * It seems that mode change can happen between driveAutonomousOneStep() and here,
+                 * so we must check for mode change / stop of follower before setting speed.
                  */
-                RobotCar.setSpeedPWMAndDirection(tNewSpeedPWM, tDirection);
+                if (sDriveMode != MODE_MANUAL_DRIVE) {
+                    RobotCar.setSpeedPWMAndDirection(tNewSpeedPWM, tDirection);
+                }
 
             } else {
                 /*

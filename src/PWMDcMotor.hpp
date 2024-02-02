@@ -498,6 +498,7 @@ void PWMDcMotor::setDriveSpeedPWM(uint8_t aDriveSpeedPWM) {
 }
 
 /*
+ * @param aFullBridgeInputVoltageMillivolt is used to compute the (reference) PWM for 2 volt.
  * Formula is: 2VPWM = (2000mV / tBridgeMillivolt) * MAX_SPEED_PWM
  */
 void PWMDcMotor::setDriveSpeedPWMFor2Volt(uint16_t aFullBridgeInputVoltageMillivolt) {
