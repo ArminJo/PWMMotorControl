@@ -243,9 +243,9 @@ void MecanumWheelCarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
     uint8_t tBackRightMotorDirection;
 
     /*
-     * We set all for straight or movements to the left,  movements to the right are implemented by just swapping left and right motors
+     * We set all for straight or movements to the left, movements to the right are implemented by just swapping left and right motors
      */
-    if (aRequestedDirection & DIRECTION_TURN) {
+    if (aRequestedDirection & DIRECTION_TURN_MASK) {
         /*
          * TURN requested
          * We have TURN and FOWARD -> turn center is front axis, TURN and BACKWARD  -> turn center is back axis

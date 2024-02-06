@@ -39,6 +39,7 @@ Contains the [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar) 
 - The EncoderMotor.cpp.cpp controls a DC motor with attached encoder disc and slot-type photo interrupters to enable **driving a specified distance**.
 - The CarPWMMotorControl.cpp controls **2 motors simultaneously** like it is required for most **Robot Cars**.
 - To **compensate for different motor characteristics**, each motor can have a **positive** compensation value, which is **subtracted** from the requested speed PWM if you use the `setSpeedPWMCompensation()` functions. For car control, only compensation of one motor is required.
+- **4 wheel mecanum car control** movements are fully supported with [extended directions](https://github.com/ArminJo/PWMMotorControl/blob/master/src/PWMDcMotor.h#L231) like `DIRECTION_LEFT`, `DIRECTION_DIAGONAL_LEFT_BACKWARD`, `DIRECTION_TURN_RIGHT_IN_PLACE` etc..
 
 ### The motor is mainly controlled by 2 dimensions:
 1. **Direction** / motor driver control. Can be FORWARD, BACKWARD, BRAKE (motor connections are shortened) or RELEASE (motor connections are high impedance).
@@ -123,7 +124,23 @@ It starts with `DEFAULT_DRIVE_SPEED_PWM` and doubles speed for next turn until `
 
 | Diagram for car controlled by an MosFet bridge | Diagram for car controlled by an L298 bridge |
 | :-: | :-: |
-| ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.4V_PrintCarValuesWithIMU_Encoder.png) | ![Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/Lafvin_Test.png) |
+| ![2WD Smart Car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.4V_PrintCarValuesWithIMU_Encoder.png) | ![2WD Lafvin car](https://github.com/ArminJo/PWMMotorControl/blob/master/pictures/analytic/7.4V_PrintCarValuesWithIMU_Lafvin.png) |
+
+## LineFollower
+[The code](https://github.com/ArminJo/PWMMotorControl/blob/master/examples/LineFollower/LineFollower.ino) uses a TCRT 5000 3-channel sensor.
+
+According to the 8 different states of the 3 sensor inputs, we perform the following actions:
+0 - All sensors are dark or not connected -> stop or go forward after sharp turn
+1 - Mid and right sensors are dark -> sharp right
+2 - Left and right sensors are dark -> panic stop, because this is unexpected
+3 - Only right sensor is dark -> right
+4 - Mid and left sensors are dark -> sharp left
+5 - Only mid sensor is dark -> forward
+6 - Only left sensor is dark -> left
+7 - All sensors are not dark -> stop or go backward after turn
+
+#### YouTube video of LineFollower in action
+[![Youtube video](https://i.ytimg.com/vi/XzY7ZW040i0/hqdefault.jpg)](https://youtu.be/XzY7ZW040i0)
 
 ## RobotCarBasic
 Template for your RobotCar control. Currently implemented is: Drive until distance too low, then stop, go backwards and turn random amount.
@@ -165,7 +182,6 @@ If an IR Receiver is attached, the following IR commands are available:
   - Use maximum of both sensors as distance.
 - Toggle scan speed of distance servo.
 
-
 - TestRotate: **Check the current EEPROM stored values for rotation**.
   1. Rotate left forward by 9 times 10 degree -> 90 degree.
   2. Rotate right forward by 90 degree -> car has its initial direction but moved left forward.
@@ -196,7 +212,7 @@ Second **calibrate rotation**.<br/>
 The steps 1 to 4 are first executed with turn in place, then with turn forward, since the values for both are different, so you must press the stop button twice for a complete calibration.
 
 ## [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar)
-Requires also the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
+Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
 
 Enables autonomous driving of a 2 or 4 wheel car with an Arduino.<br/>
 To avoid obstacles a HC-SR04 Ultrasonic sensor mounted on a SG90 Servo continuously scans the environment.

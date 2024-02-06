@@ -149,12 +149,13 @@ void playDistanceFeedbackTone(uint8_t aCentimeter) {
                  * DISTANCE_FEEDBACK_CONTINUOUSLY. Play feedback tone proportional to measured distance
                  */
 #if defined(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) && defined(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER)
-                if(aCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER){
+                if (aCentimeter < FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) {
                     tFrequency = map(aCentimeter, 0, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, 100, 200);
-                } else if(aCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER){
+                } else if (aCentimeter > FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) {
                     tFrequency = map(aCentimeter, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 200, 2000, 6000);
                 } else {
-                    tFrequency = map(aCentimeter, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 440, 880); // 1 octaves for gap
+                    tFrequency = map(aCentimeter, FOLLOWER_DISTANCE_MINIMUM_CENTIMETER, FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER, 440,
+                            880); // 1 octaves for gap
                 }
 #else
                 tFrequency = map(aCentimeter, 0, 100, 110, 7040); // 6 octaves per meter
@@ -228,23 +229,23 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aW
     sUSDistanceCentimeter = tUSCentimeter; // overwrite value set by getUSDistanceAsCentimeterWithCentimeterTimeout()
 
 #if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+    uint8_t tIRCentimeter;
 #  if !defined(USE_BLUE_DISPLAY_GUI)
     /*
      * Only get IR or TOF distance if used later
      */
     if (sDistanceSourceMode != DISTANCE_SOURCE_MODE_US) {
 #  endif
-    uint8_t tIRCentimeter;
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
-    tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
-    if (tIRCentimeter == DISTANCE_TIMEOUT_RESULT) {
-        tIRCentimeter = aDistanceTimeoutCentimeter;
-    }
-    sIROrTofDistanceCentimeter = tIRCentimeter;
+        tIRCentimeter = getIRDistanceAsCentimeter(aWaitForCurrentMeasurementToEnd);
+        if (tIRCentimeter == DISTANCE_TIMEOUT_RESULT) {
+            tIRCentimeter = aDistanceTimeoutCentimeter;
+        }
+        sIROrTofDistanceCentimeter = tIRCentimeter;
 
 #  elif defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-    tIRCentimeter = readToFDistanceAsCentimeter();
-    sIROrTofDistanceCentimeter = tIRCentimeter;
+        tIRCentimeter = readToFDistanceAsCentimeter();
+        sIROrTofDistanceCentimeter = tIRCentimeter;
 #  endif
 #  if !defined(USE_BLUE_DISPLAY_GUI)
     }
@@ -649,11 +650,10 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
         tServoDegreeToScan += tDeltaDegree;
     } // scan 3 distances
 
-
     /*
      * Check if forward distance is in the right range for a target
      */
-    if(sRawForwardDistancesArray[INDEX_TARGET_FORWARD] <= aMaximumTargetDistance) {
+    if (sRawForwardDistancesArray[INDEX_TARGET_FORWARD] <= aMaximumTargetDistance) {
         // target found in forward direction
         tRotationDegree = 0; // no rotation
         sEffectiveDistanceJustChanged = true; // force movement
@@ -663,7 +663,7 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
     /*
      * Do no rotation if minimum distance is NOT in the right range for a target
      */
-    if(tMinDistance > aMaximumTargetDistance) {
+    if (tMinDistance > aMaximumTargetDistance) {
         // Target not found at any side
         tRotationDegree = 0; // no rotation, no movement
     }

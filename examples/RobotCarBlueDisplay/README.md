@@ -30,7 +30,7 @@ Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-Bl
 
 # Features
 - Obstacles avoidance by a HC-SR04 ultrasonic sensor mounted on a SG90 Servo which continuously scans the environment.
-- To overcome the drawbacks of ultrasonic sensors, an additional IR or TOF (TimeOfFlight) sensor can be mounted to the servo.
+- To overcome the drawbacks of ultrasonic sensors, an additional Sharp 430/1080/20150/100550 (GP2Y0A21YK0F) IR or VL53L1X TOF (TimeOfFlight) sensor can be mounted to the servo.
 - Manual control implemented by a GUI using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
 
 **Just overwrite the function doUserCollisionAvoiding() to test your own skill**.
