@@ -24,7 +24,7 @@ Contains the [RobotCarBlueDisplay](https://github.com/ArminJo/Arduino-RobotCar) 
  &nbsp; &nbsp;
 [![Button API](https://img.shields.io/badge/API-yellow?logoColor=white&logo=OpenStreetMap)](https://github.com/ArminJo/PWMMotorControl#api)
  &nbsp; &nbsp;
-[![Button Changelog](https://img.shields.io/badge/Changelog-blue?logoColor=white&logo=AzureArtifacts)](https://github.com/ArminJo/PWMMotorControl#revision-history)
+[![Button Changelog](https://img.shields.io/badge/Changelog-blue?logoColor=white&logo=AzureArtifacts)](https://github.com/ArminJo/PWMMotorControl?tab=readme-ov-file#revision-history)
 
 </div>
 

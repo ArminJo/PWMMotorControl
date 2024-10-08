@@ -53,10 +53,6 @@
 #  endif // defined(USE_SOFT_I2C_MASTER)
 #endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
-#if defined(ESP32)
-#include "analogWrite.h" // from e.g. ESP32Servo library
-#endif
-
 //#define TRACE
 #if defined(DEBUG)
 #define LOCAL_DEBUG

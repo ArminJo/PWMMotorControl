@@ -208,15 +208,17 @@ void setup() {
     /*
      * Detect USB connection and signal end of boot
      */
-#if defined(VIN_ATTENUATED_INPUT_PIN)
+#if !defined(ESP32)
+#  if defined(VIN_ATTENUATED_INPUT_PIN)
     sVINProvided = isVINProvided();
     Serial.println();
-#else
+#  else
     sVINProvided = !isVCCUSBPowered(&Serial);
-#endif
+#  endif
     signalUSBPowered(!sVINProvided, false);
+#endif
 
-#  if defined(US_DISTANCE_SENSOR_ENABLE_PIN) && (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
+#if defined(US_DISTANCE_SENSOR_ENABLE_PIN) && (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
 // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
     pinMode(US_DISTANCE_SENSOR_ENABLE_PIN, INPUT_PULLUP);
 #endif
@@ -314,9 +316,11 @@ void loop() {
         }
     }
 
+#if defined(VIN_ATTENUATED_INPUT_PIN)
     if (sVINProvided) {
         checkVinPeriodicallyAndPrintIfChanged(); // checks internally for sVINProvided
     }
+#endif
 
     delay(20); // Delay, to avoid receiving the US echo of last distance scan. 20 ms delay corresponds to an US echo from 3.43 m.
 }

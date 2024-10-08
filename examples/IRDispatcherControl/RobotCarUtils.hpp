@@ -87,9 +87,9 @@ bool doCalibration = false;
 #  endif
 #include "ADCUtils.hpp"
 uint16_t sLastVINRawSum; // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC, used to determine if voltage has changed and must be displayed.
-float sVINVoltage = FULL_BRIDGE_INPUT_MILLIVOLT / 1000; // set default value for later use
 uint32_t sMillisOfLastVCCInfo;
 #endif // defined(VIN_ATTENUATED_INPUT_PIN)
+float sVINVoltage = FULL_BRIDGE_INPUT_MILLIVOLT / 1000; // Set default value for later use. Is used a parameter for getVoltageAdjustedSpeedPWM
 
 //uint32_t sMillisOfLastAttention = 0;                            // millis() of last doAttention() or doWave()
 
@@ -227,7 +227,7 @@ bool readVINVoltage() {
      * Here VIN is the only channel we convert.
      * Get 10 samples lasting 1030 us, which is almost the PWM period of 1024 us.
      */
-    uint16_t tVINRawSum = readADCChannelWithReferenceMultiSamples(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL, NUMBER_OF_VIN_SAMPLES); // 10 samples
+    uint16_t tVINRawSum = readADCChannelMultiSamplesWithReference(VIN_ATTENUATED_INPUT_CHANNEL, INTERNAL, NUMBER_OF_VIN_SAMPLES); // 10 samples
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR)
     checkAndWaitForReferenceAndChannelToSwitch(tOldADMUX & MASK_FOR_ADC_CHANNELS, tOldADMUX >> SHIFT_VALUE_FOR_REFERENCE);
 #endif

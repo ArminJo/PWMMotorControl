@@ -28,7 +28,7 @@
  ************************************************************************************
  * MIT License
  *
- * Copyright (c) 2022-2023 Armin Joachimsmeyer
+ * Copyright (c) 2022-2024 Armin Joachimsmeyer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,6 +58,7 @@
  * - IR_FEEDBACK_LED_PIN    The pin number for TinyIRReceiver feedback LED.
  * - NO_LED_FEEDBACK_CODE   Disables the feedback LED function. Saves 14 bytes program memory.
  * - DISABLE_PARITY_CHECKS  Disable parity checks. Saves 48 bytes of program memory.
+ * - USE_EXTENDED_NEC_PROTOCOL Like NEC, but take the 16 bit address as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
  * - USE_ONKYO_PROTOCOL     Like NEC, but take the 16 bit address and command each as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
  * - USE_FAST_PROTOCOL      Use FAST protocol (no address and 16 bit data, interpreted as 8 bit command and 8 bit inverted command) instead of NEC.
  * - ENABLE_NEC2_REPEATS    Instead of sending / receiving the NEC special repeat code, send / receive the original frame for repeat.
@@ -75,11 +76,14 @@
 //#define LOCAL_DEBUG // This enables debug output only for this file
 #endif
 
+/*
+ * Protocol selection
+ */
 //#define DISABLE_PARITY_CHECKS // Disable parity checks. Saves 48 bytes of program memory.
+//#define USE_EXTENDED_NEC_PROTOCOL // Like NEC, but take the 16 bit address as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
 //#define USE_ONKYO_PROTOCOL    // Like NEC, but take the 16 bit address and command each as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
 //#define USE_FAST_PROTOCOL     // Use FAST protocol instead of NEC / ONKYO.
 //#define ENABLE_NEC2_REPEATS // Instead of sending / receiving the NEC special repeat code, send / receive the original frame for repeat.
-
 #include "TinyIR.h" // If not defined, it defines IR_RECEIVE_PIN, IR_FEEDBACK_LED_PIN and TINY_RECEIVER_USE_ARDUINO_ATTACH_INTERRUPT
 
 #include "digitalWriteFast.h"
@@ -379,7 +383,7 @@ void IRPinChangeInterruptHandler(void) {
                     // Here we have 8 bit command
                     TinyIRReceiverData.Command = TinyIRReceiverControl.IRRawData.UBytes[2];
 #  else
-                            // Here we have 16 bit command
+                    // Here we have 16 bit command
                     TinyIRReceiverData.Command = TinyIRReceiverControl.IRRawData.UWord.HighWord;
 #  endif
 
@@ -419,6 +423,17 @@ void IRPinChangeInterruptHandler(void) {
 
 bool isTinyReceiverIdle() {
     return (TinyIRReceiverControl.IRReceiverState == IR_RECEIVER_STATE_WAITING_FOR_START_MARK);
+}
+
+/*
+ * Function to be used as drop in for IrReceiver.decode()
+ */
+bool TinyReceiverDecode() {
+    bool tJustWritten = TinyIRReceiverData.justWritten;
+    if (tJustWritten) {
+        TinyIRReceiverData.justWritten = false;
+    }
+    return tJustWritten;
 }
 
 /*
