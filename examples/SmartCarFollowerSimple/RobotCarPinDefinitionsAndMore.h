@@ -219,6 +219,7 @@
 #define LEFT_MOTOR_FORWARD_PIN         14 // IN1
 #define LEFT_MOTOR_BACKWARD_PIN        15 // IN2
 #define LEFT_MOTOR_PWM_PIN             13 // ENA - Must be PWM capable
+#define ESP32_LEDC_MOTOR_CHANNEL        4 // leave first 4 channel for other purposes e.g. Servo and Light (channel 2)
 
 // Not tested :-(
 #define RIGHT_MOTOR_INTERRUPT          12
@@ -230,11 +231,6 @@
 #if !defined(BUZZER_PIN)
 #define BUZZER_PIN                     23
 #endif
-
-// for ESP32 LED_BUILTIN is defined as: static const uint8_t LED_BUILTIN 2
-#  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
-#define LED_BUILTIN PB1
-#  endif
 
 #else // NANO_BASED
 // Uno based

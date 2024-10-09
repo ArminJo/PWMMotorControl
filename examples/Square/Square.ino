@@ -53,9 +53,6 @@
 #define SIZE_OF_SQUARE_MILLIMETER  400
 
 void setup() {
-// initialize the digital pin as an output.
-    pinMode(LED_BUILTIN, OUTPUT);
-
     Serial.begin(115200);
 
 #if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \

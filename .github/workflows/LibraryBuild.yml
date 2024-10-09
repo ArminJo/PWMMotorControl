@@ -1,7 +1,7 @@
 # LibraryBuild.yml
 # Github workflow script to test compile all examples of an Arduino library repository.
 #
-# Copyright (C) 2020  Armin Joachimsmeyer
+# Copyright (C) 2020-2024  Armin Joachimsmeyer
 # https://github.com/ArminJo/Github-Actions
 #
 
@@ -27,7 +27,7 @@ jobs:
 
     env:
       # Comma separated list without double quotes around the list.
-      REQUIRED_LIBRARIES: Servo,ServoEasing,Adafruit Motor Shield V2 Library,PlayRtttl,BlueDisplay
+      REQUIRED_LIBRARIES: Servo,ServoEasing,Adafruit Motor Shield V2 Library,PlayRtttl # ,BlueDisplay
 
     strategy:
       matrix:
@@ -44,7 +44,7 @@ jobs:
         arduino-boards-fqbn:
           - arduino:avr:uno
           - arduino:avr:uno|full
-          - esp32:esp32:featheresp32:FlashFreq=80
+          - esp32:esp32:esp32cam
 
         # Specify parameters for each board.
         # With sketches-exclude you may exclude specific examples for a board. Use a comma separated list.
@@ -68,21 +68,15 @@ jobs:
                 -DBREADBOARD_4WD_FULL_CONFIGURATION
                 -DUS_SENSOR_SUPPORTS_1_PIN_MODE
 
-          - arduino-boards-fqbn: esp32:esp32:featheresp32:FlashFreq=80
+          - arduino-boards-fqbn: esp32:esp32:esp32cam
             platform-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-            required-libraries: ESP32Servo@0.13.0 # contains analogWrite.h
-            sketches-exclude: PrintMotorDiagram,PrintCarValuesWithIMU,RobotCarBasic,RobotCarBlueDisplay,SmartCarFollower,LineFollower  # no Encoder support yet
+            required-libraries: ESP32Servo
+            sketches-exclude: PrintMotorDiagram,PrintCarValuesWithIMU,RobotCarBlueDisplay,LineFollower  # no Encoder support yet, no sensor input
             build-properties: # the flags were put in compiler.cpp.extra_flags
-              All: -DCAR_IS_ESP32_CAM_BASED
-              MecanumWheelCar: -DDUMMY # undefine CAR_IS_ESP32_CAM_BASED
-              RobotCarBlueDisplay:
-                -DCAR_IS_ESP32_CAM_BASED
-                -DBLUETOOTH_BAUD_RATE=BAUD_115200
-                -DBREADBOARD_4WD_FULL_CONFIGURATION
-                -DUS_SENSOR_SUPPORTS_1_PIN_MODE
+              All: -DCAR_IS_ESP32_CAM_BASED -MMD -c # see https://github.com/espressif/arduino-esp32/issues/8815
+              MecanumWheelCar: -DDUMMY -MMD -c # this undefines CAR_IS_ESP32_CAM_BASED
 
-      # Do not cancel all jobs / architectures if one job fails
-      fail-fast: false
+#      fail-fast: false # false -> do not cancel all jobs / architectures if one job fails
 
     # This is the list of steps this job will run.
     steps:
@@ -99,14 +93,14 @@ jobs:
           path: CustomBlueDisplay # must contain string "Custom"
           # No need to put "Custom" library in the required-libraries list
 
-
       - name: Compile all examples using the arduino-test-compile action
         uses: ArminJo/arduino-test-compile@master
         with:
           arduino-board-fqbn: ${{ matrix.arduino-boards-fqbn }}
-          arduino-platform: ${{ matrix.arduino-platform }}
           platform-url: ${{ matrix.platform-url }}
           required-libraries: ${{ env.REQUIRED_LIBRARIES }},${{ matrix.required-libraries }}
           sketches-exclude: ${{ matrix.sketches-exclude }}
           build-properties: ${{ toJson(matrix.build-properties) }}
-          extra-arduino-lib-install-args: "--no-deps"
+          extra-arduino-lib-install-args: "--no-deps" # suppress dependency resolving for libraries, here the "Adafruit Motor Shield V2 Library"
+#          debug-install: true
+          debug-compile: true

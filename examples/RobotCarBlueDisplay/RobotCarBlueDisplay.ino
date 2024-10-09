@@ -11,7 +11,7 @@
  *  Define ENABLE_USER_PROVIDED_COLLISION_DETECTION and overwrite the 2 functions myOwnFillForwardDistancesInfo()
  *  and doUserCollisionAvoiding() to test your own skill.
  *
- *  If Bluetooth is not connected, after TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (10 seconds) the car starts demo mode.
+ *  If Bluetooth is not connected, after TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS (30 seconds) the car starts demo mode.
  *  After power up it runs in follower mode and after reset it runs in autonomous drive mode.
  *
  *  Program size of GUI is 63 percent of 32kByte.
@@ -32,16 +32,15 @@
 
 #include <Arduino.h>
 
-#define VERSION_EXAMPLE "2.0.1"
+#define VERSION_EXAMPLE "2.1.0"
 
 //#define DEBUG
 //#define TRACE
 /*
  * Timeouts for demo mode and inactivity remainder
  */
-#define TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
-#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
-#define TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
+#define ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
+#define TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
 
 /*
  * Car configuration
@@ -102,7 +101,9 @@ Servo TiltServo;
 #else
 #define ENABLE_SERIAL_OUTPUT            // To avoid the double negation !defined(NO_SERIAL_OUTPUT)
 #endif
+#if defined(VIN_ATTENUATED_INPUT_PIN)
 #define MONITOR_VIN_VOLTAGE             // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
+#endif
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be defined before #include "BlueDisplay.hpp"
 #define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
@@ -148,6 +149,7 @@ int doUserCollisionAvoiding();
 
 #include "CarPWMMotorControl.hpp"   // after BlueDisplay.hpp
 
+#define VOLTAGE_USB_POWERED_UPPER_THRESHOLD_MILLIVOLT   4975 // Because Uno boards lack the series diode and have a low voltage drop
 #include "RobotCarUtils.hpp"        // after BlueDisplay.hpp
 
 #if defined(USE_MPU6050_IMU)
@@ -223,8 +225,10 @@ void setup() {
      * Configure first set of pins
      */
     // initialize the digital pin as an output.
+#if defined(LED_BUILTIN)
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW); // on my Uno R3 the LED is on otherwise
+#endif
 #if defined(CAR_HAS_LASER) && (LASER_OUT_PIN != LED_BUILTIN)
     pinMode(LASER_OUT_PIN, OUTPUT);
 #endif
@@ -371,7 +375,9 @@ void loop() {
         // first get EEPROM values, in order to not work with the values we accidently set before in a former calibration
         RobotCar.readCarValuesFromEeprom();
         displayRotationValues();
+#if defined(VIN_ATTENUATED_INPUT_PIN)
         calibrateDriveSpeedPWMAndPrint();
+#endif
 #  if !defined(USE_MPU6050_IMU) && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
         if (!delayMillisAndCheckForStop(3000)) { // time to rearrange car
             calibrateRotation();
@@ -391,16 +397,19 @@ void loop() {
      * After 30 seconds of being disconnected, run the demo.
      * Do not run it if the car is connected to USB (e.g. for programming or debugging), which can be tested only for a Li-ion supply :-(.
      */
-    if (!sTimeoutDemoDisable && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)) {
+    if (!sTimeoutDemoDisable && (millis() > TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)) {
         sTimeoutDemoDisable = true;
 
+#if defined(ADC_UTILS_ARE_AVAILABLE)
         if (isVCCUSBPowered()) {
-#if defined(ENABLE_SERIAL_OUTPUT)
+#  if defined(ENABLE_SERIAL_OUTPUT)
             Serial.print(F("Timeout and USB powered with "));
             Serial.print(sVCCVoltageMillivolt);
             Serial.println(F(" mV -> skip follower demo"));
+#  endif
+        } else
 #endif
-        } else {
+        {
             /*
              * Timeout just reached and not USB powered, play melody and start autonomous drive
              */
@@ -431,8 +440,8 @@ void loop() {
     /*
      * After 4 minutes of user inactivity, make noise by scanning with US Servo and repeat it every 2. minute
      */
-    if (BlueDisplay1.isConnectionEstablished() && sMillisOfLastReceivedBDEvent + TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
-        sMillisOfLastReceivedBDEvent = millis() - (TIMOUT_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
+    if (BlueDisplay1.isConnectionEstablished() && sMillisOfLastReceivedBDEvent + ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
+        sMillisOfLastReceivedBDEvent = millis() - (ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
 #if defined(CAR_HAS_DISTANCE_SERVO)
         fillAndShowForwardDistancesInfo(true, true);
 #  if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)

@@ -203,6 +203,9 @@ void PWMDcMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMPin
 
     // Set DriveSpeedPWM, SpeedPWMCompensation and MillisPerCentimeter defaults
     setDefaultsForFixedDistanceDriving();
+#if defined(ESP32)
+    ledcAttachChannel(aPWMPin, ESP32_LEDC_MOTOR_CHANNEL_FREQUENCY, ESP32_LEDC_MOTOR_CHANNEL_RESOLUTION, ESP32_LEDC_MOTOR_CHANNEL); // 1000 Hz, 8 bit, channel 2
+#endif
     stop(DEFAULT_STOP_MODE);
 }
 

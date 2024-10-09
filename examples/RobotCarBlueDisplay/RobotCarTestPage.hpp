@@ -239,9 +239,11 @@ void drawTestPage(void) {
 void startTestPage(void) {
     doReset(NULL, 0);
     drawTestPage();
+#if defined(VIN_ATTENUATED_INPUT_PIN)
     if (!isPWMCalibrated) {
         calibrateDriveSpeedPWMAndPrint();
     }
+#endif
 }
 
 void loopTestPage(void) {

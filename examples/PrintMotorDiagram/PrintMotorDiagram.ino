@@ -56,9 +56,6 @@ EncoderMotor MotorUnderTest;
 //#define ENABLE_EXTRA_NON_PLOTTER_OUTPUT // Generate verbose output for SerialMonitor but this not compatible with Arduino Plotter
 
 void setup() {
-// initialize the digital pin as an output.
-    pinMode(LED_BUILTIN, OUTPUT);
-
     Serial.begin(115200);
 
 #if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \

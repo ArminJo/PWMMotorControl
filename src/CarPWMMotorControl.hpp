@@ -942,16 +942,16 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 
 void CarPWMMotorControl::printCalibrationValues(Print *aSerial) {
     aSerial->println(F("Calibration values:"));
-    aSerial->print(F("mm/256 deg="));
     aSerial->print(RobotCar.MillimeterPer256Degree);
-    aSerial->print(F(" inPlace="));
-    aSerial->println(RobotCar.MillimeterPer256DegreeInPlace);
-    aSerial->print(F("2 volt PWM right="));
+    aSerial->print(F(" mm per 256 deg, "));
+    aSerial->print(RobotCar.MillimeterPer256DegreeInPlace);
+    aSerial->println(F(" mm for inPlace"));
+    aSerial->print(F("PWM for 2 volt: right="));
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
     aSerial->println(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
 #else
     aSerial->print(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
-    aSerial->print(F(" left="));
+    aSerial->print(F(", left="));
     aSerial->println(RobotCar.leftCarMotor.DriveSpeedPWMFor2Volt);
 #endif
     aSerial->println();

@@ -73,6 +73,23 @@
 #define _USE_OWN_LIBRARY_FOR_ADAFRUIT_MOTOR_SHIELD // to avoid double negations
 #endif
 
+/*
+ * Each two ESP32 channels share the same frequency and resolution, and if we allocate an even channel
+ * and the next (odd) ledc channel is initialized with another frequency/resolution e.g. for Servo,
+ * our channel also gets this frequency/resolution.
+ */
+#if defined(ESP32)
+#  if !defined ESP32_LEDC_MOTOR_CHANNEL
+#define ESP32_LEDC_MOTOR_CHANNEL               4 // 4 channels / 2 timers before
+#  endif
+#  if !defined ESP32_LEDC_MOTOR_CHANNEL_FREQUENCY
+#define ESP32_LEDC_MOTOR_CHANNEL_FREQUENCY  1000 // 1 kHz
+#  endif
+#  if !defined ESP32_LEDC_MOTOR_CHANNEL_RESOLUTION
+#define ESP32_LEDC_MOTOR_CHANNEL_RESOLUTION    8 // 8 bit
+#  endif
+#endif
+
 #if defined(USE_ADAFRUIT_MOTOR_SHIELD)
 //This disables using motor as buzzer, but requires only 2 I2C/TWI pins in contrast to the 6 pins used for the full bridge.
 #  if !defined(FULL_BRIDGE_LOSS_MILLIVOLT)

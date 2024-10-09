@@ -309,9 +309,11 @@ void startAutonomousDrivePage(void) {
     SliderIROrTofDistance.setPosition(POS_X_DISTANCE_POSITION_SLIDER - (TEXT_SIZE_11_WIDTH + BUTTON_WIDTH_10), SLIDER_SHIFTED_Y_POS);
 #endif
     drawAutonomousDrivePage();
+#if defined(VIN_ATTENUATED_INPUT_PIN)
     if(!isPWMCalibrated) {
         calibrateDriveSpeedPWMAndPrint();
     }
+#endif
 }
 
 // currently not used
