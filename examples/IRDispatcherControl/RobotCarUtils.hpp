@@ -178,7 +178,7 @@ void initRobotCarPWMMotorControl() {
     BACK_LEFT_MOTOR_FORWARD_PIN, BACK_LEFT_MOTOR_BACKWARD_PIN);
 #else
     RobotCar.init(RIGHT_MOTOR_FORWARD_PIN, RIGHT_MOTOR_BACKWARD_PIN, RIGHT_MOTOR_PWM_PIN, LEFT_MOTOR_FORWARD_PIN,
-            LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
+    LEFT_MOTOR_BACKWARD_PIN, LEFT_MOTOR_PWM_PIN);
 #endif
 }
 
@@ -477,9 +477,7 @@ bool calibrateRotation(turn_direction_t aTurnDirection) {
 void testDriveTwoTurnsBothDirections() {
 #define NUMBER_OF_TEST_DRIVES       2
 #if defined(ENABLE_SERIAL_OUTPUT) // requires 1504 bytes program space
-    Serial.print(F("Move the wheels 2x a full turn i.e. "));
-    Serial.print(DEFAULT_CIRCUMFERENCE_MILLIMETER);
-    Serial.println(F(" mm, both directions"));
+    Serial.print(F("Move the wheels 2x a full turn i.e. " STR(DEFAULT_CIRCUMFERENCE_MILLIMETER) " mm, both directions"));
 #endif
     for (int i = 0; i < NUMBER_OF_TEST_DRIVES; ++i) {
         RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER);
@@ -500,9 +498,7 @@ void testDriveTwoTurnsBothDirections() {
 void testDriveTwoTurnsIn5PartsBothDirections() {
     uint8_t tDirection = DIRECTION_FORWARD;
 #if defined(ENABLE_SERIAL_OUTPUT) // requires 1504 bytes program space
-    Serial.print(F("Move the wheels 2x 1/8 + 1/4 + 1/2 + 1 turn i.e. "));
-    Serial.print(2 * DEFAULT_CIRCUMFERENCE_MILLIMETER);
-    Serial.println(F(" mm, both directions"));
+    Serial.print(F("Move the wheels 2x 1/8 + 1/4 + 1/2 + 1 turn i.e. " STR(2 * DEFAULT_CIRCUMFERENCE_MILLIMETER)" mm, both directions"));
 #endif
     for (int i = 0; i < 2; ++i) {
         RobotCar.goDistanceMillimeter(DEFAULT_CIRCUMFERENCE_MILLIMETER / 8, tDirection);

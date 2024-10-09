@@ -317,6 +317,9 @@
  * BASIC CONFIGURATION for ESP32-Cam car
  * Car controlled by an ESP32-Cam module
  */
+#if defined(ESP32) // a temporarily hack
+#define CAR_IS_ESP32_CAM_BASED
+#endif
 #if defined(CAR_IS_ESP32_CAM_BASED)
 #define CAR_HAS_US_DISTANCE_SENSOR      // A HC-SR04 ultrasonic distance sensor is mounted (default for most China smart cars)
 #define CAR_HAS_DISTANCE_SERVO          // Distance sensor is mounted on a pan servo (default for most China smart cars)

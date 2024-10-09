@@ -231,11 +231,6 @@
 #define BUZZER_PIN                     23
 #endif
 
-// for ESP32 LED_BUILTIN is defined as: static const uint8_t LED_BUILTIN 2
-#  if !defined(LED_BUILTIN) && !defined(CAR_IS_ESP32_CAM_BASED)
-#define LED_BUILTIN PB1
-#  endif
-
 #else // NANO_BASED
 // Uno based
 // Pin A0 for VCC monitoring - ADC channel 2

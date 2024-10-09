@@ -44,7 +44,6 @@
 #include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
 #include "RobotCarPinDefinitionsAndMore.h"
 
-#include "Servo.h"
 #include "Distance.hpp"
 #include "CarPWMMotorControl.hpp"
 #include "RobotCarUtils.hpp"

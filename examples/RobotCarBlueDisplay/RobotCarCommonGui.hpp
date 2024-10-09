@@ -284,7 +284,7 @@ void displayRotationValues() {
 #endif
 
 void doCalibrate(BDButton *aTheTouchedButton, int16_t aValue) {
-#if defined(USE_MPU6050_IMU)
+#if defined(USE_MPU6050_IMU) && defined(VIN_ATTENUATED_INPUT_PIN)
     calibrateDriveSpeedPWMAndPrint(); // Calibrate only drive speed PWM
 #else
     doCalibration = true; // set flag for main loop
@@ -364,8 +364,10 @@ void startCurrentPage() {
         startHomePage();
         break;
     }
+#if defined(MONITOR_VIN_VOLTAGE)
     forceDisplayOfVin();
     readAndPrintVin();
+#endif
 }
 
 /*

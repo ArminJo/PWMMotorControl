@@ -102,7 +102,9 @@ Servo TiltServo;
 #else
 #define ENABLE_SERIAL_OUTPUT            // To avoid the double negation !defined(NO_SERIAL_OUTPUT)
 #endif
+#if defined(VIN_ATTENUATED_INPUT_PIN)
 #define MONITOR_VIN_VOLTAGE             // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
+#endif
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be defined before #include "BlueDisplay.hpp"
 #define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
@@ -223,8 +225,10 @@ void setup() {
      * Configure first set of pins
      */
     // initialize the digital pin as an output.
+#if defined(LED_BUILTIN)
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW); // on my Uno R3 the LED is on otherwise
+#endif
 #if defined(CAR_HAS_LASER) && (LASER_OUT_PIN != LED_BUILTIN)
     pinMode(LASER_OUT_PIN, OUTPUT);
 #endif
@@ -371,7 +375,9 @@ void loop() {
         // first get EEPROM values, in order to not work with the values we accidently set before in a former calibration
         RobotCar.readCarValuesFromEeprom();
         displayRotationValues();
+#if defined(VIN_ATTENUATED_INPUT_PIN)
         calibrateDriveSpeedPWMAndPrint();
+#endif
 #  if !defined(USE_MPU6050_IMU) && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
         if (!delayMillisAndCheckForStop(3000)) { // time to rearrange car
             calibrateRotation();
@@ -394,13 +400,16 @@ void loop() {
     if (!sTimeoutDemoDisable && (millis() > TIMOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)) {
         sTimeoutDemoDisable = true;
 
+#if defined(ADC_UTILS_ARE_AVAILABLE)
         if (isVCCUSBPowered()) {
 #if defined(ENABLE_SERIAL_OUTPUT)
             Serial.print(F("Timeout and USB powered with "));
             Serial.print(sVCCVoltageMillivolt);
             Serial.println(F(" mV -> skip follower demo"));
 #endif
-        } else {
+        } else
+#endif
+        {
             /*
              * Timeout just reached and not USB powered, play melody and start autonomous drive
              */

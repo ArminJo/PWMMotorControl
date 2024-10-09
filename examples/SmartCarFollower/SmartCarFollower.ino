@@ -129,7 +129,6 @@ bool sVINProvided = false;
  * 5 CurrentCompensatedSpeedPWM=0 DriveSpeedPWM=53 DriveSpeedPWMFor2Volt=64 SpeedPWMCompensation=0 CurrentDirection=S
  */
 #define LOCAL_INFO // Enable info just for IRCommandDispatcher to show "A=0x0 C=0x1D - Received IR data" and "Run non blocking command: default speed - Called car command"
-#include "IRCommandDispatcher.hpp"
 #include "IRCommandDispatcher.hpp" // must be before #include "RobotCarUtils.hpp"
 bool sIRReceiverIsAttached = false;
 #else
@@ -208,7 +207,7 @@ void setup() {
     /*
      * Detect USB connection and signal end of boot
      */
-#if !defined(ESP32)
+#if defined(ADC_UTILS_ARE_AVAILABLE)
 #  if defined(VIN_ATTENUATED_INPUT_PIN)
     sVINProvided = isVINProvided();
     Serial.println();

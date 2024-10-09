@@ -1,9 +1,9 @@
 /*
  *  Basic.cpp
  *
- *  Implements basic car movements.
+ *  Implements forward and backward movement for each 300 ms.
  *
- *  Copyright (C) 2023  Armin Joachimsmeyer
+ *  Copyright (C) 2023-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -42,7 +42,7 @@
 //#define L298_2WD_2LI_ION_VIN_IR_CONFIGURATION         // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance
 //#define L298_2WD_2LI_ION_VIN_IR_IMU_CONFIGURATION     // L298_2WD_2LI_ION_BASIC + VIN voltage divider + IR distance + MPU6050
 #include "RobotCarConfigurations.h" // sets e.g. CAR_HAS_ENCODERS, USE_ADAFRUIT_MOTOR_SHIELD
-#include "RobotCarPinDefinitionsAndMore.h"
+#include "RobotCarPinDefinitionsAndMore.h" // Pinout depends on settings like CAR_HAS_ENCODERS etc.
 #include "PWMDcMotor.hpp"
 
 PWMDcMotor rightCarMotor;

@@ -288,7 +288,7 @@ void driveCollisonAvoidingOneStep() {
 
 #if !defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
             if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-                char tStringBuffer[6];
+                char tStringBuffer[11];
                 sprintf_P(tStringBuffer, PSTR("%2d%s"), sCentimetersDrivenPerScan, "cm/scan");
                 BlueDisplay1.drawText(TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_HEIGHT - TEXT_SIZE_11_DECEND,
                         tStringBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
