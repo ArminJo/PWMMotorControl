@@ -141,14 +141,17 @@ public:
      * Functions for moving a fixed distance
      */
     // With signed distance
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
-            uint8_t aRequestedDirection); // only setup values
-    void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // only setup values, no movement -> use updateMotors()
-
+    void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection); // only setup values
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+    uint8_t aRequestedDirection)__attribute__ ((deprecated ("Renamed to startGoDistanceMillimeterWithSpeed()."))); // only setup values
     void goDistanceMillimeter(int aRequestedDistanceMillimeter, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilStopped
+    void goDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter, void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilStopped
     void goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection,
             void (*aLoopCallback)(void) = NULL); // Blocking function, uses waitUntilStopped
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter); // only setup values
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+            uint8_t aRequestedDirection); // only setup values
 
     bool checkAndHandleDirectionChange(uint8_t aRequestedDirection); // used internally
 

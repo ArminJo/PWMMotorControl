@@ -11,8 +11,7 @@
  *
  *  Tested for Adafruit Motor Shield and plain TB6612 breakout board.
  *
- *  Created on: 12.05.2019
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -90,10 +89,14 @@ void EncoderMotor::init(uint8_t aForwardPin, uint8_t aBackwardPin, uint8_t aPWMP
 }
 #endif
 
+void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+        uint8_t aRequestedDirection) {
+    startGoDistanceMillimeterWithSpeed( aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+}
 /*
  * If motor is already running, adjust TargetDistanceMillimeter to go to aRequestedDistanceMillimeter
  */
-void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+void EncoderMotor::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
     if (aRequestedDistanceMillimeter == 0) {
         stop(DefaultStopMode); // In case motor was running
@@ -118,7 +121,7 @@ void EncoderMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigne
 }
 
 void EncoderMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 /*
@@ -128,9 +131,18 @@ void EncoderMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMill
 void EncoderMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
-        startGoDistanceMillimeter(aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+        startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
     } else {
-        startGoDistanceMillimeter(aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+        startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+    }
+}
+
+void EncoderMotor::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter) {
+    if (aRequestedDistanceMillimeter < 0) {
+        aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+    } else {
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
     }
 }
 

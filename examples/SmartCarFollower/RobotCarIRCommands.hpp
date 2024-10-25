@@ -80,19 +80,19 @@ void doReset() {
 void goForward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
         // if repeat was pressed, we enable a "fast" stop
-        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
+        RobotCar.startGoDistanceMillimeterWithSpeed(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
                 DIRECTION_FORWARD);
     } else {
-        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
+        RobotCar.startGoDistanceMillimeterWithSpeed(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
                 DIRECTION_FORWARD);
     }
 }
 void goBackward() {
     if (IRDispatcher.IRReceivedData.isRepeat) {
-        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
+        RobotCar.startGoDistanceMillimeterWithSpeed(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER / 4,
                 DIRECTION_BACKWARD);
     } else {
-        RobotCar.startGoDistanceMillimeter(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
+        RobotCar.startGoDistanceMillimeterWithSpeed(RobotCar.rightCarMotor.DriveSpeedPWM, DEFAULT_CIRCUMFERENCE_MILLIMETER,
                 DIRECTION_BACKWARD);
     }
 }

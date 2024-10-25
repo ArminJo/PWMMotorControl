@@ -317,7 +317,7 @@
  * BASIC CONFIGURATION for ESP32-Cam car
  * Car controlled by an ESP32-Cam module
  */
-#if defined(ESP32) // a temporarily hack
+#if defined(ESP32) && !defined(CAR_IS_ESP32_CAM_BASED) // a temporarily hack
 #define CAR_IS_ESP32_CAM_BASED
 #endif
 #if defined(CAR_IS_ESP32_CAM_BASED)

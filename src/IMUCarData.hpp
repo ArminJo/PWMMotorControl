@@ -9,7 +9,6 @@
  *  Automatic offset recalculation is done, if we do not detect any movement for NUMBER_OF_OFFSET_CALIBRATION_SAMPLES samples.
  *  It can be activated (default) or suspended.
  *
- *  Created on: 19.11.2020
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *

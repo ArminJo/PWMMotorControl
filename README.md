@@ -310,7 +310,9 @@ VIN sensing
 <br/>
 
 # Revision History
-### Version 2.1.1
+### Version 2.2.0
+- Added 2 functions startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, ...).
+- ESP32 core 3.x support.
 - Improved examples, especially follower examples.
 
 ### Version 2.1.0

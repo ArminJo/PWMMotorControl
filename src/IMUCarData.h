@@ -3,7 +3,6 @@
  *
  *  Functions for getting IMU data from MPU6050 for car control.
  *
- *  Created on: 19.11.2020
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *

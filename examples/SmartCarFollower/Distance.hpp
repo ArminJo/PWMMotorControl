@@ -33,12 +33,16 @@
 #include "HCSR04.hpp" // include sources
 #include "RobotCarConfigurations.h" // helps the pretty printer / Ctrl F
 
-#if defined(CAR_HAS_SERVO) && defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
-#define DISABLE_SERVO_TIMER_AUTO_INITIALIZE // saves 70 bytes program space
-#include "LightweightServo.hpp"
-#endif
-
 #if defined(CAR_HAS_DISTANCE_SERVO)
+#  if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+#include "LightweightServo.hpp"
+#    if defined(_LIGHTWEIGHT_SERVO_HPP)
+LightweightServo DistanceServo;    // The pan servo instance for distance sensor
+#    else // LightweightServo is not applicable for this CPU
+#undef USE_LIGHTWEIGHT_SERVO_LIBRARY
+#    endif
+#  endif // defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+
 #  if !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
 Servo DistanceServo;    // The pan servo instance for distance sensor
 #  endif
@@ -87,7 +91,7 @@ ForwardDistancesInfoStruct sForwardDistancesInfo;
 void initDistance() {
     getDistanceModesFromPins();
 
-#if defined(CAR_HAS_DISTANCE_SERVO) && !defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+#if defined(CAR_HAS_DISTANCE_SERVO)
     DistanceServo.attach(DISTANCE_SERVO_PIN);
 #endif
 
@@ -492,11 +496,8 @@ void DistanceServoWriteAndWaitForStop(uint8_t aTargetDegrees, bool doWaitForStop
     // The servo is top down and therefore inverted
     aTargetDegrees = 180 - aTargetDegrees;
 #endif
-#if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
-    write10(aTargetDegrees);
-#else
     DistanceServo.write(aTargetDegrees);
-#endif
+
 
     /*
      * Delay until stopped

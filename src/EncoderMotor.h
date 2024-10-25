@@ -1,7 +1,6 @@
 /*
  * EncoderMotor.h
  *
- *  Created on: 12.05.2019
  *  Copyright (C) 2019-2020  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
@@ -79,7 +78,9 @@ public:
      */
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance count
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
-    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
+    void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection)__attribute__ ((deprecated ("Renamed to startGoDistanceMillimeterWithSpeed().")));
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter); // Signed distance count
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     bool updateMotor();
 
     /*

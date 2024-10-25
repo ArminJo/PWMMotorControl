@@ -424,13 +424,17 @@ void MecanumWheelCarPWMMotorControl::startRampUpAndWaitForDriveSpeedPWM(uint8_t 
 
 void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeterWithSpeed(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
+void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM,
+        unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
+    startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+}
 /*
  * initialize motorInfo fields LastDirection and CompensatedSpeedPWM
  */
-void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM,
+void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM,
         unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
 
 #if defined(USE_MPU6050_IMU)
@@ -443,23 +447,32 @@ void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(uint8_t aRequeste
     setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 #else
     checkAndHandleDirectionChange(aRequestedDirection);
-    rightCarMotor.startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    rightCarMotor.startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
     setDirection(aRequestedDirection); // this sets the direction for all the other motors
 #endif
 }
 
 void MecanumWheelCarPWMMotorControl::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection,
         void (*aLoopCallback)(void)) {
-    startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeterWithSpeed(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
     waitUntilStopped(aLoopCallback);
 }
 
 void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
-        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+        startGoDistanceMillimeterWithSpeed(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
     } else {
-        startGoDistanceMillimeter(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+        startGoDistanceMillimeterWithSpeed(rightCarMotor.DriveSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+    }
+}
+
+void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter) {
+    if (aRequestedDistanceMillimeter < 0) {
+        aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+    } else {
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
     }
 }
 
@@ -567,7 +580,7 @@ void MecanumWheelCarPWMMotorControl::startRotate(int aRotationDegrees, turn_dire
         tTurnSpeed = DEFAULT_START_SPEED_PWM;
     }
     // Use direction set by setDirection() above
-    rightCarMotor.startGoDistanceMillimeter(tTurnSpeed, tDistanceMillimeter, rightCarMotor.getDirection());
+    rightCarMotor.startGoDistanceMillimeterWithSpeed(tTurnSpeed, tDistanceMillimeter, rightCarMotor.getDirection());
 #if defined(LOCAL_DEBUG)
     Serial.print(F("RotationDegrees="));
     Serial.print(aRotationDegrees);

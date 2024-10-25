@@ -19,8 +19,7 @@
  * A fixed speed compensation PWM value to be subtracted can be specified.
  *
  *
- *  Created on: 12.05.2019
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -807,7 +806,7 @@ void PWMDcMotor::goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter,
  */
 void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
 #if defined(DO_NOT_SUPPORT_RAMP)
     delay(computedMillisOfMotorForDistance);
 #else
@@ -819,7 +818,7 @@ void PWMDcMotor::goDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int a
 }
 
 void PWMDcMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection) {
-    startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
+    startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, aRequestedDirection);
 }
 
 /*
@@ -828,9 +827,18 @@ void PWMDcMotor::startGoDistanceMillimeter(unsigned int aRequestedDistanceMillim
 void PWMDcMotor::startGoDistanceMillimeter(int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
-        startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+        startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
     } else {
-        startGoDistanceMillimeter(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+        startGoDistanceMillimeterWithSpeed(DriveSpeedPWMFor2Volt, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
+    }
+}
+
+void PWMDcMotor::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter) {
+    if (aRequestedDistanceMillimeter < 0) {
+        aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
+    } else {
+        startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_FORWARD);
     }
 }
 
@@ -848,10 +856,15 @@ unsigned int PWMDcMotor::convertMillisToCentimeterFor2Volt(unsigned int aMillis)
     return aMillis / MillisPerCentimeter;
 }
 
+void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+        uint8_t aRequestedDirection) {
+    startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
+}
+
 /*
  * If motor is already running, just update speed and new stop time
  */
-void PWMDcMotor::startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+void PWMDcMotor::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
         uint8_t aRequestedDirection) {
     if (aRequestedDistanceMillimeter == 0) {
         stop(STOP_MODE_BRAKE); // In case motor was running

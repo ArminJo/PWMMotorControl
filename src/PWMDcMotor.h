@@ -14,7 +14,7 @@
  * With encoder: - distance is measured by Encoder.
  *
  *
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2024  Armin Joachimsmeyer
  *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
@@ -378,7 +378,11 @@ public:
     void startGoDistanceMillimeter(int aRequestedDistanceMillimeter); // Signed distance
     void startGoDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection);
     void startGoDistanceMillimeter(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
+            uint8_t aRequestedDirection) __attribute__ ((deprecated ("Renamed to startGoDistanceMillimeterWithSpeed().")));
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter); // Signed distance
+    void startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, unsigned int aRequestedDistanceMillimeter,
             uint8_t aRequestedDirection);
+
     uint32_t convertMillimeterToMillis(uint8_t aSpeedPWM, unsigned int aRequestedDistanceMillimeter);
     unsigned int convertMillisToMillimeter(uint8_t aSpeedPWM, unsigned int aMillis);
     unsigned int convertMillisToCentimeterFor2Volt(unsigned int aMillis);
@@ -462,6 +466,11 @@ public:
 };
 
 /*
+ * Version 2.2.0 - 11/2024
+ * - Added 2 functions startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, ...).
+ * - ESP32 core 3.x support.
+ * - Improved examples, especially follower examples.
+ *
  * Version 2.1.0 - 09/2023
  * - Added convertMillimeterToMillis() etc.
  * - Added Variable computedMillisOfMotorForDistance.
