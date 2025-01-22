@@ -97,14 +97,14 @@ void loop() {
         /*
          * Try to turn by 90 degree.
          */
-        RobotCar.rotate(90, TURN_FORWARD, true, NULL);
+        RobotCar.rotate(90, TURN_FORWARD, true, nullptr);
         delay(400);
     }
 
     /*
      * Turn car around and switch direction.
      */
-    RobotCar.rotate(180, TURN_IN_PLACE, NULL);
+    RobotCar.rotate(180, TURN_IN_PLACE, true, nullptr);
     sMotorDirection = oppositeDIRECTION(sMotorDirection);
     delay(2000);
 }

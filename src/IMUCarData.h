@@ -44,6 +44,7 @@ extern bool sOnlyPlotterOutput; // from main program
 //#define SAMPLE_RATE         250
 //#define SAMPLE_RATE         125
 #endif
+
 #if SAMPLE_RATE == 1000
 #define RATE_SHIFT                      0
 #define DELAY_TO_NEXT_IMU_DATA_MILLIS   1
@@ -74,7 +75,7 @@ public:
 
     bool initMPU6050FifoForCarData();
     bool initMPU6050CarDataAndCalculateAllOffsetsAndWait();
-    unsigned int getMPU6050SampleRate(); // just returns SAMPLE_RATE
+    unsigned int getMPU6050SampleRate(); // just returns ORIGINAL_SAMPLE_RATE
 
     void readCarDataFromMPU6050();
     bool readCarDataFromMPU6050Fifo();

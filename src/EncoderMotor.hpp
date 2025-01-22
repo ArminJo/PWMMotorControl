@@ -644,19 +644,19 @@ void EncoderMotor::enableINT0AndINT1InterruptsOnRisingEdge() {
  * The list version saves 100 bytes and is more flexible, compared with the array version
  */
 uint8_t EncoderMotor::sNumberOfMotorControls = 0;
-EncoderMotor *EncoderMotor::sMotorControlListStart = NULL;
+EncoderMotor *EncoderMotor::sMotorControlListStart = nullptr;
 
 void EncoderMotor::AddToMotorList() {
     EncoderMotor::sNumberOfMotorControls++;
-    NextMotorControl = NULL;
-    if (sMotorControlListStart == NULL) {
+    NextMotorControl = nullptr;
+    if (sMotorControlListStart == nullptr) {
         // first constructor
         sMotorControlListStart = this;
     } else {
         // put object in control list
         EncoderMotor *tObjectPointer = sMotorControlListStart;
         // search last list element
-        while (tObjectPointer->NextMotorControl != NULL) {
+        while (tObjectPointer->NextMotorControl != nullptr) {
             tObjectPointer = tObjectPointer->NextMotorControl;
         }
         //insert current control in last element
@@ -671,7 +671,7 @@ void EncoderMotor::AddToMotorList() {
 bool EncoderMotor::updateAllMotors() {
 // walk through list
     bool tMotorsNotStopped = false; // to check if motors are not stopped by aLoopCallback
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tMotorsNotStopped |= tEncoderMotorControlPointer->updateMotor();
     }
@@ -684,14 +684,14 @@ bool EncoderMotor::updateAllMotors() {
  */
 void EncoderMotor::startRampUpAndWaitForDriveSpeedPWMForAll(uint8_t aRequestedDirection, void (*aLoopCallback)(void)) {
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tEncoderMotorControlPointer->startRampUp(aRequestedDirection);
     }
     bool tMotorsNotStopped; // to check if motors are not stopped by aLoopCallback
     do {
         tMotorsNotStopped = EncoderMotor::updateAllMotors();
-        if (aLoopCallback != NULL) {
+        if (aLoopCallback != nullptr) {
             aLoopCallback(); // this may stop motors
         }
     } while (tMotorsNotStopped && !EncoderMotor::allMotorsStarted());
@@ -700,7 +700,7 @@ void EncoderMotor::startRampUpAndWaitForDriveSpeedPWMForAll(uint8_t aRequestedDi
 bool EncoderMotor::allMotorsStarted() {
     bool tAllAreStarted = true;
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         if (tEncoderMotorControlPointer->MotorRampState != MOTOR_STATE_DRIVE) {
             tAllAreStarted = false;
@@ -712,7 +712,7 @@ bool EncoderMotor::allMotorsStarted() {
 
 void EncoderMotor::startGoDistanceMillimeterForAll(int aRequestedDistanceMillimeter) {
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tEncoderMotorControlPointer->startGoDistanceMillimeter(aRequestedDistanceMillimeter);
     }
@@ -723,7 +723,7 @@ void EncoderMotor::startGoDistanceMillimeterForAll(int aRequestedDistanceMillime
  */
 void EncoderMotor::goDistanceMillimeterForAll(int aRequestedDistanceMillimeter, void (*aLoopCallback)(void)) {
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tEncoderMotorControlPointer->startGoDistanceMillimeter(aRequestedDistanceMillimeter);
     }
@@ -734,7 +734,7 @@ void EncoderMotor::goDistanceMillimeterForAll(int aRequestedDistanceMillimeter, 
 bool EncoderMotor::allMotorsStopped() {
     bool tAllAreStopped = true;
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         if (tEncoderMotorControlPointer->isStopped()) {
             tAllAreStopped = false;
@@ -748,7 +748,7 @@ bool EncoderMotor::allMotorsStopped() {
  */
 void EncoderMotor::stopAllMotorsAndWaitUntilStopped() {
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tEncoderMotorControlPointer->startRampDown();
     }
@@ -764,7 +764,7 @@ void EncoderMotor::stopAllMotorsAndWaitUntilStopped() {
 void EncoderMotor::waitUntilAllMotorsStopped(void (*aLoopCallback)(void)) {
     do {
         EncoderMotor::updateAllMotors();
-        if (aLoopCallback != NULL) {
+        if (aLoopCallback != nullptr) {
             aLoopCallback();
         }
     } while (!EncoderMotor::allMotorsStopped());
@@ -772,7 +772,7 @@ void EncoderMotor::waitUntilAllMotorsStopped(void (*aLoopCallback)(void)) {
 
 void EncoderMotor::stopAllMotors(uint8_t aStopMode) {
 // walk through list
-    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != NULL;tEncoderMotorControlPointer =
+    for(EncoderMotor *tEncoderMotorControlPointer = sMotorControlListStart; tEncoderMotorControlPointer != nullptr;tEncoderMotorControlPointer =
             tEncoderMotorControlPointer->NextMotorControl) {
         tEncoderMotorControlPointer->stop(aStopMode);
     }

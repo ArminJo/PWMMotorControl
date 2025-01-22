@@ -71,7 +71,7 @@ void doReset(BDButton *aTheTouchedButton, int16_t aValue) {
  * For miscellaneous test purposes
  */
 void doTest(BDButton *aTheTouchedButton, int16_t aValue) {
-    doDistance(NULL, 10);
+    doDistance(nullptr, 10);
 }
 
 void doRotation(BDButton *aTheTouchedButton, int16_t aValue) {
@@ -237,7 +237,7 @@ void drawTestPage(void) {
  * Stop motors but enable movement
  */
 void startTestPage(void) {
-    doReset(NULL, 0);
+    doReset(nullptr, 0);
     drawTestPage();
 #if defined(VIN_ATTENUATED_INPUT_PIN)
     if (!isPWMCalibrated) {

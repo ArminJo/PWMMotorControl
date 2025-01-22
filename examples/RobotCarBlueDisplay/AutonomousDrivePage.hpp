@@ -31,7 +31,7 @@ BDButton TouchButtonStepMode;
 const char sStepModeButtonStringContinuousStepToTurn[] PROGMEM = "Continuous\n->\nStep to turn";
 const char sStepModeButtonStringStepToTurnSingleStep[] PROGMEM = "Step to turn\n->\nSingle step";
 const char sStepModeButtonStringSingleStepContinuous[] PROGMEM = "Single step\n->\nContinuous";
-const char *const sStepModeButtonCaptionStringArray[] PROGMEM = { sStepModeButtonStringContinuousStepToTurn,
+const char *const sStepModeButtonTextStringArray[] PROGMEM = { sStepModeButtonStringContinuousStepToTurn,
         sStepModeButtonStringStepToTurnSingleStep, sStepModeButtonStringSingleStepContinuous };
 
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
@@ -39,7 +39,7 @@ BDButton TouchButtonDistanceFeedbackMode;
 const char sDistanceFeedbackModeNoTone[] PROGMEM = "No tone";
 const char sDistanceFeedbackModePentatonic[] PROGMEM = "Pentatonic";
 const char sDistanceFeedbackModeContinuous[] PROGMEM = "Continuous";
-const char *const sDistanceFeedbackModeButtonCaptionStringArray[] PROGMEM = { sDistanceFeedbackModeNoTone,
+const char *const sDistanceFeedbackModeButtonTextStringArray[] PROGMEM = { sDistanceFeedbackModeNoTone,
         sDistanceFeedbackModePentatonic, sDistanceFeedbackModeContinuous };
 #endif
 
@@ -57,13 +57,13 @@ const char sDistanceSourceModeButtonStringMaxUS[] PROGMEM = "Max->US";
 #  if defined(CAR_HAS_IR_DISTANCE_SENSOR)
 const char sDistanceSourceModeButtonStringUSIr[] PROGMEM = "US->IR";
 const char sDistanceSourceModeButtonStringIrMin[] PROGMEM = "IR->Min";
-const char *const sDistanceSourceModeButtonCaptionStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax,
+const char *const sDistanceSourceModeButtonTextStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax,
         sDistanceSourceModeButtonStringMaxUS, sDistanceSourceModeButtonStringUSIr, sDistanceSourceModeButtonStringIrMin };
 # else
 const char sDistanceSourceModeButtonStringUSTof[] PROGMEM = "US->ToF";
 const char sDistanceSourceModeButtonStringTofMin[] PROGMEM = "ToF->Min";
 
-const char * const sDistanceSourceModeButtonCaptionStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax, sDistanceSourceModeButtonStringMaxUS,
+const char * const sDistanceSourceModeButtonTextStringArray[] PROGMEM = { sDistanceSourceModeButtonStringMinMax, sDistanceSourceModeButtonStringMaxUS,
         sDistanceSourceModeButtonStringUSTof, sDistanceSourceModeButtonStringTofMin};
 #  endif
 #endif
@@ -75,8 +75,8 @@ BDButton TouchButtonStartStopBuiltInAutonomousDrive;
 BDButton TouchButtonFollower;
 
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
-void setDistanceFeedbackModeButtonCaption() {
-    TouchButtonDistanceFeedbackMode.setCaptionFromStringArrayPGM(sDistanceFeedbackModeButtonCaptionStringArray, sDistanceFeedbackMode, true);
+void setDistanceFeedbackModeButtonText() {
+    TouchButtonDistanceFeedbackMode.setTextFromStringArrayPGM(sDistanceFeedbackModeButtonTextStringArray, sDistanceFeedbackMode, true);
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -86,12 +86,12 @@ void doNextDistanceFeedbackMode(BDButton *aTheTouchedButton, int16_t aValue) {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_NO_TONE;
         noTone(BUZZER_PIN);
     }
-    setDistanceFeedbackModeButtonCaption();
+    setDistanceFeedbackModeButtonText();
 }
 #endif
 
-void setStepModeButtonCaption() {
-    TouchButtonStepMode.setCaptionFromStringArray((const __FlashStringHelper* const*) sStepModeButtonCaptionStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
+void setStepModeButtonText() {
+    TouchButtonStepMode.setPGMTextFromPGMArray(sStepModeButtonTextStringArray, sStepMode, (sCurrentPage == PAGE_AUTOMATIC_CONTROL));
 }
 
 /*
@@ -105,7 +105,7 @@ void setStepMode(uint8_t aStepMode) {
         sDoStep = true;
     }
     sStepMode = aStepMode;
-    setStepModeButtonCaption();
+    setStepModeButtonText();
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -132,8 +132,8 @@ void doStep(BDButton *aTheTouchedButton, int16_t aValue) {
 }
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-void setScanModeButtonCaption() {
-    TouchButtonScanMode.setCaptionFromStringArray(sDistanceSourceModeButtonCaptionStringArray, sDistanceSourceMode);
+void setScanModeButtonText() {
+    TouchButtonScanMode.setPGMTextFromPGMArray(sDistanceSourceModeButtonTextStringArray, sDistanceSourceMode);
 }
 
 void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
@@ -141,7 +141,7 @@ void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sDistanceSourceMode > DISTANCE_LAST_SOURCE_MODE) {
         sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
     }
-    setScanModeButtonCaption();
+    setScanModeButtonText();
     TouchButtonScanMode.drawButton();
 }
 
@@ -203,7 +203,7 @@ void initAutonomousDrivePage(void) {
 
     TouchButtonScanSpeed.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Scan slow"), TEXT_SIZE_14,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
-    TouchButtonScanSpeed.setCaptionForValueTrue("Scan fast");
+    TouchButtonScanSpeed.setTextForValueTrue("Scan fast");
 
 #if defined(ENABLE_PATH_INFO_PAGE)
     TouchButtonPathInfoPage.init(BUTTON_WIDTH_3_POS_3, 0, BUTTON_WIDTH_3, BUTTON_HEIGHT_6, COLOR16_RED, F("Show Path"), TEXT_SIZE_11,
@@ -217,7 +217,7 @@ void initAutonomousDrivePage(void) {
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, F("Start User"), TEXT_SIZE_14,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_COLLISION_AVOIDING_USER),
             &doStartStopTestUser);
-    TouchButtonStartStopUserAutonomousDrive.setCaptionForValueTrue(F("Stop User"));
+    TouchButtonStartStopUserAutonomousDrive.setTextForValueTrue(F("Stop User"));
 #endif
 
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
@@ -238,19 +238,19 @@ void initAutonomousDrivePage(void) {
     TouchButtonStartStopBuiltInAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
             F("Start\nBuiltin"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             (sDriveMode == MODE_COLLISION_AVOIDING_BUILTIN), &doStartStopAutomomousDrive);
-    TouchButtonStartStopBuiltInAutonomousDrive.setCaptionForValueTrue(F("Stop"));
+    TouchButtonStartStopBuiltInAutonomousDrive.setTextForValueTrue(F("Stop"));
 
     TouchButtonFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
     COLOR16_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
             (sDriveMode == MODE_FOLLOWER), &doStartStopFollowerMode);
-    TouchButtonFollower.setCaptionForValueTrue(F("Stop\nFollow"));
+    TouchButtonFollower.setTextForValueTrue(F("Stop\nFollow"));
 }
 
 void drawAutonomousDrivePage(void) {
     drawCommonGui();
 
     // - (TEXT_SIZE_22_WIDTH / 2) since we have one character more
-    BlueDisplay1.drawText(HEADER_X - (TEXT_SIZE_22_WIDTH / 2), (2 * TEXT_SIZE_22_HEIGHT), F("Auto drive"));
+    BlueDisplay1.drawText(HEADER_X - (TEXT_SIZE_22_WIDTH / 2), 4 + TEXT_SIZE_22_HEIGHT, F("Auto drive"));
 
 #if defined(ENABLE_PATH_INFO_PAGE)
     TouchButtonPathInfoPage.drawButton();
@@ -288,12 +288,12 @@ void startAutonomousDrivePage(void) {
     handleAutomomousDriveRadioButtons();
 
     // restore last step and scan mode
-    setStepModeButtonCaption();
+    setStepModeButtonText();
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-    setScanModeButtonCaption();
+    setScanModeButtonText();
 #endif
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
-    setDistanceFeedbackModeButtonCaption();
+    setDistanceFeedbackModeButtonText();
 #endif
 #if defined(ENABLE_PATH_INFO_PAGE)
 #define SLIDER_SHIFTED_Y_POS    BUTTON_HEIGHT_6
@@ -369,13 +369,13 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
         }
 
         // draw blue (red if backwards) rotation line. The default length is sCentimetersDrivenPerScan
-        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, aLengthOfVector, tDegreeToDisplay + 90,
+        BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, aLengthOfVector, tDegreeToDisplay + 90,
                 tColor);
         if (!aDoClearVector) {
             //Print result
-            sprintf_P(sBDStringBuffer, PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
+            snprintf_P(sBDStringBuffer, sizeof(sBDStringBuffer), PSTR("wall%4d\xB0 rotation: %3d\xB0 wall%4d\xB0"), sForwardDistancesInfo.WallLeftAngleDegrees,
                     aDegreeToTurn, sForwardDistancesInfo.WallRightAngleDegrees); // \xB0 is degree character
-            BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
+            BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_START_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
             COLOR16_BLACK, COLOR16_WHITE);
         }
     }

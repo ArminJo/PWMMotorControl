@@ -95,7 +95,7 @@ void loop() {
     static uint8_t sMotorDirection = DIRECTION_FORWARD;
 
     MotorUnderTest.resetEncoderControlValues();
-    uint8_t tStartPWM;
+    uint8_t tStartPWM = 0;
     int tLastSpeed;
     int tStartSpeed = 0;
     int tMaxSpeed = 0;

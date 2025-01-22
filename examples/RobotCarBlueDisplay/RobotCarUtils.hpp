@@ -249,14 +249,14 @@ bool readVINVoltage() {
 // tVIN * 0,01182795
 #if defined(VIN_VOLTAGE_CORRECTION)
     // we have a diode (requires 0.8 to 0.9 volt) between LiIon and VIN
-        sVINVoltage = (tVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1023)) + VIN_VOLTAGE_CORRECTION;
+        sVINVoltage = (tVINRawSum * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / (1000.0 * NUMBER_OF_VIN_SAMPLES))) / 1024)) + VIN_VOLTAGE_CORRECTION;
 #else
     /*
      * Here voltage correction is 0 volt.
      * tVINRawSum * 0.000591
      */
     sVINVoltage = tVINRawSum
-            * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / 1000.0)) / (1023.0 * NUMBER_OF_VIN_SAMPLES));
+            * ((VOLTAGE_DIVIDER_DIVISOR * (ADC_INTERNAL_REFERENCE_MILLIVOLT / 1000.0)) / (1024.0 * NUMBER_OF_VIN_SAMPLES));
 #endif
     // resolution is about 5 mV and we display in a 10 mV resolution -> compare with (2 * NUMBER_OF_VIN_SAMPLES)
     if (abs(sLastVINRawSum - tVINRawSum) > (2 * NUMBER_OF_VIN_SAMPLES)) {
@@ -283,7 +283,7 @@ void readVINVoltageAndAdjustDriveSpeedAndPrint() {
     RobotCar.setDriveSpeedPWMFor2Volt(sVINVoltage);
     PWMDcMotor::MotorPWMHasChanged = true; // to force a new display of motor voltage
 
-    sprintf_P(sBDStringBuffer, PSTR("2 volt PWM %3d -> %3d"), tOldDriveSpeedPWM, RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
+    snprintf_P(sBDStringBuffer, sizeof(sBDStringBuffer), PSTR("2 volt PWM %3d -> %3d"), tOldDriveSpeedPWM, RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
     BlueDisplay1.debug(sBDStringBuffer);
 #  else
     Serial.print(F("2 volt PWM: "));

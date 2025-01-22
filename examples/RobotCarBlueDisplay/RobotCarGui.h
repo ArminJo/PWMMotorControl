@@ -47,8 +47,8 @@ extern char sBDStringBuffer[128];
 #define DISTANCE_SLIDER_SCALE_FACTOR    2 // Slider is virtually 2 times larger, values were divided by 2
 #define DISTANCE_DISPLAY_PERIOD_MILLIS      500
 
-#define US_DISTANCE_MAP_ORIGIN_X 200
-#define US_DISTANCE_MAP_ORIGIN_Y 150
+#define US_DISTANCE_MAP_START_X 200
+#define US_DISTANCE_MAP_START_Y 150
 
 #define MOTOR_INFO_START_X (BUTTON_WIDTH_6 + 4)
 #define MOTOR_INFO_START_Y (SPEED_SLIDER_SIZE / 2 + 26)
@@ -132,8 +132,8 @@ extern bool sPlayMelody;
 extern bool sEnableDemo;
 #endif
 
-extern void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
-extern void doVerticalServoPosition(BDSlider *aTheTouchedSlider, uint16_t aValue);
+extern void doHorizontalServoPosition(BDSlider *aTheTouchedSlider, int16_t aValue);
+extern void doVerticalServoPosition(BDSlider *aTheTouchedSlider, int16_t aValue);
 
 void initHomePage(void);
 void drawHomePage(void);
@@ -181,7 +181,7 @@ extern BDButton TouchButtonCompensationStore;
 #endif
 
 extern BDSlider SliderSpeed;
-extern uint16_t sLastSpeedSliderValue;
+extern int16_t sLastSpeedSliderValue;
 void showSpeedSliderValue();
 
 extern BDSlider SliderSpeedRight;

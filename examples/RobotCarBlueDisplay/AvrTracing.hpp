@@ -101,7 +101,7 @@ uint8_t sLastMSBytePrinted = 0;
 
 //uint16_t sCallCount = 0;
 /*
- * Prints PC from stack
+ * Prints PC from stack. Real addresses on stack are always shifted right by one!
  * The amount of pushes for this ISR is compiler and compiler flag dependent
  * I saw 15, 17, 19, 20 and 23 (DEBUG_TRACE_INIT enabled) pushes.
  * They can be found by looking for <__vector_1> in the assembler file.
@@ -190,7 +190,7 @@ void INT0_vect(void) {
      * to __stop_program (== _etext - 2)
      */
     if (!(tPC.UWord >= (uint16_t) &__init && tPC.UWord <= (uint16_t) &_etext)) {
-        sendUSARTForTrace('X');  // no valid address
+        sendUSARTForTrace('-');  // no valid address
     }
     sendPCHex(tPC.UWord); // PC=0x03DC (11 character@115200 baud) => 954,86 us or 1047,2727 Hz rate. But I had to trigger it externally with 1070 Hz to get no misses.
 
@@ -222,9 +222,9 @@ __attribute__((optimize("-Os"))) void initTrace() {
 }
 
 /*
- * Connect button between pin2 and ground.
- * INT0 is at pin2
- * Enable interrupts during button press.
+ * INT0 is at pin 2
+ * Connect button between pin 2 and ground, or start tracing by writing LOW to pin 2 or calling startTracing().
+ * Enable interrupts during LOW on pin 2.
  */
 __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
 
@@ -252,6 +252,9 @@ __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
  * You can insert 2  "_NOP();" statements right after startTracing() as a workaround.
  */
 __attribute__((optimize("-Os"))) void startTracing() {
+    Serial.flush();
+    sPrintCount = 0;
+    sendLineFeed();
     pinModeFast(2, OUTPUT);
     digitalWriteFast(2, LOW); // The next 2 instructions are not yet printed
 }
@@ -270,6 +273,9 @@ __attribute__((optimize("-Os"))) void sendStringForTrace(const char *aStringPtr)
     }
 }
 
+/*
+ * Print "PC=0x" before the address every 20 values
+ */
 __attribute__((optimize("-Os"))) void sendPCHex(uint16_t aPC) {
     if (sPrintCount == 0) {
         sendUSARTForTrace('P');
@@ -365,6 +371,10 @@ __attribute__((optimize("-Os"))) void sendUnsignedIntegerHex(uint16_t aInteger) 
     sendUnsignedByteHex(aInteger);
 }
 
+/*
+ * Send a 16 bit hex value.
+ * If MSB is equal the last MSP (which is very likely) the suppress printing of the MSB
+ */
 __attribute__((optimize("-Os"))) void sendUnsignedInteger(uint16_t aInteger) {
     WordUnionForPrint tInteger; // saves 6 bytes
     tInteger.UWord = aInteger;

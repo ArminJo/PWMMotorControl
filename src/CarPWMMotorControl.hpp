@@ -497,7 +497,7 @@ bool CarPWMMotorControl::updateMotors() {
  * @return true if not stopped (motor expects another update)
  */
 bool CarPWMMotorControl::updateMotors(void (*aLoopCallback)(void)) {
-    if (aLoopCallback != NULL) {
+    if (aLoopCallback != nullptr) {
         aLoopCallback();
     }
     return updateMotors();
@@ -910,7 +910,7 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 //         */
 //        uint32_t tStartMillis = millis();
 //        do {
-//            if (aLoopCallback != NULL) {
+//            if (aLoopCallback != nullptr) {
 //                aLoopCallback();
 //            }
 //            if (isStopped()) {
