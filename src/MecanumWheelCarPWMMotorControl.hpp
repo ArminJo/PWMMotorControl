@@ -367,7 +367,7 @@ bool MecanumWheelCarPWMMotorControl::updateMotors() {
  * @return true if not stopped (motor expects another update)
  */
 bool MecanumWheelCarPWMMotorControl::updateMotors(void (*aLoopCallback)(void)) {
-    if (aLoopCallback != NULL) {
+    if (aLoopCallback != nullptr) {
         aLoopCallback();
     }
     return updateMotors();

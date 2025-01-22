@@ -91,7 +91,7 @@ jobs:
           repository: ArminJo/Arduino-BlueDisplay
           ref: master
           path: CustomBlueDisplay # must contain string "Custom"
-          # No need to put "Custom" library in the required-libraries list
+          # No need to put this custom library in the required-libraries list
 
       - name: Compile all examples using the arduino-test-compile action
         uses: ArminJo/arduino-test-compile@master
@@ -103,4 +103,4 @@ jobs:
           build-properties: ${{ toJson(matrix.build-properties) }}
           extra-arduino-lib-install-args: "--no-deps" # suppress dependency resolving for libraries, here the "Adafruit Motor Shield V2 Library"
 #          debug-install: true
-          debug-compile: true
+#          debug-compile: true

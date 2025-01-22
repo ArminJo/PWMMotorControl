@@ -1,13 +1,13 @@
 {
   "name": "PWMMotorControl",
+  "version": "2.2.0",
   "keywords": "motor,encoder,PWM,full-bridge,PCA9685,L298,TB6612",
   "description": "Control brushed DC motors by PWM and uses optional attached encoders to drive fixed distances..",
+  "homepage": "https://github.com/ArminJo/PWMMotorControl",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ArminJo/PWMMotorControl"
+    "url": "https://github.com/ArminJo/PWMMotorControl.git"
   },
-  "version": "2.2.0",
-  "exclude": "pictures",
   "authors": {
     "name": "Armin Joachimsmeyer",
     "email": "armin.arduino@gmail.com",
@@ -15,7 +15,8 @@
   },
   "license": "GPL-3.0-or-later",
   "frameworks": "arduino",
-  "platforms": [
-    "atmelavr"
-  ]
+  "platforms": ["atmelavr"],
+  "headers": ["CarPWMMotorControl.hpp", "PWMDcMotor.hpp", "EncoderMotor.hpp"],
+  "examples": "examples/*/*.ino",
+  "export": {"exclude": [".github", "pictures"]}
 }

@@ -135,7 +135,7 @@ void loop() {
                 Serial.print(F("Go distance[mm]="));
                 Serial.println((tLoopIndex + 1) * 200); // 200, 400, 600
 #endif
-                RobotCar.startGoDistanceMillimeter(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
+                RobotCar.startGoDistanceMillimeterWithSpeed(sSpeedPWM, (tLoopIndex + 1) * 200, sDirection);
 #if defined(ENABLE_EXTRA_NON_PLOTTER_OUTPUT)
                 Serial.print(F("Go distance[mm]="));
                 Serial.println(RobotCar.CarRequestedDistanceMillimeter);

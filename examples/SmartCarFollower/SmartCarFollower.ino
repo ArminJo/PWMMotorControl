@@ -76,7 +76,7 @@
 /*
  * Enable functionality of this program
  */
-#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100UL // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #define PRINT_VOLTAGE_PERIOD_MILLIS 2000
 #define MILLIS_OF_INACTIVITY_BEFORE_ATTENTION   60000   // 1 minute before attention
 uint32_t sMillisOfLastMovement = 0;                     // 0 is a marker, that follower was just started

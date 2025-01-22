@@ -1,7 +1,7 @@
 /*
  *  TinyIRReceiver.hpp
  *
- *  Receives IR protocol data of NEC protocol using pin change interrupts.
+ *  Receives IR data of NEC protocol using pin change interrupts.
  *  NEC is the protocol of most cheap remote controls for Arduino.
  *
  *  Parity check is done for address and data.
@@ -22,13 +22,13 @@
  * - Repeats are sent as complete frames but in a 50 ms period / with a 21 ms distance.
  *
  *
- *  This file is part of IRMP https://github.com/IRMP-org/IRMP.
  *  This file is part of Arduino-IRremote https://github.com/Arduino-IRremote/Arduino-IRremote.
+ *  This file is also part of IRMP https://github.com/IRMP-org/IRMP.
  *
  ************************************************************************************
  * MIT License
  *
- * Copyright (c) 2022-2024 Armin Joachimsmeyer
+ * Copyright (c) 2022-2026 Armin Joachimsmeyer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,13 +56,15 @@
  *
  * - IR_RECEIVE_PIN         The pin number for TinyIRReceiver IR input.
  * - IR_FEEDBACK_LED_PIN    The pin number for TinyIRReceiver feedback LED.
- * - NO_LED_FEEDBACK_CODE   Disables the feedback LED function. Saves 14 bytes program memory.
- * - DISABLE_PARITY_CHECKS  Disable parity checks. Saves 48 bytes of program memory.
- * - USE_EXTENDED_NEC_PROTOCOL Like NEC, but take the 16 bit address as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
+ * - NO_LED_FEEDBACK_CODE   Disables the feedback LED function for send and receive. Saves 14 bytes program memory.
+ * - NO_LED_RECEIVE_FEEDBACK_CODE Disables the LED feedback code for receive.
+ * - NO_LED_SEND_FEEDBACK_CODE    Disables the LED feedback code for send.
+ * - DISABLE_PARITY_CHECKS        Disable parity checks. Saves 48 bytes of program memory.
+ * - USE_EXTENDED_NEC_PROTOCOL    Like NEC, but take the 16 bit address as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
  * - USE_ONKYO_PROTOCOL     Like NEC, but take the 16 bit address and command each as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
  * - USE_FAST_PROTOCOL      Use FAST protocol (no address and 16 bit data, interpreted as 8 bit command and 8 bit inverted command) instead of NEC.
  * - ENABLE_NEC2_REPEATS    Instead of sending / receiving the NEC special repeat code, send / receive the original frame for repeat.
- * - USE_CALLBACK_FOR_TINY_RECEIVER   Call the fixed function "void handleReceivedTinyIRData()" each time a frame or repeat is received.
+ * - USE_CALLBACK_FOR_TINY_RECEIVER   Call the user provided function "void handleReceivedTinyIRData()" each time a frame or repeat is received.
  */
 
 #ifndef _TINY_IR_RECEIVER_HPP
@@ -70,42 +72,37 @@
 
 #include <Arduino.h>
 
-#if defined(DEBUG) && !defined(LOCAL_DEBUG)
-#define LOCAL_DEBUG
-#else
-//#define LOCAL_DEBUG // This enables debug output only for this file
-#endif
-
 /*
  * Protocol selection
  */
-//#define DISABLE_PARITY_CHECKS // Disable parity checks. Saves 48 bytes of program memory.
 //#define USE_EXTENDED_NEC_PROTOCOL // Like NEC, but take the 16 bit address as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
 //#define USE_ONKYO_PROTOCOL    // Like NEC, but take the 16 bit address and command each as one 16 bit value and not as 8 bit normal and 8 bit inverted value.
 //#define USE_FAST_PROTOCOL     // Use FAST protocol instead of NEC / ONKYO.
 //#define ENABLE_NEC2_REPEATS // Instead of sending / receiving the NEC special repeat code, send / receive the original frame for repeat.
-#include "TinyIR.h" // If not defined, it defines IR_RECEIVE_PIN, IR_FEEDBACK_LED_PIN and TINY_RECEIVER_USE_ARDUINO_ATTACH_INTERRUPT
+//#define DISABLE_PARITY_CHECKS // Disable parity checks. Saves 48 bytes of program memory.
+//#define IR_RECEIVE_PIN          2
+//#define IR_FEEDBACK_LED_PIN     12 // Use this, to disable use of LED_BUILTIN definition for IR_FEEDBACK_LED_PIN
+#include "TinyIR.h"
 
 #include "digitalWriteFast.h"
 /** \addtogroup TinyReceiver Minimal receiver for NEC and FAST protocol
  * @{
  */
 
-#if defined(DEBUG)
+// This block must be located after the includes of other *.hpp files
+//#define LOCAL_DEBUG // This enables debug output only for this file - only for development
+//#define LOCAL_TRACE // This enables trace output only for this file - only for development
+#include "LocalDebugLevelStart.h"
+#if defined(LOCAL_DEBUG)
 #define LOCAL_DEBUG_ATTACH_INTERRUPT
 #else
-//#define LOCAL_DEBUG_ATTACH_INTERRUPT  // to see if attachInterrupt() or static interrupt (by register tweaking) is used
-#endif
-#if defined(TRACE)
-#define LOCAL_TRACE_STATE_MACHINE
-#else
-//#define LOCAL_TRACE_STATE_MACHINE  // to see the state of the ISR (Interrupt Service Routine) state machine
+//#define LOCAL_DEBUG_ATTACH_INTERRUPT  // To see if attachInterrupt() or static interrupt (by register tweaking) is used and no other debug output
 #endif
 
 //#define _IR_MEASURE_TIMING        // Activate this if you want to enable internal hardware timing measurement.
 //#define _IR_TIMING_TEST_PIN 7
 TinyIRReceiverStruct TinyIRReceiverControl;
-volatile TinyIRReceiverCallbackDataStruct TinyIRReceiverData;
+volatile TinyIRReceiverCallbackDataStruct TinyIRReceiverData; // The persistent copy of all IR data after receiving a complete frame. To be used by main program.
 
 /*
  * Set input pin and output pin definitions etc.
@@ -128,8 +125,8 @@ volatile TinyIRReceiverCallbackDataStruct TinyIRReceiverData;
 #  endif
 #endif
 
-#if !defined(IR_FEEDBACK_LED_PIN) && defined(LED_BUILTIN)
-#define IR_FEEDBACK_LED_PIN    LED_BUILTIN
+#if !defined(NO_LED_RECEIVE_FEEDBACK_CODE)
+#define LED_RECEIVE_FEEDBACK_CODE // Resolve the double negative
 #endif
 
 #if !( \
@@ -143,18 +140,20 @@ volatile TinyIRReceiverCallbackDataStruct TinyIRReceiverData;
 || ( (defined(__AVR_ATtiny87__) || defined(__AVR_ATtiny167__)) && ( (defined(ARDUINO_AVR_DIGISPARKPRO) && ((IR_RECEIVE_PIN == 3) || (IR_RECEIVE_PIN == 9))) /*ATtinyX7(digisparkpro) and pin 3 or 9 */\
         || (! defined(ARDUINO_AVR_DIGISPARKPRO) && ((IR_RECEIVE_PIN == 3) || (IR_RECEIVE_PIN == 14)))) ) /*ATtinyX7(ATTinyCore) and pin 3 or 14 */ \
 )
-#define TINY_RECEIVER_USE_ARDUINO_ATTACH_INTERRUPT // Cannot use any static ISR vector here. In other cases we have code provided for generating interrupt on pin change.
+/*
+ * Cannot use any static ISR vector here. In other cases we have code provided for generating interrupt on pin change.
+ * Requires additional 112 bytes program memory + 4 bytes RAM
+ */
+#define TINY_RECEIVER_USE_ARDUINO_ATTACH_INTERRUPT
 #endif
 
 /**
  * Declaration of the callback function provided by the user application.
  * It is called every time a complete IR command or repeat was received.
  */
-extern void handleTinyReceivedIRData();
+extern void handleReceivedTinyIRData();
 
-#if defined(LOCAL_DEBUG)
-uint32_t sMicrosOfGap; // The length of the gap before the start bit
-#endif
+uint32_t sMicrosOfGap; // The length of the gap before the start bit, used for trace
 /**
  * The ISR (Interrupt Service Routine) of TinyIRRreceiver.
  * It handles the NEC protocol decoding and calls the user callback function on complete.
@@ -173,8 +172,12 @@ void IRPinChangeInterruptHandler(void) {
      */
     uint_fast8_t tIRLevel = digitalReadFast(IR_RECEIVE_PIN);
 
-#if !defined(NO_LED_FEEDBACK_CODE) && defined(IR_FEEDBACK_LED_PIN)
+#if defined(LED_RECEIVE_FEEDBACK_CODE) && defined(IR_FEEDBACK_LED_PIN)
+#  if defined(FEEDBACK_LED_IS_ACTIVE_LOW)
+    digitalWriteFast(IR_FEEDBACK_LED_PIN, tIRLevel);
+#  else
     digitalWriteFast(IR_FEEDBACK_LED_PIN, !tIRLevel);
+#  endif
 #endif
 
     /*
@@ -182,27 +185,25 @@ void IRPinChangeInterruptHandler(void) {
      */
     // Repeats can be sent after a pause, which is longer than 64000 microseconds, so we need a 32 bit value for check of repeats
     uint32_t tCurrentMicros = micros();
-    uint32_t tMicrosOfMarkOrSpace32 = tCurrentMicros - TinyIRReceiverControl.LastChangeMicros;
+    uint32_t tMicrosOfMarkOrSpace32 = tCurrentMicros - TinyIRReceiverControl.LastChangeMicros; // statement is required to force 32 bit arithmetic
     uint16_t tMicrosOfMarkOrSpace = tMicrosOfMarkOrSpace32;
 
     TinyIRReceiverControl.LastChangeMicros = tCurrentMicros;
 
     uint8_t tState = TinyIRReceiverControl.IRReceiverState;
 
-#if defined(LOCAL_TRACE_STATE_MACHINE)
-    Serial.print(tState);
-    Serial.print(F(" D="));
-    Serial.print(tMicrosOfMarkOrSpace);
-//    Serial.print(F(" I="));
-//    Serial.print(tIRLevel);
-    Serial.print('|');
-#endif
+    TRACE_PRINT(tState);
+    TRACE_PRINT(F(" D="));
+    TRACE_PRINT(tMicrosOfMarkOrSpace);
+//    TRACE_PRINT(F(" I="));
+//    TRACE_PRINT(tIRLevel);
+    TRACE_PRINT('|');
 
     if (tIRLevel == LOW) {
         /*
-         * We have a mark here
+         * We are at the start of a mark here and tMicrosOfMarkOrSpace is the time of the previous space
          */
-        if (tMicrosOfMarkOrSpace > 2 * TINY_RECEIVER_HEADER_MARK) {
+        if (tMicrosOfMarkOrSpace > TINY_RECEIVER_MARK_TIMEOUT) {
             // timeout -> must reset state machine
             tState = IR_RECEIVER_STATE_WAITING_FOR_START_MARK;
         }
@@ -210,7 +211,7 @@ void IRPinChangeInterruptHandler(void) {
             // We are at the beginning of the header mark, check timing at the next transition
             tState = IR_RECEIVER_STATE_WAITING_FOR_START_SPACE;
             TinyIRReceiverControl.Flags = IRDATA_FLAGS_EMPTY; // If we do it here, it saves 4 bytes
-#if defined(LOCAL_TRACE)
+#if defined(TRACE) // Do not use LOCAL_TRACE here since sMicrosOfGap is read in a cpp file at TRACE
             sMicrosOfGap = tMicrosOfMarkOrSpace32;
 #endif
 #if defined(ENABLE_NEC2_REPEATS)
@@ -227,7 +228,7 @@ void IRPinChangeInterruptHandler(void) {
             if (tMicrosOfMarkOrSpace >= lowerValue25Percent(TINY_RECEIVER_HEADER_SPACE)
                     && tMicrosOfMarkOrSpace <= upperValue25Percent(TINY_RECEIVER_HEADER_SPACE)) {
                 /*
-                 * We have a valid data header space here -> initialize data
+                 * We had a valid data header space before -> initialize data
                  */
                 TinyIRReceiverControl.IRRawDataBitCounter = 0;
 #if (TINY_RECEIVER_BITS > 16)
@@ -237,8 +238,9 @@ void IRPinChangeInterruptHandler(void) {
 #endif
                 TinyIRReceiverControl.IRRawDataMask = 1;
                 tState = IR_RECEIVER_STATE_WAITING_FOR_DATA_SPACE;
+
 #if !defined(ENABLE_NEC2_REPEATS)
-                // Check for NEC repeat header
+                // Alternatively check for NEC repeat header space length
             } else if (tMicrosOfMarkOrSpace >= lowerValue25Percent(NEC_REPEAT_HEADER_SPACE)
                     && tMicrosOfMarkOrSpace <= upperValue25Percent(NEC_REPEAT_HEADER_SPACE)
                     && TinyIRReceiverControl.IRRawDataBitCounter >= TINY_RECEIVER_BITS) {
@@ -256,12 +258,15 @@ void IRPinChangeInterruptHandler(void) {
         }
 
         else if (tState == IR_RECEIVER_STATE_WAITING_FOR_DATA_MARK) {
-            // Check data space length
+            /*
+             * Start of data mark here, check data space length
+             * Maybe the minimum length check could be removed here.
+             */
             if (tMicrosOfMarkOrSpace >= lowerValue50Percent(TINY_RECEIVER_ZERO_SPACE)
                     && tMicrosOfMarkOrSpace <= upperValue50Percent(TINY_RECEIVER_ONE_SPACE)) {
                 // We have a valid bit here
                 tState = IR_RECEIVER_STATE_WAITING_FOR_DATA_SPACE;
-                if (tMicrosOfMarkOrSpace >= 2 * TINY_RECEIVER_UNIT) {
+                if (tMicrosOfMarkOrSpace >= TINY_RECEIVER_ONE_THRESHOLD) {
                     // we received a 1
 #if (TINY_RECEIVER_BITS > 16)
                     TinyIRReceiverControl.IRRawData.ULong |= TinyIRReceiverControl.IRRawDataMask;
@@ -286,7 +291,8 @@ void IRPinChangeInterruptHandler(void) {
 
     else {
         /*
-         * We have a space here
+         * We are at the start of a space here and tMicrosOfMarkOrSpace is the time of the previous mark
+         *
          */
         if (tState == IR_RECEIVER_STATE_WAITING_FOR_START_SPACE) {
             /*
@@ -324,7 +330,7 @@ void IRPinChangeInterruptHandler(void) {
                      * Check address parity
                      * Address is sent first and contained in the lower word
                      */
-                    if (TinyIRReceiverControl.IRRawData.UBytes[0] != (uint8_t)(~TinyIRReceiverControl.IRRawData.UBytes[1])) {
+                    if (TinyIRReceiverControl.IRRawData.UBytes[0] != (uint8_t) (~TinyIRReceiverControl.IRRawData.UBytes[1])) {
 #if defined(ENABLE_NEC2_REPEATS)
                     TinyIRReceiverControl.Flags |= IRDATA_FLAGS_PARITY_FAILED; // here we can have the repeat flag already set
 #else
@@ -337,28 +343,24 @@ void IRPinChangeInterruptHandler(void) {
                      * Check command parity
                      */
 #if (TINY_RECEIVER_ADDRESS_BITS > 0)
-                    if (TinyIRReceiverControl.IRRawData.UBytes[2] != (uint8_t)(~TinyIRReceiverControl.IRRawData.UBytes[3])) {
+                    if (TinyIRReceiverControl.IRRawData.UBytes[2] != (uint8_t) (~TinyIRReceiverControl.IRRawData.UBytes[3])) {
 #if defined(ENABLE_NEC2_REPEATS)
                     TinyIRReceiverControl.Flags |= IRDATA_FLAGS_PARITY_FAILED;
 #else
                         TinyIRReceiverControl.Flags = IRDATA_FLAGS_PARITY_FAILED;
 #endif
-#  if defined(LOCAL_DEBUG)
-                    Serial.print(F("Parity check for command failed. Command="));
-                    Serial.print(TinyIRReceiverControl.IRRawData.UBytes[2], HEX);
-                    Serial.print(F(" parity="));
-                    Serial.println(TinyIRReceiverControl.IRRawData.UBytes[3], HEX);
-#  endif
+                        DEBUG_PRINT(F("Parity check for command failed. Command="));
+                        DEBUG_PRINT(TinyIRReceiverControl.IRRawData.UBytes[2], HEX);
+                        DEBUG_PRINT(F(" parity="));
+                        DEBUG_PRINTLN(TinyIRReceiverControl.IRRawData.UBytes[3], HEX);
 #else
                     // No address, so command and parity are in the lowest bytes
                     if (TinyIRReceiverControl.IRRawData.UBytes[0] != (uint8_t) (~TinyIRReceiverControl.IRRawData.UBytes[1])) {
                         TinyIRReceiverControl.Flags |= IRDATA_FLAGS_PARITY_FAILED;
-#  if defined(LOCAL_DEBUG)
-                        Serial.print(F("Parity check for command failed. Command="));
-                        Serial.print(TinyIRReceiverControl.IRRawData.UBytes[0], HEX);
-                        Serial.print(F(" parity="));
-                        Serial.println(TinyIRReceiverControl.IRRawData.UBytes[1], HEX);
-#  endif
+                        DEBUG_PRINT(F("Parity check for command failed. Command="));
+                        DEBUG_PRINT(TinyIRReceiverControl.IRRawData.UBytes[0], HEX);
+                        DEBUG_PRINT(F(" parity="));
+                        DEBUG_PRINTLN(TinyIRReceiverControl.IRRawData.UBytes[1], HEX);
 #endif
                     }
 #endif
@@ -367,7 +369,7 @@ void IRPinChangeInterruptHandler(void) {
                      * The parameter size is dependent of the code variant used in order to save program memory.
                      * We have 6 cases: 0, 8 bit or 16 bit address, each with 8 or 16 bit command
                      */
-#if !defined(ARDUINO_ARCH_MBED) && !defined(ESP32) // no Serial etc. in callback for ESP -> no interrupt required, WDT is running!
+#if !defined(ARDUINO_ARCH_MBED) && !defined(ESP32) // no Serial etc. possible in callback for RTOS based cores like ESP, even when interrupts are enabled
                     interrupts(); // enable interrupts, so delay() etc. works in callback
 #endif
                     TinyIRReceiverData.justWritten = true;
@@ -455,15 +457,17 @@ bool isIRReceiverAttachedForTinyReceiver() {
 bool initPCIInterruptForTinyReceiver() {
     pinModeFast(IR_RECEIVE_PIN, INPUT);
 
-#if !defined(NO_LED_FEEDBACK_CODE) && defined(IR_FEEDBACK_LED_PIN)
+#if defined(LED_RECEIVE_FEEDBACK_CODE) && defined(IR_FEEDBACK_LED_PIN)
     pinModeFast(IR_FEEDBACK_LED_PIN, OUTPUT);
+#  if defined(FEEDBACK_LED_IS_ACTIVE_LOW)
+    digitalWriteFast(IR_FEEDBACK_LED_PIN, HIGH);
+#  endif
 #endif
     return enablePCIInterruptForTinyReceiver();
 }
 
 void printTinyReceiverResultMinimal(Print *aSerial) {
 // Print only very short output, since we are in an interrupt context and do not want to miss the next interrupts of the repeats coming soon
-    // Print only very short output, since we are in an interrupt context and do not want to miss the next interrupts of the repeats coming soon
 #if defined(USE_FAST_PROTOCOL)
     aSerial->print(F("C=0x"));
 #else
@@ -483,7 +487,7 @@ void printTinyReceiverResultMinimal(Print *aSerial) {
     aSerial->println();
 }
 
-#if defined (LOCAL_DEBUG_ATTACH_INTERRUPT) && !defined(STR)
+#if !defined(STR_HELPER) && !defined(STR)
 // Helper macro for getting a macro definition as string
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
@@ -569,14 +573,19 @@ bool enablePCIInterruptForTinyReceiver() {
 
 #if defined(USE_ATTACH_INTERRUPT) || defined(USE_ATTACH_INTERRUPT_DIRECT)
 #  if defined(USE_ATTACH_INTERRUPT)
-#if defined(NOT_AN_INTERRUPT)
+#    if defined(NOT_AN_INTERRUPT) // check if IDE has defined the check of digitalPinToInterrupt
     if(digitalPinToInterrupt(IR_RECEIVE_PIN) == NOT_AN_INTERRUPT){
         return false;
     }
-#endif
+#    endif
     // costs 112 bytes program memory + 4 bytes RAM
-    attachInterrupt(digitalPinToInterrupt(IR_RECEIVE_PIN), IRPinChangeInterruptHandler, CHANGE);
+#    if defined(ARDUINO_ARCH_SAMD) // see https://www.arduino.cc/reference/tr/language/functions/external-interrupts/attachinterrupt/ paragraph: Syntax
+    attachInterrupt(IR_RECEIVE_PIN, IRPinChangeInterruptHandler, CHANGE); // no extra pin mapping here :-(
+#    else
+    attachInterrupt(digitalPinToInterrupt(IR_RECEIVE_PIN), IRPinChangeInterruptHandler, CHANGE); // CHANGE can be an enum :-(
+#    endif
 #  else
+    // USE_ATTACH_INTERRUPT_DIRECT here, only defined for ATtinies *16, see above
     // 2.2 us more than version configured with macros and not compatible
     attachInterrupt(IR_RECEIVE_PIN, IRPinChangeInterruptHandler, CHANGE); // no extra pin mapping here
 #  endif
@@ -584,11 +593,11 @@ bool enablePCIInterruptForTinyReceiver() {
 #  if defined(LOCAL_DEBUG_ATTACH_INTERRUPT)
     Serial.println(F("Use attachInterrupt for pin=" STR(IR_RECEIVE_PIN)));
 #  endif
-
 #else
 #  if defined(LOCAL_DEBUG_ATTACH_INTERRUPT)
-    Serial.println(F("Use static interrupt for pin=" STR(IR_RECEIVE_PIN)));
+    Serial.println(F("Use hardware/static interrupt for pin=" STR(IR_RECEIVE_PIN)));
 #  endif
+
 #  if defined(USE_INT0)
     // interrupt on any logical change
     EICRA |= _BV(ISC00);
@@ -704,11 +713,6 @@ void dummyFunctionToAvoidCompilerErrors()
 #if defined(LOCAL_DEBUG_ATTACH_INTERRUPT)
 #undef LOCAL_DEBUG_ATTACH_INTERRUPT
 #endif
-#if defined(LOCAL_TRACE_STATE_MACHINE)
-#undef LOCAL_TRACE_STATE_MACHINE
-#endif
+#include "LocalDebugLevelEnd.h"
 
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
 #endif // _TINY_IR_RECEIVER_HPP

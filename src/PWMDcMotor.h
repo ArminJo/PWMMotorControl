@@ -97,12 +97,14 @@
 #  endif
 #endif
 
-/*
- * Helper macro for getting a macro definition as string
- */
-#if !defined(STR_HELPER)
+//Helper macro for getting a macro definition as string
+#if !defined(STR_HELPER) && !defined(STR)
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
+#endif
+// Get absolute value of difference of two unsigned values
+#if !defined(uintDifferenceAbs)
+#define uintDifferenceAbs(a, b) ((a >= b) ? a - b : b - a)
 #endif
 
 #define MAX_SPEED_PWM                        255L // Long constant, otherwise we get "integer overflow in expression"

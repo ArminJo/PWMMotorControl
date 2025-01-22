@@ -292,7 +292,7 @@ unsigned int getDistanceAsCentimeter(uint8_t aDistanceTimeoutCentimeter, bool aW
 #endif // (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
 
     auto tLastEffectiveDistanceCentimeter = sEffectiveDistanceCentimeter;
-    if (abs(tLastEffectiveDistanceCentimeter - tCentimeterToReturn) > DISTANCE_CHANGE_THRESHOLD_CENTIMETER) {
+    if (uintDifferenceAbs(tLastEffectiveDistanceCentimeter, tCentimeterToReturn) > DISTANCE_CHANGE_THRESHOLD_CENTIMETER) {
         sEffectiveDistanceJustChanged = true;
         sEffectiveDistanceCentimeter = tCentimeterToReturn;
     } else {
@@ -318,7 +318,7 @@ uint8_t getIRDistanceAsCentimeter(bool aWaitForCurrentMeasurementToEnd) {
         uint32_t tStartMillis = millis();
         do {
             int16_t tNewValue = analogRead(IR_DISTANCE_SENSOR_PIN); // 100 us
-            if (abs(tOldValue-tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
+            if (abs(tOldValue - tNewValue) > IR_SENSOR_NEW_MEASUREMENT_THRESHOLD) {
                 // assume, that voltage has changed because of the end of a measurement
                 break;
             }
@@ -586,7 +586,7 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
         if (tCentimeter == DISTANCE_TIMEOUT_RESULT) {
             tCentimeter = FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER;
         }
-//        if (abs(tCentimeter - sRawForwardDistancesArray[tIndex]) > 10) {
+//        if (uintDifferenceAbs(tCentimeter, sRawForwardDistancesArray[tIndex]) > 10) {
 //            /*
 //             * Read again, if different from last value.
 //             * Tone / LED feedback for signaling this "exception".
@@ -625,11 +625,11 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
                 tColor = COLOR16_YELLOW;
             }
 
-            // Clear old line
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
+            // Clear old line - use drawVectorDegreeWithAliasing to be able to clear line without residual
+            BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y,
                     sRawForwardDistancesArray[tIndex], tServoDegreeToScan, COLOR16_WHITE, 3);
             // draw new one and store value in distances array for clearing at next scan
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tServoDegreeToScan,
+            BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, tCentimeter, tServoDegreeToScan,
                     tColor, 3);
             sRawForwardDistancesArray[tIndex] = tCentimeter;
         }
@@ -673,8 +673,8 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
      * Print results
      */
 #if defined(USE_BLUE_DISPLAY_GUI)
-    sprintf_P(sBDStringBuffer, PSTR("rotation:%3d\xB0 distance:%3dcm"), tRotationDegree, tMinDistance); // \xB0 is degree character
-    BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_ORIGIN_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
+    snprintf_P(sBDStringBuffer, sizeof(sBDStringBuffer), PSTR("rotation:%3d\xB0 distance:%3dcm"), tRotationDegree, tMinDistance); // \xB0 is degree character
+    BlueDisplay1.drawText(BUTTON_WIDTH_3_5_POS_2, US_DISTANCE_MAP_START_Y + TEXT_SIZE_11, sBDStringBuffer, TEXT_SIZE_11,
             COLOR16_BLACK, COLOR16_WHITE);
 #else
     printForwardDistanceInfo(&Serial);
@@ -754,7 +754,7 @@ void printDistanceRangeCharacter(distance_range_t aRange, Print *aSerial) {
  * @param aForceScan    If true, do not prematurely return if stop was requested i.e. sRuningAutonomousDrive is false
  * @return true if user cancellation requested.
  */
-bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan) {
+bool fillAndShowForwardDistancesInfo(bool aDoFirstValue, bool aForceScan) {
 
     color16_t tColor;
 
@@ -819,9 +819,9 @@ bool __attribute__((weak)) fillAndShowForwardDistancesInfo(bool aDoFirstValue, b
             /*
              * Clear old and draw new distance line
              */
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y,
+            BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y,
                     sForwardDistancesInfo.RawDistancesArray[tIndex], tCurrentDegrees, COLOR16_WHITE, 3);
-            BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tCentimeter, tCurrentDegrees, tColor,
+            BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, tCentimeter, tCurrentDegrees, tColor,
                     3);
         }
 
@@ -862,7 +862,7 @@ void drawForwardDistancesInfos() {
         /*
          * Draw line
          */
-        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tDistance, tCurrentDegrees, tColor, 3);
+        BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, tDistance, tCurrentDegrees, tColor, 3);
         tCurrentDegrees += DEGREES_PER_STEP;
     }
 }
@@ -1024,7 +1024,7 @@ void doWallDetection() {
                 tNextDistanceOriginal = tNextDistanceComputed;
 #if defined(USE_BLUE_DISPLAY_GUI)
                 if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-                    BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextDistanceComputed,
+                    BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, tNextDistanceComputed,
                             tCurrentAngleToCheck, COLOR16_WHITE, 1);
                 }
 #endif
@@ -1098,7 +1098,7 @@ void doWallDetection() {
                     tNextValue = tNextValueComputed;
 #if defined(USE_BLUE_DISPLAY_GUI)
                     if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-                        BlueDisplay1.drawVectorDegrees(US_DISTANCE_MAP_ORIGIN_X, US_DISTANCE_MAP_ORIGIN_Y, tNextValueComputed,
+                        BlueDisplay1.drawVectorDegreeWithAliasing(US_DISTANCE_MAP_START_X, US_DISTANCE_MAP_START_Y, tNextValueComputed,
                                 tCurrentAngleToCheck, COLOR16_WHITE, 1);
                     }
 #endif

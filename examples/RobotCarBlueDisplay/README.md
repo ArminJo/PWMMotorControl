@@ -17,7 +17,7 @@ Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.
 <br/>
 [![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://stand-with-ukraine.pp.ua)
 
-Available as [RobotCarBlueDisplay](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/RobotCarBlueDisplay) example of the Arduino library [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl).<br/>
+Used as [RobotCarBlueDisplay](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/RobotCarBlueDisplay) example of the Arduino library [PWMMotorControl](https://github.com/ArminJo/PWMMotorControl).<br/>
 Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-BlueDisplay).
 
 </div>
@@ -31,7 +31,8 @@ Requires the Arduino library [BlueDisplay](https://github.com/ArminJo/Arduino-Bl
 # Features
 - Obstacles avoidance by a HC-SR04 ultrasonic sensor mounted on a SG90 Servo which continuously scans the environment.
 - To overcome the drawbacks of ultrasonic sensors, an additional Sharp 430/1080/20150/100550 (GP2Y0A21YK0F) IR or VL53L1X TOF (TimeOfFlight) sensor can be mounted to the servo.
-- Manual control implemented by a GUI using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
+- **Manual control by a GUI** using a Bluetooth HC-05 Module and the [BlueDisplay library](https://github.com/ArminJo/Arduino-BlueDisplay).
+- Support for *many configurations* e.g. for **2, 4 or mecanum wheel cars**, different **motor drivers**, different **power supplies**, or different **distance sensors**.
 
 **Just overwrite the function doUserCollisionAvoiding() to test your own skill**.
 You may also overwrite the function fillAndShowForwardDistancesInfo(), if you use your own scanning method.
@@ -40,6 +41,11 @@ You may also overwrite the function fillAndShowForwardDistancesInfo(), if you us
 - Install **[BlueDisplay library](https://github.com/ArminJo/BlueDisplay)** with *Tools > Manage Libraries...* or *Ctrl+Shift+I*. Use "BlueDisplay" as filter string.<br/>
 - Install **[PWMMotorControl library](https://github.com/ArminJo/PWMMotorControl)** with *Tools > Manage Libraries...* or *Ctrl+Shift+I*. Use "PWMMotorControl" as filter string.<br/>
 - Open the example **[RobotCarBlueDisplay](https://github.com/ArminJo/PWMMotorControl/tree/master/examples/RobotCarBlueDisplay)**, available at File > Examples > Examples from Custom Libraries / **PWMMotorControl**.
+
+OR
+
+- Download the [Zip file](https://github.com/ArminJo/Arduino-RobotCar/archive/refs/heads/master.zip) of this repository with *Code > Download ZIP*.
+Open it and extract the sub folder **RobotCarBlueDisplay** to the **Sketchbook location** you see in the preferences window *File > Preferences (Ctrl + Comma)*. After restarting the Arduino IDE, you can open it as RobotCarBlueDisplay with *File > Sketchbook*.
 
 Other examples of PWMMotorControl like **[SmartCarFollower](https://github.com/ArminJo/PWMMotorControl#smartcarfollower)** will also run on this robot car.
 

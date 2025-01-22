@@ -97,7 +97,7 @@ Servo TiltServo;
  */
 //#define NO_SERIAL_OUTPUT              // Saves up to 2532 bytes of program memory for L298_2WD_2LI_ION_BASIC_CONFIGURATION
 #if defined(NO_SERIAL_OUTPUT)           // No printing of any info with Serial.print or we get "multiple definition of __vector_18".
-#define USE_SIMPLE_SERIAL               // We can use simple serial here, since no Serial.print are active. Saves up to 2172 bytes in BlueDisplay library.
+#define BD_USE_SIMPLE_SERIAL               // We can use simple serial here, since no Serial.print are active. Saves up to 2172 bytes in BlueDisplay library.
 #else
 #define ENABLE_SERIAL_OUTPUT            // To avoid the double negation !defined(NO_SERIAL_OUTPUT)
 #endif
@@ -106,7 +106,7 @@ Servo TiltServo;
 #endif
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
 // Must be defined before #include "BlueDisplay.hpp"
-#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100L // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
+#define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100UL // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #endif
 #define PRINT_VOLTAGE_PERIOD_MILLIS         500 // we only print if changed
 #define VOLTAGE_TWO_LI_ION_LOW_THRESHOLD    6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
@@ -141,7 +141,8 @@ int doUserCollisionAvoiding();
  * Settings to configure the BlueDisplay library and to reduce its size
  */
 //#define BLUETOOTH_BAUD_RATE BAUD_115200  // Activate this, if you have reprogrammed the HC05 module for 115200, otherwise 9600 is used as baud rate
-#define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables unused basic touch events like down, move and up. Saves 620 bytes program memory and 36 bytes RAM
+#define DO_NOT_NEED_BASIC_TOUCH_EVENTS // Disables unused basic touch events down, move and up. Saves 620 bytes program memory and 36 bytes RAM
+#define DO_NOT_NEED_LONG_TOUCH_DOWN_AND_SWIPE_EVENTS  // Disables LongTouchDown and SwipeEnd events. Saves up to 88 bytes program memory and 4 bytes RAM.
 #include "BlueDisplay.hpp"          // include source of library
 #if !defined(USE_BLUE_DISPLAY_GUI)
 #define USE_BLUE_DISPLAY_GUI        // for Distance.hpp and MecanumWheelCarPWMMotorControl.hpp included by CarPWMMotorControl.hpp
@@ -267,7 +268,7 @@ void setup() {
 
     } else {
 #if defined(ENABLE_SERIAL_OUTPUT) // requires 1504 bytes program space
-#  if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
+#  if !defined(BD_USE_SIMPLE_SERIAL) && !defined(BD_USE_SERIAL1)  // print it now if not printed above
 #    if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \
     || defined(SERIALUSB_PID)  || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
@@ -279,7 +280,7 @@ void setup() {
 #  endif
 #endif
     }
-#if !defined(USE_SIMPLE_SERIAL) && !defined(USE_SERIAL1)  // print it now if not printed above
+#if !defined(BD_USE_SIMPLE_SERIAL) && !defined(BD_USE_SERIAL1)  // print it now if not printed above
     /*
      * Print this always, it can be seen in the app log
      */
@@ -428,10 +429,10 @@ void loop() {
                 delayAndLoopGUI(60000); // wait a minute before next demo loop
                 sTimeoutDemoDisable = false;
 #elif defined(ENABLE_AUTONOMOUS_DRIVE)
-                GUISwitchPages(NULL, PAGE_AUTOMATIC_CONTROL);
+                GUISwitchPages(nullptr, PAGE_AUTOMATIC_CONTROL);
                 startStopAutomomousDrive(true, MODE_FOLLOWER);
 #else
-            GUISwitchPages(NULL, PAGE_HOME);
+            GUISwitchPages(nullptr, PAGE_HOME);
 #endif
             }
         }

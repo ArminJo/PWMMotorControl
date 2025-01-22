@@ -16,6 +16,7 @@
  *
  *  Usage:
  *  #define NUMBER_OF_PUSH 0x17 // This enables static mode. Saves 60 bytes program memory.
+ *  //#define SEARCH_LOWEST_STACKPOINTER_MODE // Instead of printing program addresses of traced section, store lowest SP and corresponding PC
  *  #include "AvrTracing.hpp"
  *  ...
  *  setup() {
@@ -27,9 +28,12 @@
  *    startTracing();  // This connects Pin 2 to ground
  *    ... // your code
  *    stopTracing();  // This releases connection to ground
+ *  #if defined(SEARCH_LOWEST_STACKPOINTER_MODE)
+ *    printLowestStackpointerAndProgramAddress();
+ *  #endif
  *  }
  *
- *  Copyright (C) 2020-2021  Armin Joachimsmeyer
+ *  Copyright (C) 2020-2026  Armin Joachimsmeyer
  *  Email: armin.joachimsmeyer@gmail.com
  *
  *  This file is part of AvrTracing https://github.com/ArminJo/AvrTracing.
@@ -55,6 +59,19 @@
 #include "AvrTracing.h" // Contains function prototypes
 
 //#define DEBUG_TRACE_INIT // To see internal information at call of initTrace() costs 52 (static) / 196 (dynamic) bytes of program memory
+
+//#define SEARCH_LOWEST_STACKPOINTER_MODE // Instead of printing program addresses of traced section, store lowest SP and corresponding PC
+#if defined(SEARCH_LOWEST_STACKPOINTER_MODE)
+uint8_t *sLowestStackPointer = (uint8_t *)(RAMEND + 1);
+uint8_t *sProgramAddressOfLowestStackPointer;
+void printLowestStackpointerAndProgramAddress();
+
+// Too much false entries and the stack array cannot be easily increased, because this makes stack size even smaller :-((
+//#define SIZE_OF_CALL_STACK_ARRAY                16
+//uint8_t *sCallStackOfLowestStackPointer[SIZE_OF_CALL_STACK_ARRAY];
+//void printLowestStackpointerAndProgramAddressAndCallStack();
+//void fillCallStackArray(uint8_t * aStackPositionToStart);
+#endif
 
 /*
  * The amount of pushes for this ISR is compiler and compiler flag dependent
@@ -101,7 +118,7 @@ uint8_t sLastMSBytePrinted = 0;
 
 //uint16_t sCallCount = 0;
 /*
- * Prints PC from stack
+ * Prints PC from stack. Real addresses on stack are always shifted right by one!
  * The amount of pushes for this ISR is compiler and compiler flag dependent
  * I saw 15, 17, 19, 20 and 23 (DEBUG_TRACE_INIT enabled) pushes.
  * They can be found by looking for <__vector_1> in the assembler file.
@@ -173,6 +190,9 @@ void INT0_vect(void) {
         sendLineFeed();
 #  endif
         sPushAdjust = tPushAdjust;
+        /*
+         * End of initializing sPushAdjust
+         */
     }
     tStackPtr += tPushAdjust;
 #endif
@@ -189,11 +209,28 @@ void INT0_vect(void) {
      * PC (after init()) has value from __bad_interrupt + 2 where e.g. micros() start
      * to __stop_program (== _etext - 2)
      */
+
+#if defined(SEARCH_LOWEST_STACKPOINTER_MODE)
+    if (tPC.UWord >= (uint16_t) &__init && tPC.UWord <= (uint16_t) &_etext) {
+        // Valid address here
+        if (sLowestStackPointer > tStackPtr) {
+            sLowestStackPointer = tStackPtr;
+            sProgramAddressOfLowestStackPointer = tPC.BytePointer;
+//            fillCallStackArray((uint8_t *)tStackPtr); // too much false entries and the stack array cannot be increased, because this makes stack size even smaller :-((
+            // Print caller address, this is at least a hint, where the program has been
+            uint16_t tCallerAddress = (uint16_t) __builtin_return_address(0);
+            Serial.flush(); // In Order not to interfere with Serial prints of program
+            sendPCHex(tCallerAddress << 1);
+            flushUSARTForTrace(); // otherwise next Serial might not work
+//            printStackDump(); // This cannot work, because stack is low and printStackDump uses additional stack
+        }
+    }
+#else
     if (!(tPC.UWord >= (uint16_t) &__init && tPC.UWord <= (uint16_t) &_etext)) {
-        sendUSARTForTrace('X');  // no valid address
+        sendUSARTForTrace('-');  // no valid address
     }
     sendPCHex(tPC.UWord); // PC=0x03DC (11 character@115200 baud) => 954,86 us or 1047,2727 Hz rate. But I had to trigger it externally with 1070 Hz to get no misses.
-
+#endif
     /*
      * Check for millis() interrupt pending
      * this is true almost every time, since we require 1 ms for one run.
@@ -212,9 +249,9 @@ void INT0_vect(void) {
 __attribute__((optimize("-Os"))) void initTrace() {
 #if defined(DEBUG_TRACE_INIT)
 #  if defined(NUMBER_OF_PUSH)
-    sendStringForTrace("# of pushes in ISR=0x");
-    sendUnsignedByteHex(NUMBER_OF_PUSH);
-    sendLineFeed();
+        sendStringForTrace("# of pushes in ISR=0x");
+        sendUnsignedByteHex(NUMBER_OF_PUSH);
+        sendLineFeed();
 #  endif // otherwise value of sPushAdjust is printed in ISR on first call
 #endif
 
@@ -222,9 +259,9 @@ __attribute__((optimize("-Os"))) void initTrace() {
 }
 
 /*
- * Connect button between pin2 and ground.
- * INT0 is at pin2
- * Enable interrupts during button press.
+ * INT0 is at pin 2
+ * Connect button between pin 2 and ground, or start tracing by writing LOW to pin 2 or calling startTracing().
+ * Enable interrupts during LOW on pin 2.
  */
 __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
 
@@ -236,12 +273,12 @@ __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
 
 #if defined(EICRA)
     EICRA &= ~(_BV(ISC01) | _BV(ISC00)); // interrupt on low level
-    EIFR |= _BV(INTF0);  // clear interrupt bit
-    EIMSK |= _BV(INT0);  // enable interrupt
+    EIFR |= _BV(INTF0); // clear interrupt bit
+    EIMSK |= _BV(INT0); // enable interrupt
 #elif defined(GIFR)
-    MCUCR &= ~(_BV(ISC01) | _BV(ISC00)); // interrupt on low level
-    GIFR |= _BV(INTF0);  // clear interrupt bit
-    GIMSK |= _BV(INT0);  // enable interrupt
+        MCUCR &= ~(_BV(ISC01) | _BV(ISC00)); // interrupt on low level
+        GIFR |= _BV(INTF0);// clear interrupt bit
+        GIMSK |= _BV(INT0);// enable interrupt
 #endif
 
 }
@@ -252,6 +289,9 @@ __attribute__((optimize("-Os"))) void enableINT0InterruptOnLowLevel() {
  * You can insert 2  "_NOP();" statements right after startTracing() as a workaround.
  */
 __attribute__((optimize("-Os"))) void startTracing() {
+    Serial.flush();
+    sPrintCount = 0;
+    sendLineFeed();
     pinModeFast(2, OUTPUT);
     digitalWriteFast(2, LOW); // The next 2 instructions are not yet printed
 }
@@ -260,6 +300,62 @@ __attribute__((optimize("-Os"))) void stopTracing() {
     digitalWriteFast(2, HIGH);
     pinModeFast(2, INPUT); // results in INPUT_PULLUP, since we wrote the bit to HIGH before. This is the last instruction printed.
 }
+
+bool isAddressFromStackInText(uint8_t *aAddressToCheck) {
+    return ((((uint16_t) aAddressToCheck & 0xFF) != 0) && ((uint8_t*) ((uint16_t) &__init >> 1)) <= aAddressToCheck
+            && aAddressToCheck < ((uint8_t*) ((uint16_t) &_etext >> 1)));
+}
+
+#if defined(SEARCH_LOWEST_STACKPOINTER_MODE)
+/*
+ * Too much false entries and the stack array cannot be easily increased, because this makes stack size even smaller :-((
+ */
+//void fillCallStackArray(uint8_t *aStackPositionToStart){
+//    int8_t i = 0;
+//    do {
+//        uint8_t *tAddressToCheck = *((uint8_t **)aStackPositionToStart);
+//        if(isAddressFromStackInText(tAddressToCheck)){
+//            sCallStackOfLowestStackPointer[i] = ((uint8_t*) ((uint16_t)tAddressToCheck << 1)); // convert stack address content to memory address
+//            i++;
+//        }
+//        aStackPositionToStart++;
+//    } while (i < SIZE_OF_CALL_STACK_ARRAY && aStackPositionToStart < (uint8_t *)RAMEND);
+//    // clear remainder of array
+//    while(i < SIZE_OF_CALL_STACK_ARRAY){
+//        sCallStackOfLowestStackPointer[i++] = 0;
+//    }
+//}
+
+//void printLowestStackpointerAndProgramAddressAndCallStack() {
+//    Serial.print(F("Lowest SP=0x"));
+//    Serial.print((uint16_t)sLowestStackPointer, HEX);
+//    Serial.print(F(" ("));
+//    Serial.print(RAMEND - (int16_t)sLowestStackPointer);
+//    Serial.print(F(") at PC=0x"));
+//    Serial.print((uint16_t)sProgramAddressOfLowestStackPointer, HEX);
+//    for (uint8_t i = 0; i < SIZE_OF_CALL_STACK_ARRAY; ++i) {
+//        Serial.print(F(", 0x"));
+//        Serial.print((uint16_t)sCallStackOfLowestStackPointer[i], HEX);
+//    }
+//    Serial.println();
+
+//    Serial.print(F("tAddressToCheckP=0x"));
+//    Serial.print((uint16_t)SP, HEX);
+//    Serial.print(F(" init=0x"));
+//    Serial.print(((uint16_t) &__init >> 1), HEX);
+//    Serial.print(F(" _etext=0x"));
+//    Serial.println(((uint16_t) &_etext >> 1), HEX);
+//}
+
+void printLowestStackpointerAndProgramAddress() {
+    Serial.print(F("Lowest SP=0x"));
+    Serial.print((uint16_t)sLowestStackPointer, HEX);
+    Serial.print(F(" ("));
+    Serial.print(RAMEND - (int16_t)sLowestStackPointer);
+    Serial.print(F(") at PC=0x"));
+    Serial.println((uint16_t)sProgramAddressOfLowestStackPointer, HEX);
+}
+#endif
 
 /*
  * Drive pin 2 to high and reset it input pullup
@@ -270,6 +366,9 @@ __attribute__((optimize("-Os"))) void sendStringForTrace(const char *aStringPtr)
     }
 }
 
+/*
+ * Print "PC=0x" before the address every 20 values
+ */
 __attribute__((optimize("-Os"))) void sendPCHex(uint16_t aPC) {
     if (sPrintCount == 0) {
         sendUSARTForTrace('P');
@@ -329,6 +428,23 @@ __attribute__((optimize("-Os"))) void sendUSARTForTrace(char aChar) {
 #  endif // Atmega...
 }
 
+/**
+ * ultra simple blocking USART send routine - works 100%!
+ */
+__attribute__((optimize("-Os"))) void flushUSARTForTrace() {
+// wait for buffer to become empty
+#  if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1284__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega644__) || defined(__AVR_ATmega644A__) || defined(__AVR_ATmega644P__) || defined(__AVR_ATmega644PA__) || defined(ARDUINO_AVR_LEONARDO) || defined(__AVR_ATmega16U4__) || defined(__AVR_ATmega32U4__)
+        // Use TX1 on MEGA and on Leonardo, which has no TX0
+        while (!((UCSR1A) & (1 << UDRE1))) {
+            ;
+        }
+#  else
+    while (!((UCSR0A) & (1 << UDRE0))) {
+        ;
+    }
+#  endif // Atmega...
+}
+
 __attribute__((optimize("-Os"))) void sendLineFeed() {
     sendUSARTForTrace('\r');
     sendUSARTForTrace('\n');
@@ -365,6 +481,10 @@ __attribute__((optimize("-Os"))) void sendUnsignedIntegerHex(uint16_t aInteger) 
     sendUnsignedByteHex(aInteger);
 }
 
+/*
+ * Send a 16 bit hex value.
+ * If MSB is equal the last MSP (which is very likely) the suppress printing of the MSB
+ */
 __attribute__((optimize("-Os"))) void sendUnsignedInteger(uint16_t aInteger) {
     WordUnionForPrint tInteger; // saves 6 bytes
     tInteger.UWord = aInteger;
