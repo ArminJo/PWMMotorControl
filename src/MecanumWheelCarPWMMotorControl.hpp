@@ -39,11 +39,9 @@
 #define DELAY_UNTIL_EVENT(aDurationMillis)          delay(aDurationMillis)
 #endif
 
-#if defined(DEBUG)
-#define LOCAL_DEBUG
-#else
+// This block must be located after the includes of other *.hpp files
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
-#endif
+#include "LocalDebugLevelStart.h"
 
 MecanumWheelCarPWMMotorControl::MecanumWheelCarPWMMotorControl() { // @suppress("Class members should be properly initialized")
 }
@@ -999,7 +997,6 @@ void MecanumWheelCarPWMMotorControl::doDemo() {
     tone(BUZZER_PIN, 2200, 200);
 }
 
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
+#include "LocalDebugLevelEnd.h"
+
 #endif // _MECANUM_WHEEL_CAR_PWM_MOTOR_CONTROL_HPP

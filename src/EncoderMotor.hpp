@@ -36,12 +36,9 @@
 #include "EncoderMotor.h"
 #include "PWMDcMotor.hpp"
 
-//#define TRACE
-#if defined(DEBUG)
-#define LOCAL_DEBUG
-#else
+// This block must be located after the includes of other *.hpp files
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
-#endif
+#include "LocalDebugLevelStart.h"
 
 EncoderMotor *sPointerForInt0ISR;
 EncoderMotor *sPointerForInt1ISR;
@@ -778,8 +775,7 @@ void EncoderMotor::stopAllMotors(uint8_t aStopMode) {
     }
 }
 #endif // #if defined(ENABLE_MOTOR_LIST_FUNCTIONS)
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
+#include "LocalDebugLevelEnd.h"
+
 #endif // #if defined(USE_ENCODER_MOTOR_CONTROL)
 #endif // _ENCODER_MOTOR_CONTROL_HPP

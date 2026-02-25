@@ -44,14 +44,9 @@
 #include "Wire.h"
 #endif // defined(USE_SOFT_I2C_MASTER)
 
-//#define WARN    // Information that the program may encounter problems, like small Heap/Stack area.
-#include "DebugLevel.h" // Include to propagate debug levels
-
-#if defined(DEBUG)
-#define LOCAL_DEBUG
-#else
+// This block must be located after the includes of other *.hpp files
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
-#endif
+#include "LocalDebugLevelStart.h"
 
 #define FIFO_CHUNK_SIZE_FOR_CAR_DATA       ((NUMBER_OF_ACCEL_VALUES + 1) * 2) // 3 accel and only z gyro requested
 
@@ -841,7 +836,7 @@ uint16_t IMUCarData::MPU6050ReadWord(uint8_t aRegisterNumber) {
     return tWord.UWord;
 #endif
 }
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
+
+#include "LocalDebugLevelEnd.h"
+
 #endif // _IMU_CAR_DATA_HPP

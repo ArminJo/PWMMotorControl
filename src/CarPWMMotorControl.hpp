@@ -49,11 +49,9 @@ CarPWMMotorControl RobotCar;
 
 #include "PWMDcMotor.hpp"
 
-#if defined(DEBUG)
-#define LOCAL_DEBUG
-#else
+// This block must be located after the includes of other *.hpp files
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
-#endif
+#include "LocalDebugLevelStart.h"
 
 CarPWMMotorControl::CarPWMMotorControl() { // @suppress("Class members should be properly initialized")
 }
@@ -1034,7 +1032,6 @@ void CarPWMMotorControl::writeCarValuesToEeprom() {
 #endif // defined(E2END)
 }
 
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
+#include "LocalDebugLevelEnd.h"
+
 #endif // _CAR_PWM_MOTOR_CONTROL_HPP

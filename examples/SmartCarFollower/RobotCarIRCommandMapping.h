@@ -313,39 +313,39 @@ const struct IRToCommandMappingStruct IRMapping[] = {
  * Commands, which must run exclusively and therefore must first stop other commands running.
  */
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-        { COMMAND_DISTANCE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doKeepDistance, distance }, /**/
-        { COMMAND_FOLLOWER, IR_COMMAND_FLAG_BLOCKING_BEEP, &doFollower, follower }, /**/
+        { COMMAND_DISTANCE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doKeepDistance, COMMAND_STRING(distance) }, /**/
+        { COMMAND_FOLLOWER, IR_COMMAND_FLAG_BLOCKING_BEEP, &doFollower, COMMAND_STRING(follower) }, /**/
 #endif
-        { COMMAND_TEST_ROTATION, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestRotation, rotate }, /**/
-        { COMMAND_TEST_DRIVE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestDrive, drive }, /**/
-        { COMMAND_TEST, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestCommand, test }, /**/
+        { COMMAND_TEST_ROTATION, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestRotation, COMMAND_STRING(rotate) }, /**/
+        { COMMAND_TEST_DRIVE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestDrive, COMMAND_STRING(drive) }, /**/
+        { COMMAND_TEST, IR_COMMAND_FLAG_BLOCKING_BEEP, &doTestCommand, COMMAND_STRING(test) }, /**/
 #if defined(COMMAND_CALIBRATE)
-        { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doCalibrate, calibrate }, /**/
+        { COMMAND_CALIBRATE, IR_COMMAND_FLAG_BLOCKING_BEEP, &doCalibrate, COMMAND_STRING(calibrate) }, /**/
 #endif
 
-        { COMMAND_STOP, IR_COMMAND_FLAG_BLOCKING_BEEP, &doStop, stop }, /**/
-        { COMMAND_RESET, IR_COMMAND_FLAG_BLOCKING_BEEP, &doReset, reset }, /**/
+        { COMMAND_STOP, IR_COMMAND_FLAG_BLOCKING_BEEP, &doStop, COMMAND_STRING(stop) }, /**/
+        { COMMAND_RESET, IR_COMMAND_FLAG_BLOCKING_BEEP, &doReset, COMMAND_STRING(reset) }, /**/
 
         /*
          * Commands, which can be executed always, since the are short. Like set mode etc.
          */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-        { COMMAND_DISTANCE_SOURCE, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &stepDistanceSourceMode, stepDistanceSource }, /**/
+        { COMMAND_DISTANCE_SOURCE, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &stepDistanceSourceMode, COMMAND_STRING(stepDistanceSource) }, /**/
 #endif
 #if defined(_ROBOT_CAR_DISTANCE_HPP)
-        { COMMAND_DISTANCE_FEEDBACK, IR_COMMAND_FLAG_NON_BLOCKING, &stepDistanceFeedbackMode, stepFeedback }, /**/
-        { COMMAND_SCAN_SPEED, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &toggleDistanceScanSpeed, toggleScanSpeed }, /**/
+        { COMMAND_DISTANCE_FEEDBACK, IR_COMMAND_FLAG_NON_BLOCKING, &stepDistanceFeedbackMode, COMMAND_STRING(stepFeedback) }, /**/
+        { COMMAND_SCAN_SPEED, IR_COMMAND_FLAG_NON_BLOCKING | IR_COMMAND_FLAG_BEEP, &toggleDistanceScanSpeed, COMMAND_STRING(toggleScanSpeed) }, /**/
 #endif
-        { COMMAND_INCREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doIncreaseSpeed, speedIncrease }, /**/
-        { COMMAND_DECREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doDecreaseSpeed, speedDecrease }, /**/
+        { COMMAND_INCREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doIncreaseSpeed, COMMAND_STRING(speedIncrease) }, /**/
+        { COMMAND_DECREASE_SPEED, IR_COMMAND_FLAG_NON_BLOCKING, &doDecreaseSpeed, COMMAND_STRING(speedDecrease) }, /**/
 
         /*
          * Repeatable short commands
          */
-        { COMMAND_FORWARD, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &goForward, forward }, /**/
-        { COMMAND_BACKWARD, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &goBackward, backward }, /**/
-        { COMMAND_RIGHT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnRight, right }, /**/
-        { COMMAND_LEFT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnLeft, left }, /**/
-        { COMMAND_DEFAULT_SPEED, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &doDefaultSpeed, speedDefault } };
+        { COMMAND_FORWARD, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &goForward, COMMAND_STRING(forward) }, /**/
+        { COMMAND_BACKWARD, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &goBackward, COMMAND_STRING(backward) }, /**/
+        { COMMAND_RIGHT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnRight, COMMAND_STRING(right) }, /**/
+        { COMMAND_LEFT, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &turnLeft, COMMAND_STRING(left) }, /**/
+        { COMMAND_DEFAULT_SPEED, IR_COMMAND_FLAG_REPEATABLE_NON_BLOCKING, &doDefaultSpeed, COMMAND_STRING(speedDefault) } };
 
 #endif // _IR_COMMAND_MAPPING_H
