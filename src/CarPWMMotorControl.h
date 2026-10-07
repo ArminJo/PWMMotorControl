@@ -3,8 +3,7 @@
  *
  *  Motor control for a car with 2 encoder motors
  *
- *  Created on: 12.05.2019
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2026  Armin Joachimsmeyer
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

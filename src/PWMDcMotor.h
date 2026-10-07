@@ -37,10 +37,10 @@
 
 #include <stdint.h>
 
-#define VERSION_PWMMOTORCONTROL "2.1.0"
+#define VERSION_PWMMOTORCONTROL "2.2.1"
 #define VERSION_PWMMOTORCONTROL_MAJOR 2
-#define VERSION_PWMMOTORCONTROL_MINOR 1
-#define VERSION_PWMMOTORCONTROL_PATCH 0
+#define VERSION_PWMMOTORCONTROL_MINOR 2
+#define VERSION_PWMMOTORCONTROL_PATCH 1
 // The change log is at the bottom of the file
 
 /*
@@ -477,6 +477,9 @@ public:
 };
 
 /*
+ * Version 2.2.1 - 10/2026
+ * - Improved mecanum car support.
+ *
  * Version 2.2.0 - 11/2024
  * - Added 2 functions startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, ...).
  * - ESP32 core 3.x support.
