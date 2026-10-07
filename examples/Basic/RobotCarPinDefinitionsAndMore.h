@@ -5,7 +5,6 @@
  *  Used for PWMMotorControl examples for various platforms.
  *
  *  Copyright (C) 2021-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of PWMMotorControl https://github.com/ArminJo/Arduino-RobotCar.

@@ -3,7 +3,6 @@
  *  Example for controlling 2 motors using the basic PWMDcMotor class
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *

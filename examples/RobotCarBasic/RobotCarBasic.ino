@@ -6,7 +6,6 @@
  *  The measured distance range is converted to a pitch as an acoustic feedback.
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.

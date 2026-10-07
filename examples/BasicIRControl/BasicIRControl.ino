@@ -6,7 +6,6 @@
  *  To support mapping, the received IR code is printed at the serial output.
  *
  *  Copyright (C) 2023  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

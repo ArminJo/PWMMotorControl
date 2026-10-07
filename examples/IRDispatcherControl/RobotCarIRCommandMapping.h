@@ -4,7 +4,6 @@
  * IR remote button codes, strings, and functions to call for robot car IR control
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  */
 

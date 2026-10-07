@@ -34,7 +34,6 @@
  *  }
  *
  *  Copyright (C) 2020-2026  Armin Joachimsmeyer
- *  Email: armin.joachimsmeyer@gmail.com
  *
  *  This file is part of AvrTracing https://github.com/ArminJo/AvrTracing.
  *

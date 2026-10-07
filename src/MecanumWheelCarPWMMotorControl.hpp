@@ -3,8 +3,7 @@
  *
  *  Contains functions for control of the 4 motors of a mecanum wheel car.
  *
- *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
+ *  Copyright (C) 2022-2026  Armin Joachimsmeyer
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -143,15 +142,28 @@ void MecanumWheelCarPWMMotorControl::setDriveSpeedPWMFor2Volt(float aFullBridgeI
     rightCarMotor.setDriveSpeedPWMFor2Volt(aFullBridgeInputVoltageMillivolt);
 }
 
+void MecanumWheelCarPWMMotorControl::printDirectionChars(Print *aSerial, uint8_t aRequestedDirection) {
+    if (aRequestedDirection & DIRECTION_TURN) {
+        aSerial->print('T');
+    }
+    if (aRequestedDirection & DIRECTION_LEFT) {
+        aSerial->print('L');
+    }
+    if (aRequestedDirection & DIRECTION_RIGHT) {
+        aSerial->print('R');
+    }
+}
 /*
- * Checks speed and direction and stops car if required
- * @return true if direction has changed and motor has stopped
+ * Stop motors if direction changed (and rightCarMotor.RequestedSpeedPWM > 0)
+ * updates CarDirection
+ * @param aRequestedDirection
+ * @return true if motor has stopped
  */
-bool MecanumWheelCarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequestedDirection) {
+bool MecanumWheelCarPWMMotorControl::stopMotorsIfDirectionChanged(uint8_t aRequestedDirection) {
     bool tReturnValue = false;
     if (CarDirection != aRequestedDirection) {
-        uint8_t tMaxRequestedSpeedPWM = rightCarMotor.RequestedSpeedPWM;
-        if (tMaxRequestedSpeedPWM > 0) {
+        uint8_t tRequestedSpeedPWM = rightCarMotor.RequestedSpeedPWM;
+        if (tRequestedSpeedPWM > 0) {
             /*
              * Direction change requested but motor(s) still running-> first stop motor(s)
              */
@@ -160,14 +172,18 @@ bool MecanumWheelCarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequ
 #endif
             stop(STOP_MODE_BRAKE);
 //            delay(((tMaxCompensatedSpeedPWM * tMaxCompensatedSpeedPWM) >> 8) * 2); // to let motors stop
-            delay(tMaxRequestedSpeedPWM); // to let motors stop
+            delay(tRequestedSpeedPWM); // to let motors stop
             tReturnValue = true;
         }
 #if defined(LOCAL_DEBUG)
-        Serial.print(F("Change car mode from "));
-        Serial.print(sDirectionCharArray[CarDirection]);
+        Serial.print(F("Change direction from "));
+        printDirectionChars(&Serial, CarDirection); // R, L, T
+        printDirectionChar(&Serial, CarDirection); // F, B, S
+        // LS means straight left, LF left forward
         Serial.print(F(" to "));
-        Serial.println(sDirectionCharArray[aRequestedDirection]);
+        printDirectionChars(&Serial, aRequestedDirection);
+        printDirectionChar(&Serial, aRequestedDirection);
+        Serial.println();
 #endif
         CarDirection = aRequestedDirection; // The only statement which changes CarDirection to DIRECTION_FORWARD or DIRECTION_BACKWARD
     }
@@ -178,7 +194,6 @@ bool MecanumWheelCarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequ
  *  Direct motor control, no state or flag handling
  */
 void MecanumWheelCarPWMMotorControl::setSpeedPWMAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
-    checkAndHandleDirectionChange(aRequestedDirection);
     setDirection(aRequestedDirection); // sets direction for all 4 motors
     rightCarMotor.setSpeedPWM(aRequestedSpeedPWM);
 }
@@ -193,6 +208,10 @@ void MecanumWheelCarPWMMotorControl::setSpeedPWMAndDirection(uint8_t aRequestedS
 void MecanumWheelCarPWMMotorControl::setSpeedPWMAndDirectionAndDelay(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
         unsigned long aDelay) {
     setSpeedPWMAndDirection(aRequestedSpeedPWM, aRequestedDirection);
+#if defined(LOCAL_TRACE)
+    Serial.print(F("Delay="));
+    Serial.println(aDelay);
+#endif
     DELAY_UNTIL_EVENT(aDelay);
     setSpeedPWMAndDirection(0);
 }
@@ -210,7 +229,6 @@ void MecanumWheelCarPWMMotorControl::changeSpeedPWM(uint8_t aRequestedSpeedPWM) 
  */
 void MecanumWheelCarPWMMotorControl::setSpeedPWMWithDeltaAndDirection(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection,
         int8_t aSpeedPWMCompensationRightDelta) {
-    checkAndHandleDirectionChange(aRequestedDirection);
     setDirection(aRequestedDirection); // sets direction for all 4 motors
     rightCarMotor.setSpeedPWM(aRequestedSpeedPWM);
     (void) aSpeedPWMCompensationRightDelta;
@@ -218,23 +236,12 @@ void MecanumWheelCarPWMMotorControl::setSpeedPWMWithDeltaAndDirection(uint8_t aR
 
 /*
  *  Direct motor control, no state or flag handling
+ *  Calls stopMotorsIfDirectionChanged()
  */
 void MecanumWheelCarPWMMotorControl::setDirection(uint8_t aRequestedDirection) {
-    checkAndHandleDirectionChange(aRequestedDirection);
+    stopMotorsIfDirectionChanged(aRequestedDirection);
 
     uint8_t tRequestedDirection = aRequestedDirection & DIRECTION_FORWARD_BACKWARD_MASK;
-#  if defined(LOCAL_DEBUG)
-    Serial.print(F("Speed="));
-    Serial.print(aRequestedSpeedPWM);
-    Serial.print(F(" forward/backward direction="));
-    Serial.print(tRequestedDirection);
-    Serial.print(F(" left/right="));
-    Serial.print(aRequestedDirection & DIRECTION_LEFT_RIGHT_MASK);
-    Serial.print(F(" turn="));
-    Serial.print(aRequestedDirection & DIRECTION_TURN);
-    Serial.println();
-#  endif
-
     uint8_t tFrontLeftMotorDirection;
     uint8_t tBackLeftMotorDirection;
     uint8_t tFrontRightMotorDirection;
@@ -379,13 +386,13 @@ void MecanumWheelCarPWMMotorControl::delayAndUpdateMotors(unsigned int aDelayMil
 }
 
 void MecanumWheelCarPWMMotorControl::startRampUp(uint8_t aRequestedDirection) {
-    checkAndHandleDirectionChange(aRequestedDirection);
+    stopMotorsIfDirectionChanged(aRequestedDirection);
     rightCarMotor.startRampUp(aRequestedDirection);
     setDirection(aRequestedDirection); // set direction for all other motors too
 }
 
 void MecanumWheelCarPWMMotorControl::setSpeedPWMWithRamp(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection) {
-    checkAndHandleDirectionChange(aRequestedDirection);
+    stopMotorsIfDirectionChanged(aRequestedDirection);
     rightCarMotor.setSpeedPWMAndDirectionWithRamp(aRequestedSpeedPWM, aRequestedDirection);
     setDirection(aRequestedDirection); // set direction for all other motors too
 }
@@ -444,7 +451,7 @@ void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t 
     // for non encoder motor we use the IMU distance, and require only the ramp up
     setSpeedPWMWithRamp(aRequestedSpeedPWM, aRequestedDirection);
 #else
-    checkAndHandleDirectionChange(aRequestedDirection);
+    stopMotorsIfDirectionChanged(aRequestedDirection);
     rightCarMotor.startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, aRequestedDirection);
     setDirection(aRequestedDirection); // this sets the direction for all the other motors
 #endif
@@ -465,7 +472,8 @@ void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeter(int aRequestedDis
     }
 }
 
-void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter) {
+void MecanumWheelCarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM,
+        int aRequestedDistanceMillimeter) {
     if (aRequestedDistanceMillimeter < 0) {
         aRequestedDistanceMillimeter = -aRequestedDistanceMillimeter;
         startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter, DIRECTION_BACKWARD);
@@ -513,7 +521,7 @@ void MecanumWheelCarPWMMotorControl::startRampDown() {
 }
 
 /*
- * Wait with optional wait loop callback
+ * Wait until all motors are stopped with optional wait loop callback
  */
 void MecanumWheelCarPWMMotorControl::waitUntilStopped(void (*aLoopCallback)(void)) {
     while (updateMotors(aLoopCallback)) {
@@ -589,6 +597,7 @@ void MecanumWheelCarPWMMotorControl::startRotate(int aRotationDegrees, turn_dire
 }
 
 /**
+ * Start rotation and do blocking wait until all motors stopped
  * @param  aRotationDegrees positive -> turn left (counterclockwise), negative -> turn right
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE (default)
  * @param  aUseSlowSpeed true (not default) -> use slower SpeedPWM (for 4WD cars 3/4 times, for 2WD 0.5 times DriveSpeedPWM)
@@ -599,7 +608,7 @@ void MecanumWheelCarPWMMotorControl::rotate(int aRotationDegrees, turn_direction
         void (*aLoopCallback)(void)) {
     if (aRotationDegrees != 0) {
         startRotate(aRotationDegrees, aTurnDirection, aUseSlowSpeed);
-        waitUntilStopped(aLoopCallback);
+        waitUntilStopped(aLoopCallback); // Blocking wait until all motors stopped
     }
 }
 
@@ -609,12 +618,13 @@ void MecanumWheelCarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDrivi
 }
 #endif // USE_ENCODER_MOTOR_CONTROL
 
-//#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 62.0)
+//#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 42.0)
 #if !defined(MECANUM_FORWARD_TO_LATERAL_FACTOR)
-#define MECANUM_FORWARD_TO_LATERAL_FACTOR   (82.0 / 42.0) // factor is forward speed divided by sideways speed
+// Floating constant is ok, if we use constant values to multiply with, because it then is correctly processed at compile time :-)
+#define MECANUM_FORWARD_TO_LATERAL_FACTOR    (82.0 / 42.0) // around 2 - factor is forward speed divided by sideways speed
 #endif
 #if !defined(MECANUM_FORWARD_TO_DIAGONAL_FACTOR)
-#define MECANUM_FORWARD_TO_DIAGONAL_FACTOR   (82.0 / 50.0) // factor is forward speed divided by diagonal speed
+#define MECANUM_FORWARD_TO_DIAGONAL_FACTOR   (82.0 / 50.0) // around 1.6 - factor is forward speed divided by diagonal speed
 #endif
 #if !defined(MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL)
 // Factor is diagonal factor times diagonal length factor for a 90 degree triangle
@@ -622,7 +632,7 @@ void MecanumWheelCarPWMMotorControl::setMillimeterPerSecondForFixedDistanceDrivi
 #endif
 
 /**
- * o is origin of movement. The star starts with left forward and goes clockwise.
+ * o is origin of movement. The test starts with forward and then left and diagonal back.
  *  ->-
  *  | /
  *  |/
@@ -646,7 +656,8 @@ void MecanumWheelCarPWMMotorControl::moveThreeDirectionsForManualCalibration(uin
 }
 
 /*
- * The compensated moveTestDistances in order to go back to the origin
+ * Move triangle compensation factors MECANUM_FORWARD_TO_LATERAL_FACTOR and MECANUM_FORWARD_TO_DIAGONAL_FACTOR_ORTHOGONAL
+ * in order to go back to the origin
  * The triangle base is at 45 degree
  *  ->-
  *  | /
@@ -689,6 +700,35 @@ void MecanumWheelCarPWMMotorControl::moveStar(uint8_t aRequestedSpeedPWM, unsign
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_LEFT_BACKWARD, aMillisforOneMove);
     DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
     setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_DIAGONAL_RIGHT_FORWARD, aMillisforOneMove);
+}
+
+/*
+ * o is origin of movement. The cross starts with forward, backward and goes clockwise.
+ *
+ *   |
+ * --o--
+ *   |
+ */
+void MecanumWheelCarPWMMotorControl::moveCross(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove,
+        unsigned int aDelayBetweenMoves) {
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_BACKWARD, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_FORWARD, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_LEFT, aMillisforOneMove);
+    DELAY_AND_RETURN_IF_STOP(aDelayBetweenMoves);
+    setSpeedPWMAndDirectionAndDelay(aRequestedSpeedPWM, DIRECTION_RIGHT, aMillisforOneMove);
 }
 
 /*
@@ -916,81 +956,111 @@ void MecanumWheelCarPWMMotorControl::moveTrapezium(uint8_t aRequestedSpeedPWM, u
 }
 
 #define MECANUM_DEMO_SPEED                                 DEFAULT_DRIVE_SPEED_PWM
-#define MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS      1500
-#define MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS     500
-#define MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS            4000
+#define MECANUM_MICRO_MOVE_DURATION_OF_SUB_MOVEMENTS_MILLIS  500
+#define MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS       1200
+#define MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS      500
+#define MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS             4000
 
-#if defined(USE_BLUE_DISPLAY_GUI)
-#define PRINTLN(String)     BlueDisplay1.debug(String)
-#define DELAY(Millis)       delay(Millis)
-#else
-#  if defined(LOCAL_DEBUG)
-#define PRINTLN(String)     Serial.println(F(String))
-#  else
-#define PRINTLN(String)     void() // no Serial object referenced in a library
-#  endif
-#define DELAY(Millis)       delay(Millis)
+/*
+ * Some small moves which show the features of a mecanum drive
+ * and do not relocate the car
+ */
+void MecanumWheelCarPWMMotorControl::doDemoMove(uint8_t aIndexOfDemoMove, turn_direction aTurnModifier) {
+    int tRotationDegrees = 90;
+    if (aTurnModifier == TURN_IN_PLACE) {
+        tRotationDegrees = 180;
+    }
+    switch (aIndexOfDemoMove) {
+    case DEMO_MOVE_STAR: // 15 seconds
+        moveStar(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS,
+        MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+        break;
+    case DEMO_MOVE_CENTERED_SQUARE: // 15 seconds
+        moveCenteredSqare(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS,
+        MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+        break;
+    case DEMO_MOVE_CROSS: // 16 seconds
+        moveCross(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS,
+        MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+        break;
+    case DEMO_MOVE_TURN_RIGHT: // 2 seconds 180 degree in place
+        rotate(-tRotationDegrees, aTurnModifier);
+        break;
+    case DEMO_MOVE_TURN_LEFT: // 2 seconds 180 degree in place
+        rotate(tRotationDegrees, aTurnModifier);
+        break;
+    default:
+        break;
+    }
+    DELAY_UNTIL_EVENT(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
+}
+
+uint8_t sCurrentDemoMoveIndex = 0;
+#if !defined(RETURN_IF_BUTTON_FALSE)
+#define RETURN_IF_BUTTON_FALSE      void() // disable it, if not already defined by BlueDisplay library
 #endif
 
-void MecanumWheelCarPWMMotorControl::doDemo() {
+/*
+ * Blocking call, which can be interrupted by any BD command which sets a button to false, e.g. by pressing demo button again
+ */
+void MecanumWheelCarPWMMotorControl::doDemo(bool aDoLongDemo) {
     tone(BUZZER_PIN, 2200, 100);
     DELAY_AND_RETURN_IF_STOP(200);
+    if (!aDoLongDemo) {
+        /*
+         * Do demo move 0 to 4
+         */
+        doDemoMove(sCurrentDemoMoveIndex);
+        sCurrentDemoMoveIndex++;
+        if (sCurrentDemoMoveIndex > DEMO_MOVE_MAX_VALUE) {
+            sCurrentDemoMoveIndex = 0;
+        }
+        return;
+    }
 
-    PRINTLN("Move square");
-    moveSqare(MECANUM_DEMO_SPEED,
-    MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS + (MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS / 2),
-    MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
+    /*
+     * Total 32 seconds
+     */
+    DEBUG_PRINTLN(F("Move centered square"));
+    doDemoMove(DEMO_MOVE_CENTERED_SQUARE);
+    RETURN_IF_BUTTON_FALSE;
 
-    tone(BUZZER_PIN, 2200, 100);
-    DELAY_AND_RETURN_IF_STOP(200);
-    PRINTLN("Move star");
-    moveStar(MECANUM_DEMO_SPEED, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS, MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
+    DEBUG_PRINTLN(F("Move cross"));
+    doDemoMove(DEMO_MOVE_CROSS);
+    RETURN_IF_BUTTON_FALSE;
+
+    DEBUG_PRINTLN(F("Move star"));
+    doDemoMove(DEMO_MOVE_STAR);
+    RETURN_IF_BUTTON_FALSE;
 
     /*
      * Do turns
-     * Turns can be specified either by rotate() or by setSpeedPWMAndDirectionAndDelay()
      */
     tone(BUZZER_PIN, 2200, 100);
-    DELAY_AND_RETURN_IF_STOP(200);
-    PRINTLN("Turn right");
-    rotate(-180, TURN_IN_PLACE);
-    // rotate(-180, TURN_IN_PLACE); can be substituted by the following 2 lines
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_STOP | DIRECTION_RIGHT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 
-    PRINTLN("Turn left");
-    rotate(180, TURN_IN_PLACE);
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_STOP | DIRECTION_LEFT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    DEBUG_PRINTLN(F("Turn right"));
+    doDemoMove(DEMO_MOVE_TURN_RIGHT, TURN_IN_PLACE); // 2 seconds
+    RETURN_IF_BUTTON_FALSE;
 
-    PRINTLN("Turn front right");
-    rotate(-90, TURN_FORWARD);
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_FORWARD | DIRECTION_RIGHT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    DEBUG_PRINTLN(F("Turn left"));
+    doDemoMove(DEMO_MOVE_TURN_LEFT, TURN_IN_PLACE); // 2 seconds
+    RETURN_IF_BUTTON_FALSE;
 
-    PRINTLN("Turn front left");
-    rotate(90, TURN_FORWARD);
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_FORWARD | DIRECTION_LEFT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    DEBUG_PRINTLN(F("Turn front right"));
+    doDemoMove(DEMO_MOVE_TURN_RIGHT, TURN_FORWARD); // 2.5 seconds
+    RETURN_IF_BUTTON_FALSE;
 
-    PRINTLN("Turn back left");
-    rotate(90, TURN_BACKWARD);
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_BACKWARD | DIRECTION_LEFT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
+    DEBUG_PRINTLN(F("Turn front left"));
+    doDemoMove(DEMO_MOVE_TURN_LEFT, TURN_FORWARD); // 2.5 seconds
+    RETURN_IF_BUTTON_FALSE;
 
-    PRINTLN("Turn back right");
-    rotate(-90, TURN_BACKWARD);
-    // rotate(-90, TURN_BACKWARD); can be substituted by the following 2 lines
-//    setSpeedPWMAndDirectionAndDelay(MECANUM_DEMO_SPEED,
-//    DIRECTION_BACKWARD | DIRECTION_RIGHT | DIRECTION_TURN, MECANUM_DEMO_DURATION_OF_SUB_MOVEMENTS_MILLIS);
-    DELAY_AND_RETURN_IF_STOP(MECANUM_DEMO_DELAY_BETWEEN_MOVES_MILLIS);
+    DEBUG_PRINTLN(F("Turn back left"));
+    doDemoMove(DEMO_MOVE_TURN_LEFT, TURN_BACKWARD); // 2.5 seconds
+    RETURN_IF_BUTTON_FALSE;
+
+    DEBUG_PRINTLN(F("Turn back right"));
+    doDemoMove(DEMO_MOVE_TURN_RIGHT, TURN_BACKWARD); // 2.5 seconds
+    RETURN_IF_BUTTON_FALSE;
 
     tone(BUZZER_PIN, 2200, 200);
     DELAY_AND_RETURN_IF_STOP(400);

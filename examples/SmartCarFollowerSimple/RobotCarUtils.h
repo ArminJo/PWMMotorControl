@@ -4,7 +4,6 @@
  *  Contains miscellaneous convenience utility functions for the robot cars.
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -34,10 +33,9 @@ void initRobotCarPWMMotorControl();
 bool isVINProvided();
 extern uint16_t sLastVINRawSum;   // Sum of NUMBER_OF_VIN_SAMPLES raw readings of ADC
 extern float sVINVoltage;
-bool readVINVoltage();
+void readVINVoltage();
 void readVINVoltageAndAdjustDriveSpeedAndPrint();
 void calibrateDriveSpeedPWMAndPrint();
-void checkVinPeriodicallyAndPrintIfChanged();
 #endif
 
 /*

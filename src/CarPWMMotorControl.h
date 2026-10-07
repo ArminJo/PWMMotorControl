@@ -5,7 +5,6 @@
  *
  *  Created on: 12.05.2019
  *  Copyright (C) 2019-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -76,9 +75,9 @@ struct EepromCarInfoStruct {
 typedef enum turn_direction {
     TURN_IN_PLACE = DIRECTION_STOP, TURN_FORWARD = DIRECTION_FORWARD, TURN_BACKWARD = DIRECTION_BACKWARD
 } turn_direction_t;
+//#define TURN_IN_PLACE   DIRECTION_STOP // 0
 //#define TURN_FORWARD    DIRECTION_FORWARD  // 1
 //#define TURN_BACKWARD   DIRECTION_BACKWARD // 2
-//#define TURN_IN_PLACE   0
 
 class CarPWMMotorControl {
 public:
@@ -169,6 +168,7 @@ public:
 
     bool readCarValuesFromEeprom();
     void writeCarValuesToEeprom();
+    void printDirectionChar(Print *aSerial, uint8_t aRequestedDirection);
     void printCalibrationValues(Print *aSerial);
 
 #if defined(USE_MPU6050_IMU)

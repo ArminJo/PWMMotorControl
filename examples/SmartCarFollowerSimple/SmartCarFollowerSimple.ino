@@ -5,7 +5,6 @@
  *  The car tries to hold a distance between 20 and 30 cm to a target. Only forward and back movement, no turn!
  *
  *  Copyright (C) 2020-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *

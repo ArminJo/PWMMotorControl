@@ -9,8 +9,7 @@
  *
  *  Requires BlueDisplay library.
  *
- *  Copyright (C) 2016-2025  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
+ *  Copyright (C) 2016-2026  Armin Joachimsmeyer
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -28,6 +27,10 @@
 #include "HCSR04.h"
 #include "Distance.h"
 #include "RobotCarConfigurations.h" // helps the formatter
+
+// This block must be located after the includes of other *.hpp files
+//#define LOCAL_INFO  // This enables info output only for this file
+#include "LocalDebugLevelStart.h"
 
 // A string buffer for BD info output
 char sBDStringBuffer[128];
@@ -73,6 +76,8 @@ BDSlider SliderIROrTofDistance;
 unsigned int sLastSliderIROrTofCentimeter;
 #endif
 
+void handleUnderVoltage();
+
 void setupGUI(void) {
     sCurrentPage = PAGE_HOME;
 
@@ -86,7 +91,7 @@ void setupGUI(void) {
     BlueDisplay1.initCommunication(&Serial, &initRobotCarDisplay, &startCurrentPage); // introduces up to 1.5 seconds delay
 }
 
-void delayAndLoopGUI(uint16_t aDelayMillis) {
+void delayAndLoopGUI(unsigned long aDelayMillis) {
     uint32_t tStartMillis = millis();
     do {
         loopGUI();
@@ -94,8 +99,14 @@ void delayAndLoopGUI(uint16_t aDelayMillis) {
 }
 
 void loopGUI(void) {
+
+    readAndCheckVoltagePeriodically(); // sets sLowVoltageCount
+    if (sLowVoltageCount >= LOW_VOLTAGE_COUNT_THRESHOLD) {
+        handleUnderVoltage(); // endless loop until undervoltage vanishes
+    }
+
     /*
-     * Update IMU data first, they may be displayed later on
+     * Update IMU data, they may be displayed later on
      */
 #if defined(USE_MPU6050_IMU)
     // if we are going a fixed distance or are turning, updateTurnAngle() is yet called by updateMotors(),
@@ -104,48 +115,27 @@ void loopGUI(void) {
 #endif
 
     if (BlueDisplay1.isConnectionEstablished()) {
-        /*
-         * All functions are empty until now
-         * actions are centrally managed below
-         */
-//            if (sCurrentPage == PAGE_HOME) {
-//                loopHomePage();
-//            } else if (sCurrentPage == PAGE_TEST) {
-//                loopTestPage();
-//            } else if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
-//                loopAutonomousDrivePage();
-//            } else if (sCurrentPage == PAGE_BT_SENSOR_CONTROL) {
-//                loopBTSensorDrivePage();
-//#if defined(ENABLE_PATH_INFO_PAGE)
-//            } else if (sCurrentPage == PAGE_SHOW_PATH) {
-//                loopPathInfoPage();
-//#endif
-//            }
+#if defined(SHOW_VOLTAGE_ON_DISPLAY)
+        displayChangedSupplyVoltageOnce();
+#endif
+
 #if defined(ENABLE_PATH_INFO_PAGE)
-            // for all but PathInfo page
-        if (sCurrentPage != PAGE_SHOW_PATH) {
+        if (sCurrentPage != PAGE_SHOW_PATH)
 #endif
-#if defined(MONITOR_VIN_VOLTAGE)
-        readCheckAndPrintVinPeriodically();
-#endif
-        // For Home, sensorDrive and Test page
-        if (sCurrentPage != PAGE_AUTOMATIC_CONTROL && sCurrentPage != PAGE_SHOW_PATH) {
-            printMotorValuesPeriodically();
+        {
+            // For Home, sensorDrive and Test page, all but PathInfo page
+            if (sCurrentPage != PAGE_AUTOMATIC_CONTROL && sCurrentPage != PAGE_SHOW_PATH) {
+                printMotorValuesPeriodically();
 #if defined(USE_MPU6050_IMU)
-            if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
-                printIMUOffsetValues();
+                if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
+                    printIMUOffsetValues();
+                }
+#endif
             }
-#endif
-        }
-
 #if defined(CAR_HAS_DISTANCE_SENSOR)
-        readAndShowDistancePeriodically(); // show if idle
+            readAndShowDistancePeriodically(); // show if idle
 #endif
-
-#if defined(ENABLE_PATH_INFO_PAGE)
         }
-#endif
-
     }
 
     /*
@@ -221,13 +211,14 @@ void startStopRobotCar(bool aDoStart) {
             sSensorCallbacksEnabled = false;
         }
     }
-
-    bool tShowValues = sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST;
-    // set start/stop button value always just in case we are called by another than Stop button callback, e.g. by stopAutonomousDrivePage()
-    TouchButtonRobotCarStartStop.setValue(!RobotCar.isStopped() || sSensorCallbacksEnabled, tShowValues);
-    // update speed slider value
-    if (tShowValues) {
-        SliderSpeed.setValueAndDrawBar(tSpeedSliderValue);
+    if (BlueDisplay1.isConnectionEstablished()) {
+        bool tShowValues = sCurrentPage == PAGE_HOME || sCurrentPage == PAGE_TEST;
+        // set start/stop button value always just in case we are called by another than Stop button callback, e.g. by stopAutonomousDrivePage()
+        TouchButtonRobotCarStartStop.setValue(!RobotCar.isStopped() || sSensorCallbacksEnabled, tShowValues);
+        // update speed slider value
+        if (tShowValues) {
+            SliderSpeed.setValueAndDrawBar(tSpeedSliderValue);
+        }
     }
 }
 
@@ -249,16 +240,16 @@ void calibrateRotation() {
     if (calibrateRotation (TURN_IN_PLACE)) {
         return;
     }
-    if (delayMillisAndCheckForEvent(2000)) {
+    if (DELAY_UNTIL_EVENT(2000)) {
         return;
     }
     // now show 90 degree
     RobotCar.rotate(90, TURN_IN_PLACE);
-    if (delayMillisAndCheckForEvent(500)) {
+    if (DELAY_UNTIL_EVENT(500)) {
         return;
     }
     RobotCar.rotate(-90, TURN_IN_PLACE);
-    if (delayMillisAndCheckForEvent(4000)) {
+    if (DELAY_UNTIL_EVENT(4000)) {
         return;
     }
 
@@ -268,12 +259,12 @@ void calibrateRotation() {
     if (calibrateRotation (TURN_FORWARD)) {
         return;
     }
-    if (delayMillisAndCheckForEvent(2000)) {
+    if (DELAY_UNTIL_EVENT(2000)) {
         return;
     }
     // now show 90 degree
     RobotCar.rotate(90, TURN_FORWARD);
-    if (delayMillisAndCheckForEvent(500)) {
+    if (DELAY_UNTIL_EVENT(500)) {
         return;
     }
     RobotCar.rotate(-90, TURN_FORWARD);
@@ -368,9 +359,9 @@ void startCurrentPage() {
         startHomePage();
         break;
     }
-#if defined(MONITOR_VIN_VOLTAGE)
-    forceDisplayOfVin();
-    readAndPrintVin();
+#if defined(SHOW_VOLTAGE_ON_DISPLAY)
+    forceDisplayOfVoltage();
+    displayChangedSupplyVoltageOnce();
 #endif
 }
 
@@ -438,7 +429,7 @@ void initRobotCarDisplay() {
 
     // Lock to landscape layout
     BlueDisplay1.setFlagsAndSize(BD_FLAG_FIRST_RESET_ALL | BD_FLAG_USE_MAX_SIZE | BD_FLAG_SCREEN_ORIENTATION_LOCK_SENSOR_LANDSCAPE,
-            DISPLAY_WIDTH, DISPLAY_HEIGHT);
+            REMOTE_DISPLAY_WIDTH, DISPLAY_HEIGHT);
     BlueDisplay1.setCharacterMapping(0x87, 0x2227); // mapping for unicode AND used as Forward symbol
     BlueDisplay1.setCharacterMapping(0x88, 0x2228); // mapping for unicode OR used as Backwards symbol
     initCommonGui();
@@ -449,17 +440,17 @@ void initCommonGui() {
      * Common control buttons
      */
     TouchButtonRobotCarStartStop.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_BLUE, F("Start"),
-            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doStartStopRobotCar);
+            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, false, &doStartStopRobotCar);
     TouchButtonRobotCarStartStop.setTextForValueTrue(F("Stop"));
 
     TouchButtonBack.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED, F("Back"),
             TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, PAGE_HOME, &GUISwitchPages);
 
     TouchButtonCalibrate.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_3, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("CAL"),
-            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doCalibrate);
+            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, false, &doCalibrate);
 
     TouchButtonInfo.init(BUTTON_WIDTH_8_POS_4, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_RED, F("Info"),
-            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sShowInfo, &doToggleInfo); //
+            TEXT_SIZE_11, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, sShowInfo, &doToggleInfo); //
 
     TouchButtonDirection.init(BUTTON_WIDTH_8_POS_5, BUTTON_HEIGHT_8_LINE_5, BUTTON_WIDTH_8, BUTTON_HEIGHT_8, COLOR16_GREEN,
             F("\x87"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH, DIRECTION_FORWARD, &doSetDirection);
@@ -530,7 +521,7 @@ void initCommonGui() {
      */
 #if defined(US_DISTANCE_SLIDER_IS_SMALL)
     // Small US distance slider with captions and without cm units
-    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
+    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_Y_POSITON,
             (BUTTON_WIDTH_10 / 2) - 2, DISTANCE_SLIDER_SIZE,
             FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT);
@@ -542,9 +533,9 @@ void initCommonGui() {
             4 + TEXT_SIZE_10_HEIGHT, COLOR16_BLACK, COLOR16_WHITE);
 #else
 // Big US distance slider without caption but with cm units POS_X_THIRD_SLIDER because it is the position of the left edge
-    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8, BUTTON_WIDTH_10,
-            DISTANCE_SLIDER_SIZE, FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0,
-            SLIDER_DEFAULT_BACKGROUND_COLOR, SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT);
+    SliderUSDistance.init(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_Y_POSITON, BUTTON_WIDTH_10, DISTANCE_SLIDER_SIZE,
+            FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
+            SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT);
     SliderUSDistance.setValueUnitString("cm");
 #endif
     SliderUSDistance.setScaleFactor(DISTANCE_SLIDER_SCALE_FACTOR); // Slider is virtually 2 times larger, values were divided by 2
@@ -555,7 +546,7 @@ void initCommonGui() {
      */
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
     // Small IR distance slider with captions and without cm units
-    SliderIROrTofDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8,
+    SliderIROrTofDistance.init(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_Y_POSITON,
             (BUTTON_WIDTH_10 / 2) - 2, DISTANCE_SLIDER_SIZE,
             FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER / DISTANCE_SLIDER_SCALE_FACTOR, 0, SLIDER_DEFAULT_BACKGROUND_COLOR,
             SLIDER_DEFAULT_BAR_COLOR, FLAG_SLIDER_SHOW_VALUE | FLAG_SLIDER_IS_ONLY_OUTPUT);
@@ -606,37 +597,54 @@ void initCommonGui() {
 }
 
 void drawCommonGui(void) {
-    clearDisplayAndDisableButtonsAndSliders();
+    BlueDisplay1.clearDisplay();
     BlueDisplay1.drawText(HEADER_X, 4, F("Robot Car"), TEXT_SIZE_22, COLOR16_BLUE, COLOR16_NO_BACKGROUND);
 }
 
-#if defined(MONITOR_VIN_VOLTAGE)
-void forceDisplayOfVin() {
+void playDoubleTone() {
+    tone(BUZZER_PIN, 2200, 100);
+    delay(200);
+    tone(BUZZER_PIN, 2200, 100);
+}
+
+#if defined(SHOW_VOLTAGE_ON_DISPLAY)
+void forceDisplayOfVoltage() {
+#if defined(VIN_ATTENUATED_INPUT_PIN)
     sLastVINRawSum = 0; // this in turn displays the voltage
+#else
+    sLastVCCVoltageMillivolt = 0;
+#endif
 }
 /*
- * Print VIN (used as motor supply) periodically
- * Adjust print position depending on page.
+ * Print VIN or VCC if value changed
+ * Adjust display position depending on page.
  */
-void readAndPrintVin() {
-    if (readVINVoltage()) {
+void displayChangedSupplyVoltageOnce() {
+    if (sVoltageHasChanged) {
+        sVoltageHasChanged = false; // Print only once
         char tDataBuffer[18];
-        char tVCCString[5];
+        char tVoltageString[5];
 
-        dtostrf(sVINVoltage, 4, 2, tVCCString);
-        snprintf_P(tDataBuffer, sizeof(tDataBuffer), PSTR("%s volt"), tVCCString);
+#if defined(VIN_ATTENUATED_INPUT_PIN)
+        dtostrf(sVINVoltage, 4, 2, tVoltageString);
+#else
+        dtostrf(sVCCVoltage, 4, 2, tVoltageString);
+#endif
+        snprintf_P(tDataBuffer, sizeof(tDataBuffer), PSTR("%s volt"), tVoltageString);
 
         uint16_t tPosX = BUTTON_WIDTH_8_POS_4;
         uint8_t tPosY;
         if (sCurrentPage == PAGE_HOME) {
-            tPosY = BUTTON_HEIGHT_8_LINE_6;
+            tPosY = BUTTON_HEIGHT_8_LINE_6 - TEXT_SIZE_11_DECEND;
 
         } else if (sCurrentPage == PAGE_AUTOMATIC_CONTROL || sCurrentPage == PAGE_BT_SENSOR_CONTROL) {
+            // Left
             tPosX = TEXT_SIZE_11_WIDTH;
             if (sCurrentPage == PAGE_AUTOMATIC_CONTROL) {
+                // Left below small buttons
                 tPosY = BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER) - TEXT_SIZE_11;
             } else {
-                tPosY = BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11;
+                tPosY = BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11 - TEXT_SIZE_11_DECEND;
             }
 
         } else {
@@ -646,60 +654,49 @@ void readAndPrintVin() {
         BlueDisplay1.drawText(tPosX, tPosY, tDataBuffer, TEXT_SIZE_11, COLOR16_BLACK, COLOR16_WHITE);
     }
 }
+#endif // defined(SHOW_VOLTAGE_ON_DISPLAY)
 
-void checkForVCCUnderVoltage() {
-    static uint8_t sLowVoltageCount = 0;
-    if (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD) {
-        sLowVoltageCount++;
-    } else if (sLowVoltageCount > 1) {
-        sLowVoltageCount--;
+/*
+ * Endless loop until undervoltage vanishes
+ */
+void handleUnderVoltage() {
+    // Here 3 consecutive times (for 6 seconds) low voltage detected
+    playDoubleTone();
+    startStopRobotCar(false);
+
+    if (BlueDisplay1.isConnectionEstablished()) {
+        drawCommonGui();
+        BlueDisplay1.drawText(10, 30, F("Supply voltage"), TEXT_SIZE_33, COLOR16_RED, COLOR16_WHITE);
     }
-    if (sLowVoltageCount > 2) {
-        // Here more than 2 consecutive times (for 6 seconds) low voltage detected
-        startStopRobotCar(false);
-
+    do {
         if (BlueDisplay1.isConnectionEstablished()) {
-            drawCommonGui();
-            BlueDisplay1.drawText(10, 30, F("Battery voltage"), TEXT_SIZE_33, COLOR16_RED, COLOR16_WHITE);
             // Print current "too low" voltage
             char tDataBuffer[18];
-            char tVCCString[6];
-            dtostrf(sVINVoltage, 4, 2, tVCCString);
-            snprintf_P(tDataBuffer, sizeof(tDataBuffer), PSTR("%s volt"), tVCCString);
+            char tVoltageString[6];
+#if defined(VIN_ATTENUATED_INPUT_PIN)
+            dtostrf(sVINVoltage, 4, 2, tVoltageString);
+#else
+            dtostrf(sVCCVoltage, 4, 2, tVoltageString);
+#endif
+            snprintf_P(tDataBuffer, sizeof(tDataBuffer), PSTR("%s volt"), tVoltageString);
             BlueDisplay1.drawText(80, 30 + TEXT_SIZE_33_HEIGHT, tDataBuffer);
             BlueDisplay1.drawText(10 + (4 * TEXT_SIZE_33_WIDTH), 30 + (2 * TEXT_SIZE_33_HEIGHT), F("too low"));
-        }
-
-        tone(BUZZER_PIN, 2200, 100);
-        delay(200);
-        tone(BUZZER_PIN, 2200, 100);
-
-        if (BlueDisplay1.isConnectionEstablished()) {
-            uint8_t tLoopCount = VOLTAGE_TOO_LOW_DELAY_ONLINE / 500; // 12
-            do {
-                delayMillisWithCheckAndHandleEvents(500); // and wait
-                tLoopCount--;
-                readAndPrintVin(); // print current voltage
-            } while (tLoopCount > 0 || (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD && sVINVoltage > VOLTAGE_USB_THRESHOLD));
-            // Switch to and refresh home page
-            GUISwitchPages(nullptr, PAGE_HOME);
         } else {
-            delay(VOLTAGE_TOO_LOW_DELAY_OFFLINE);
+#if defined(LOCAL_INFO)
+            Serial.print(F("Undervoltage detected "));
+            printVoltage();
+            delay(VOLTAGE_TOO_LOW_DELAY_OFFLINE_MILLIS - PRINT_VOLTAGE_PERIOD_MILLIS);
+#endif
         }
+        delayMillisWithCheckAndHandleEvents (PRINT_VOLTAGE_PERIOD_MILLIS); // and wait
+        readAndCheckVoltagePeriodically();
+
+    } while (isUnderVoltage());
+    if (BlueDisplay1.isConnectionEstablished()) {
+        // Switch to and refresh home page
+        GUISwitchPages(nullptr, PAGE_HOME);
     }
 }
-
-void readCheckAndPrintVinPeriodically() {
-    static uint32_t sMillisOfLastVCCInfo;
-    uint32_t tMillis = millis();
-
-    if (tMillis - sMillisOfLastVCCInfo >= PRINT_VOLTAGE_PERIOD_MILLIS) {
-        sMillisOfLastVCCInfo = tMillis;
-        readAndPrintVin();
-        checkForVCCUnderVoltage();
-    }
-}
-#endif // defined(MONITOR_VIN_VOLTAGE)
 
 /*
  * Checks MotorControlValuesHaveChanged and print
@@ -737,7 +734,7 @@ void printMotorValuesPeriodically() {
                 tPWMVoltageString[5] = '\0';
                 tPWMVoltageString[4] = 'V';
                 if (RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM != 0) {
-#if defined(MONITOR_VIN_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE_ON_DISPLAY)
             // use current voltage minus bridge loss instead of a constant value
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage) , 4, 2, tPWMVoltageString);
 #else
@@ -751,7 +748,7 @@ void printMotorValuesPeriodically() {
 
                 // now for right motor
                 if (RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM != 0) {
-#if defined(MONITOR_VIN_VOLTAGE)
+#if defined(MONITOR_VIN_VOLTAGE_ON_DISPLAY)
                 dtostrf(PWMDcMotor::getMotorVoltageforPWM(RobotCar.rightCarMotor.CurrentCompensatedSpeedPWM, sVINVoltage), 4, 2, tPWMVoltageString);
 #else
                     // we can merely use a constant value here
@@ -893,5 +890,7 @@ void showIROrTofDistance() {
     }
 }
 #endif
+
+#include "LocalDebugLevelEnd.h"
 
 #endif // _ROBOT_CAR_COMMON_GUI_HPP

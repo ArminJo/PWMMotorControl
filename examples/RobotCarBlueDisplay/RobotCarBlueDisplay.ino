@@ -16,8 +16,7 @@
  *
  *  Program size of GUI is 63 percent of 32kByte.
  *
- *  Copyright (C) 2016-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
+ *  Copyright (C) 2016-2026  Armin Joachimsmeyer
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -32,15 +31,18 @@
 
 #include <Arduino.h>
 
-#define VERSION_EXAMPLE "2.1.0"
+#define VERSION_EXAMPLE "2.2.0"
 
+#define INFO // Requires up to 2532 bytes of program memory for L298_2WD_2LI_ION_BASIC_CONFIGURATION
 //#define DEBUG
 //#define TRACE
 /*
  * Timeouts for demo mode and inactivity remainder
  */
 #define ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS 240000L // move Servo after 4 Minutes of inactivity
-#define TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS 30000 // Start demo mode 30 seconds after boot up
+#define TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS    30 // Start demo mode 30 seconds after boot up
+#define TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS      (TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS * MILLIS_IN_ONE_SECOND)
+#define TIMEOUT_BETWEEN_DEMOS_MILLIS           120000 // Repeat demo every 2 minutes
 
 /*
  * Car configuration
@@ -95,25 +97,21 @@ Servo TiltServo;
 /*
  * Enable functionality of this program
  */
-//#define NO_SERIAL_OUTPUT              // Saves up to 2532 bytes of program memory for L298_2WD_2LI_ION_BASIC_CONFIGURATION
-#if defined(NO_SERIAL_OUTPUT)           // No printing of any info with Serial.print or we get "multiple definition of __vector_18".
-#define BD_USE_SIMPLE_SERIAL               // We can use simple serial here, since no Serial.print are active. Saves up to 2172 bytes in BlueDisplay library.
-#else
-#define ENABLE_SERIAL_OUTPUT            // To avoid the double negation !defined(NO_SERIAL_OUTPUT)
+#if !defined(INFO) && !defined(DEBUG) && !defined(TRACE) // No printing with Serial.print or we get "multiple definition of __vector_18".
+// This leads to an error "multiple definition of __vector_18" if LOCAL_DEBUG etc. is defined manually in one included hpp file -> deactivate the next line
+//#define BD_USE_SIMPLE_SERIAL            // We can use simple serial here, since no Serial.print are active. Saves up to 2480 bytes in BlueDisplay library.
 #endif
 #if defined(VIN_ATTENUATED_INPUT_PIN)
-#define MONITOR_VIN_VOLTAGE             // Enable monitoring of VIN voltage for exact movements, if available. Check at startup.
+#define SHOW_VOLTAGE_ON_DISPLAY         // requires  bytes program space
 #endif
 #if !defined(ADC_INTERNAL_REFERENCE_MILLIVOLT) && (defined(MONITOR_VIN_VOLTAGE) || defined(CAR_HAS_IR_DISTANCE_SENSOR))
+// Here we use the ADC
 // Must be defined before #include "BlueDisplay.hpp"
 #define ADC_INTERNAL_REFERENCE_MILLIVOLT    1100UL // Change to value measured at the AREF pin. If value > real AREF voltage, measured values are > real values
 #endif
 #define PRINT_VOLTAGE_PERIOD_MILLIS         500 // we only print if changed
-#define VOLTAGE_TWO_LI_ION_LOW_THRESHOLD    6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
-#define VOLTAGE_USB_THRESHOLD               5.5
-#define VIN_VOLTAGE_USB_UPPER_THRESHOLD_MILLIVOLT 5200 // Assume USB powered, if voltage at VIN is lower, -> disable auto move after timeout.
-#define VOLTAGE_TOO_LOW_DELAY_ONLINE        3000 // display VIN every 500 ms for 3 seconds
-#define VOLTAGE_TOO_LOW_DELAY_OFFLINE       1000 // wait for 1 seconds after double beep
+#define VOLTAGE_TOO_LOW_DELAY_ONLINE_MILLIS         3000 // display VIN every 500 ms for 3 seconds
+#define VOLTAGE_TOO_LOW_DELAY_OFFLINE_MILLIS       10000 // wait for 10 seconds after double beep
 
 #if !defined(NO_RTTTL_FOR_CAR)
 #define ENABLE_RTTTL_FOR_CAR        // Plays melody after initial timeout has reached and enables the "Play Melody" BD-button - 3730 bytes
@@ -166,15 +164,19 @@ int doUserCollisionAvoiding();
 #include "digitalWriteFast.h"
 #define USE_NO_RTX_EXTENSIONS       // Disables RTX format definitions `'s'` (style) and `'l'` (loop). Saves up to 332 bytes program memory
 #include <PlayRtttl.hpp>
-bool sPlayMelody = false;
+bool sPlayMelody = false; // this flag may be reseted by checkAndHandleEvents()
 void playRandomMelody();
 #endif
 
+#include "LocalDebugLevelStart.h"
+
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
-bool sEnableDemo = false;
+bool sEnableDemo = false; // modified by BD button
 #endif
 
 void initServos();
+void handleNotConnectedDemo();
+void checkForCalibration();
 
 #if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
 /*************************************************************************************
@@ -230,6 +232,9 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW); // on my Uno R3 the LED is on otherwise
 #endif
+#if defined(AUX_PIN)
+    pinMode(AUX_PIN, INPUT_PULLUP);
+#endif
 #if defined(CAR_HAS_LASER) && (LASER_OUT_PIN != LED_BUILTIN)
     pinMode(LASER_OUT_PIN, OUTPUT);
 #endif
@@ -255,7 +260,7 @@ void setup() {
 
     tone(BUZZER_PIN, 2200, 50); // GUI initialized (if connected)
 
-#if defined(ENABLE_SERIAL_OUTPUT)
+#if defined(LOCAL_INFO)
     if (BlueDisplay1.isConnectionEstablished())
 #else
     if (true)
@@ -267,26 +272,25 @@ void setup() {
 //        displayRotationValues();
 
     } else {
-#if defined(ENABLE_SERIAL_OUTPUT) // requires 1504 bytes program space
-#  if !defined(BD_USE_SIMPLE_SERIAL) && !defined(BD_USE_SERIAL1)  // print it now if not printed above
-#    if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \
+#if defined(LOCAL_INFO) // print it now if not printed above
+#  if defined(__AVR_ATmega32U4__) || defined(SERIAL_PORT_USBVIRTUAL) || defined(SERIAL_USB) /*stm32duino*/|| defined(USBCON) /*STM32_stm32*/ \
     || defined(SERIALUSB_PID)  || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_attiny3217)
     delay(4000); // To be able to connect Serial monitor after reset or power up and before first print out. Do not wait for an attached Serial Monitor!
-#    endif
+#  endif
         // Just to know which program is running on my Arduino
         Serial.println(
                 F(
                         "START " __FILE__ "\r\nVersion " VERSION_EXAMPLE " from  " __DATE__ "\r\nUsing PWMMotorControl library version " VERSION_PWMMOTORCONTROL));
-#  endif
 #endif
     }
-#if !defined(BD_USE_SIMPLE_SERIAL) && !defined(BD_USE_SERIAL1)  // print it now if not printed above
+#if defined(LOCAL_INFO)
+    readVCCOrVINVoltage(); // for isUSBPowered() below
     /*
-     * Print this always, it can be seen in the app log
+     * This can be seen in the app log
      */
     RobotCar.printCalibrationValues(&Serial);
     printConfigInfo(&Serial);
-    printProgramOptions(&Serial);
+    printProgramOptions(&Serial); // calls isUSBPowered()
     PWMDcMotor::printCompileOptions(&Serial);
 #endif
 
@@ -304,8 +308,12 @@ void setup() {
     initDistance();
 #endif
 
-#if defined(MONITOR_VIN_VOLTAGE) && defined(ENABLE_RTTTL_FOR_CAR)
+#if defined(ENABLE_RTTTL_FOR_CAR)
+#  if defined(VIN_ATTENUATED_INPUT_PIN)
     randomSeed(sVINVoltage * 100);
+#   else
+    randomSeed(sVCCVoltageMillivolt);
+#  endif
 #endif
 
     delay(100);
@@ -322,8 +330,6 @@ void setup() {
  * 140 us per loop for idle AutoDrivePage
  */
 void loop() {
-    static bool sTimeoutDemoDisable = false;
-
 #if defined(TEST_TIMING)
     digitalToggleFast(BUZZER_PIN);
 #endif
@@ -333,20 +339,17 @@ void loop() {
     RobotCar.updateMotors(); // 2 us, if driving
 
     /*
-     * check for user input and update display output
+     * Check periodically for voltage change, undervoltage, user input and update display output
      */
     loopGUI();
 
 #if defined(ENABLE_AUTONOMOUS_DRIVE)
-    /*
-     * Handle autonomous driving
-     */
-    driveAutonomousOneStep();
+    driveAutonomousOneStep(); // Handle autonomous driving
 #endif
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
     /*
-     * check for playing melody
+     * Check for playing melody in main loop requested by BD button
      */
     if (sPlayMelody) {
         RobotCar.stop();
@@ -356,29 +359,57 @@ void loop() {
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
     /*
-     * check for mecanum wheel car demo
+     * Check for mecanum wheel car demo requested by BD button
      */
     if (sEnableDemo) {
         startStopRobotCar(false); // Stop car and reset also button
-        RobotCar.doDemo();
+        RobotCar.doDemo(true); // true = long demo
         TouchButtonDemo.setValueAndDraw(false); // switch demo button back to red
         sEnableDemo = false;
     }
 #endif
 
 #if !defined(USE_MPU6050_IMU)
+    checkForCalibration();
+#endif
+
+    if (!BlueDisplay1.isConnectionEstablished()) {
+        /*
+         * After 30 seconds of being disconnected, run the demo.
+         * Runs forever and returns only if connection is established
+         */
+        handleNotConnectedDemo();
+    }
+
     /*
-     * check for calibration
+     * After 4 minutes of user inactivity, play double tone and make noise by scanning with US Servo and then repeat it every 2. minute
      */
+    if (BlueDisplay1.isConnectionEstablished()
+            && sMillisOfLastReceivedBDEvent + ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
+        sMillisOfLastReceivedBDEvent = millis() - (ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
+        playDoubleTone();
+#if defined(CAR_HAS_DISTANCE_SERVO)
+        fillAndShowForwardDistancesInfo(true, true);
+#  if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
+        write10(90);
+#  else
+        DistanceServo.write(90); // set servo back to normal
+#  endif
+#endif
+    }
+}
+
+#if !defined(USE_MPU6050_IMU)
+void checkForCalibration() {
     if (doCalibration) {
         startStopRobotCar(false); // Reset also button
 
         // first get EEPROM values, in order to not work with the values we accidently set before in a former calibration
         RobotCar.readCarValuesFromEeprom();
         displayRotationValues();
-#if defined(VIN_ATTENUATED_INPUT_PIN)
+#  if defined(VIN_ATTENUATED_INPUT_PIN)
         calibrateDriveSpeedPWMAndPrint();
-#endif
+#  endif
 #  if !defined(USE_MPU6050_IMU) && (defined(CAR_HAS_4_WHEELS) || defined(CAR_HAS_4_MECANUM_WHEELS) || !defined(USE_ENCODER_MOTOR_CONTROL))
         if (!delayMillisAndCheckForStop(3000)) { // time to rearrange car
             calibrateRotation();
@@ -388,89 +419,82 @@ void loop() {
 #  endif
         doCalibration = false;
     }
+}
 #endif
 
-    if (BlueDisplay1.isConnectionEstablished()) {
-        sTimeoutDemoDisable = true;
-    }
-
-    /*
-     * After 30 seconds of being disconnected, run the demo.
-     * Do not run it if the car is connected to USB (e.g. for programming or debugging), which can be tested only for a Li-ion supply :-(.
-     */
-    if (!sTimeoutDemoDisable && (millis() > TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS)) {
-        sTimeoutDemoDisable = true;
-
+/*
+ * After 30 seconds of being disconnected, start autonomous drive or the demo which is in turn repeated after 2 minutes.
+ * Do not run it if the car is connected to USB (e.g. for programming or debugging), which can be tested only for a Li-ion supply :-(.
+ * If AUX_PIN is LOW, do short demo, otherwise do all demo moves in a row.
+ */
+void handleNotConnectedDemo() {
+    if (millis() == TIMEOUT_BEFORE_DEMO_MODE_STARTS_MILLIS) {
 #if defined(ADC_UTILS_ARE_AVAILABLE)
-        if (isVCCUSBPowered()) {
-#  if defined(ENABLE_SERIAL_OUTPUT)
-            Serial.print(F("Timeout and USB powered with "));
-            Serial.print(sVCCVoltageMillivolt);
-            Serial.println(F(" mV -> skip follower demo"));
-#  endif
-        } else
-#endif
-        {
-            /*
-             * Timeout just reached and not USB powered, play melody and start autonomous drive
-             */
-#if defined(ENABLE_RTTTL_FOR_CAR)
-            playRandomMelody();
-            delayAndLoopGUI(1000);
-#endif
-#if defined(ENABLE_SERIAL_OUTPUT)
-            Serial.println(F("Timeout -> running follower demo"));
-#endif
-            // check again, maybe we are connected now
-            if (!BlueDisplay1.isConnectionEstablished()) {
-                // Set right page for reconnect
-#if defined(CAR_HAS_4_MECANUM_WHEELS)
-                RobotCar.doDemo();
-                delayAndLoopGUI(60000); // wait a minute before next demo loop
-                sTimeoutDemoDisable = false;
-#elif defined(ENABLE_AUTONOMOUS_DRIVE)
-                GUISwitchPages(nullptr, PAGE_AUTOMATIC_CONTROL);
-                startStopAutomomousDrive(true, MODE_FOLLOWER);
-#else
-            GUISwitchPages(nullptr, PAGE_HOME);
-#endif
-            }
+        if (isUSBPowered()) {
+            INFO_PRINTLN(F("Timeout and USB powered -> skip demo"));
+            playDoubleTone();
+            // Here we are for programming or debugging -> enable periodic attention
+            return;
         }
-    } // Timeout demo
-
-    /*
-     * After 4 minutes of user inactivity, make noise by scanning with US Servo and repeat it every 2. minute
-     */
-    if (BlueDisplay1.isConnectionEstablished() && sMillisOfLastReceivedBDEvent + ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS < millis()) {
-        sMillisOfLastReceivedBDEvent = millis() - (ATTENTION_AFTER_LAST_BD_COMMAND_MILLIS / 2); // adjust sMillisOfLastReceivedBDEvent to have the next scan in 2 minutes
-#if defined(CAR_HAS_DISTANCE_SERVO)
-        fillAndShowForwardDistancesInfo(true, true);
-#  if defined(USE_LIGHTWEIGHT_SERVO_LIBRARY)
-        write10(90);
-#  else
-        DistanceServo.write(90); // set servo back to normal
-#  endif
 #endif
 
+        /*
+         * Timeout just reached and not USB powered, play melody and start demo or autonomous drive
+         */
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+        INFO_PRINTLN(F("Timeout -> run demo and repeat it every 2 minutes"));
+#else
+        INFO_PRINTLN(F("Timeout -> run follower demo"));
+#endif
+        /*
+         * Start demo once with a melody
+         */
+#if defined(ENABLE_RTTTL_FOR_CAR)
+        playRandomMelody(); // blocking call
+        delayAndLoopGUI(1000); // make a short break before starting demo or autonomous drive
+#endif
+        /*
+         * Run and check forever, until we are connected
+         */
+        while (!BlueDisplay1.isConnectionEstablished()) {
+            // Set right page for reconnect
+#if defined(CAR_HAS_4_MECANUM_WHEELS)
+            // If AUX_PIN is LOW, do short demo, otherwise do all demo moves in a row.
+            bool tDoLongDemo = digitalRead(AUX_PIN);
+            RobotCar.doDemo(tDoLongDemo);
+            delayAndLoopGUI(TIMEOUT_BETWEEN_DEMOS_MILLIS / 2); // wait 1 minute before next short demo and check for connection
+            if (tDoLongDemo) {
+                delayAndLoopGUI(TIMEOUT_BETWEEN_DEMOS_MILLIS / 2); // wait additional 1 minutes before next long demo and check for connection
+            }
+#elif defined(ENABLE_AUTONOMOUS_DRIVE)
+            GUISwitchPages(nullptr, PAGE_AUTOMATIC_CONTROL); // ??? we are not connected!
+            startStopAutomomousDrive(true, MODE_FOLLOWER);
+#else
+            GUISwitchPages(nullptr, PAGE_HOME); // no demo here
+#endif
+        }
     }
 }
 
 #if defined(ENABLE_RTTTL_FOR_CAR)
 /*
- * Prepare for tone, use motor as loudspeaker
+ * Play melody blocking
+ * Can use motor as loudspeaker if USE_MOTOR_FOR_MELODY is defined
+ * Can be stopped by pressing BD melody button
  */
 void playRandomMelody() {
-// this flag may be reseted by checkAndHandleEvents()
     sPlayMelody = true;
-//    BlueDisplay1.debug("Play melody");
+#if defined(LOCAL_DEBUG)
+    BlueDisplay1.debug("Play melody");
+#endif
 
 #if defined(USE_MOTOR_FOR_MELODY) && defined(LEFT_MOTOR_FORWARD_PIN)
     OCR2B = 0;
     bitWrite(TIMSK2, OCIE2B, 1);            // enable interrupt for inverted pin handling
     startPlayRandomRtttlFromArrayPGM(LEFT_MOTOR_FORWARD_PIN, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
 #else
-#if defined(DEBUG)
-    startPlayRandomRtttlFromArrayPGM(BUZZER_PIN, RTTTLMelodiesTiny, ARRAY_SIZE_MELODIES_TINY);
+#if defined(LOCAL_DEBUG)
+    startPlayRandomRtttlFromArrayPGM(BUZZER_PIN, RTTTLMelodiesTiny, ARRAY_SIZE_MELODIES_TINY); // save space for debug statements
 #else
     startPlayRandomRtttlFromArrayPGM(BUZZER_PIN, RTTTLMelodiesSmall, ARRAY_SIZE_MELODIES_SMALL);
 #endif
@@ -510,9 +534,8 @@ void playTone(unsigned int aFrequency, unsigned long aDuration = 0) {
     digitalWriteFast(LEFT_MOTOR_PWM_PIN, LOW); // disable motor
     bitWrite(TIMSK2, OCIE2B, 0); // disable interrupt
 #else
-    tone(BUZZER_PIN, aFrequency);
+    tone(BUZZER_PIN, aFrequency, aDuration);
     delay(aDuration);
-    noTone(BUZZER_PIN);
 #endif
 }
 

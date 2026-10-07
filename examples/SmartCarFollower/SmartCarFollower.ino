@@ -12,7 +12,6 @@
  *
  *
  *  Copyright (C) 2020-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -360,7 +359,7 @@ void doFollowerOneStep(bool aEnableScanAndTurn) {
 //     * Print '=', '<', '>', '!'  character to show current distance range
 //     */
 //    if (aEnableScanAndTurn) {
-//        printDistanceRangeCharacter(tRange, &Serial);
+//        printDistanceRangeCharacter(&Serial, tRange);
 //        Serial.print(' ');
 //    }
 

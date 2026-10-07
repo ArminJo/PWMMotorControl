@@ -16,7 +16,6 @@
  *
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *

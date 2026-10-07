@@ -6,7 +6,6 @@
  *  Requires BlueDisplay library.
  *
  *  Copyright (C) 2016-2025  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -31,7 +30,7 @@ BDSlider SliderLeft;        // X positive
 #define SLIDER_BAR_COLOR            COLOR16_GREEN
 #define SLIDER_THRESHOLD_COLOR      COLOR16_BLUE
 
-#define SENSOR_SLIDER_WIDTH         (DISPLAY_WIDTH / 16)
+#define SENSOR_SLIDER_WIDTH         (REMOTE_DISPLAY_WIDTH / 16)
 #define VERTICAL_SLIDER_LENTGH      ((DISPLAY_HEIGHT / 4) + (DISPLAY_HEIGHT / 10))
 #define SLIDER_SPEED_THRESHOLD      DEFAULT_DRIVE_SPEED_PWM
 #define SPEED_DEAD_BAND             DEFAULT_STOP_SPEED_PWM
@@ -40,7 +39,7 @@ BDSlider SliderLeft;        // X positive
 #define SLIDER_LEFT_RIGHT_THRESHOLD (HORIZONTAL_SLIDER_LENTGH / 2)
 #define LEFT_RIGHT_SENSOR_DEAD_BAND 10
 
-#define SENSOR_SLIDER_CENTER_X      ((DISPLAY_WIDTH - SENSOR_SLIDER_WIDTH) / 2)
+#define SENSOR_SLIDER_CENTER_X      ((REMOTE_DISPLAY_WIDTH - SENSOR_SLIDER_WIDTH) / 2)
 #define SENSOR_SLIDER_CENTER_Y      ((DISPLAY_HEIGHT / 2) + (DISPLAY_HEIGHT / 16))
 
 /*
@@ -213,7 +212,7 @@ void doSensorChange(uint8_t aSensorType, struct SensorCallback *aSensorCallbackI
 void initBTSensorDrivePage(void) {
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
     TouchButtonTurnMode.init(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_2, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_BLUE, F("Turn"),
-            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, sTurnModeEnabled, &doTurnMode);
+            TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, sTurnModeEnabled, &doTurnMode);
 #endif
     /*
      * 4 Sliders
@@ -270,11 +269,17 @@ void drawBTSensorDrivePage(void) {
 void startBTSensorDrivePage(void) {
     doReset(nullptr, 0);
     drawBTSensorDrivePage();
+#if defined(CAR_HAS_DISTANCE_SENSOR)
+    SliderUSDistance.setPosition(0, SLIDER_Y_POSITON);
+#endif
 }
 
 void loopBTSensorDrivePage(void) {
 }
 
 void stopBTSensorDrivePage(void) {
+#if defined(CAR_HAS_DISTANCE_SENSOR)
+    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_Y_POSITON);
+#endif
 }
 #endif // _ROBOT_CAR_BT_SENSOR_DRIVE_PAGE_HPP

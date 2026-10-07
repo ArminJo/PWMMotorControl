@@ -12,7 +12,6 @@
  *  Tested for Adafruit Motor Shield and plain TB6612 breakout board.
  *
  *  Copyright (C) 2019-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

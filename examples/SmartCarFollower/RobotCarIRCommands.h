@@ -4,7 +4,6 @@
  *  Contains all commands required for IRCommandMapping.h / accessible by IR remote.
  *
  *  Copyright (C) 2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

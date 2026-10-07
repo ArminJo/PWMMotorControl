@@ -7,7 +7,6 @@
  *  Encoder and IMU data are printed simultaneously, to compare and to detect slipping.
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *

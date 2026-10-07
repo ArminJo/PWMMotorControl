@@ -10,7 +10,6 @@
  *  It can be activated (default) or suspended.
  *
  *  Copyright (C) 2020-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

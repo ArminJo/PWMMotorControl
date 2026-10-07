@@ -6,7 +6,7 @@ Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.
 
 [![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
  &nbsp; &nbsp;
-[![Badge Version](https://img.shields.io/github/v/release/ArminJo/Arduino-RobotCar?include_prereleases&color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/Arduino-RobotCar/releases/latest)
+[![Badge Version](https://img.shields.io/github/v/release/ArminJo/Arduino-RobotCar?color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/Arduino-RobotCar/releases/latest)
  &nbsp; &nbsp;
 [![Badge Commits since latest](https://img.shields.io/github/commits-since/ArminJo/Arduino-RobotCar/latest?color=yellow)](https://github.com/ArminJo/Arduino-RobotCar/commits/master)
  &nbsp; &nbsp;

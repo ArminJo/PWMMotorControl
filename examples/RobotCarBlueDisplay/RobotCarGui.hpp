@@ -4,7 +4,6 @@
  * includes all files of BlueDisplay GUI for robot car.
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *

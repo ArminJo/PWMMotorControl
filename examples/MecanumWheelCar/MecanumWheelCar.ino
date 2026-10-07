@@ -3,7 +3,6 @@
  *  Example for showing complex movements of a mecanum 4 wheel car.
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *
@@ -120,7 +119,6 @@ void loop() {
 //    delay(DELAY_BETWEEN_MOVES_MILLIS);
 //    RobotCar.moveBigPlus(DEMO_SPEED, DURATION_OF_SUB_MOVEMENTS_MILLIS, DELAY_BETWEEN_SUB_MOVEMENTS_MILLIS);
 //    delay(DELAY_BETWEEN_MOVES_MILLIS);
-
     /*
      * Do turns
      */

@@ -9,7 +9,6 @@
  *
  *  Created on: 13.05.2019
  *  Copyright (C) 2016-2020  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *

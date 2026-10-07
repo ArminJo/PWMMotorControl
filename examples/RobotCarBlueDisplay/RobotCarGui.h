@@ -2,7 +2,6 @@
  * RobotCarGui.h
  *
  *  Copyright (C) 2016-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -34,12 +33,13 @@
 // a string buffer for BD info output
 extern char sBDStringBuffer[128];
 
-#define DISPLAY_WIDTH           DISPLAY_HALF_VGA_WIDTH   // 320
+#define REMOTE_DISPLAY_WIDTH           DISPLAY_HALF_VGA_WIDTH   // 320
 #define DISPLAY_HEIGHT          DISPLAY_HALF_VGA_HEIGHT // 240
 
 #define HEADER_X                BUTTON_WIDTH_3_5_POS_2 - (TEXT_SIZE_22_WIDTH / 2)
 
 #define SLIDER_TOP_MARGIN       10
+#define SLIDER_Y_POSITON        SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8
 #define SPEED_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
 #define US_SLIDER_SIZE          BUTTON_HEIGHT_4_LINE_3     // 128
 #define LASER_SLIDER_SIZE       BUTTON_HEIGHT_4_LINE_3  // 128
@@ -219,15 +219,17 @@ void readAndShowDistancePeriodically();
 void rotate(int16_t aRotationDegrees, bool inPlace = true);
 void showDistance(int aCentimeter);
 
+void playDoubleTone();
+
 void printMotorValuesPeriodically();
 
-#if defined(MONITOR_VIN_VOLTAGE)
-void forceDisplayOfVin();
-void readAndPrintVin();
-void readCheckAndPrintVinPeriodically();
+#if defined(SHOW_VOLTAGE_ON_DISPLAY)
+void forceDisplayOfVoltage();
+void displayChangedSupplyVoltageOnce();
+void checkForUnderVoltage();
 #endif
 
-void delayAndLoopGUI(uint16_t aDelayMillis);
+void delayAndLoopGUI(unsigned long aDelayMillis);
 
 /*
  * Functions contained in RobotCarGuiOutput.cpp

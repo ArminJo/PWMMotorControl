@@ -6,7 +6,7 @@ It uses optional attached encoders to drive fixed distances.
 
 [![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
  &nbsp; &nbsp;
-[![Badge Version](https://img.shields.io/github/v/release/ArminJo/PWMMotorControl?include_prereleases&color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/PWMMotorControl/releases/latest)
+[![Badge Version](https://img.shields.io/github/v/release/ArminJo/PWMMotorControl?color=yellow&logo=DocuSign&logoColor=white)](https://github.com/ArminJo/PWMMotorControl/releases/latest)
  &nbsp; &nbsp;
 [![Badge Commits since latest](https://img.shields.io/github/commits-since/ArminJo/PWMMotorControl/latest?color=yellow)](https://github.com/ArminJo/PWMMotorControl/commits/master)
  &nbsp; &nbsp;

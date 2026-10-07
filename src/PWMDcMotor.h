@@ -15,7 +15,6 @@
  *
  *
  *  Copyright (C) 2019-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -116,6 +115,16 @@
 #  if !defined(DEBUG)
 #define DEBUG   // Information need to understand the operating of your program. E.g. function calls and values of control variables.
 #  endif
+#endif
+
+/********************************************
+ * Undervoltage detection
+ ********************************************/
+#if !defined(VOLTAGE_TWO_LI_ION_LOW_THRESHOLD)
+#define VOLTAGE_TWO_LI_ION_LOW_THRESHOLD    6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
+#endif
+#if !defined(VOLTAGE_USB_THRESHOLD)
+#define VOLTAGE_USB_THRESHOLD               5.5
 #endif
 
 /********************************************

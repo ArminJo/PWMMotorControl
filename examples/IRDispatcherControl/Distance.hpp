@@ -4,7 +4,6 @@
  *  Contains all distance measurement functions.
  *
  *  Copyright (C) 2020-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -687,7 +686,7 @@ int8_t scanForTargetAndPrint(uint8_t aMaximumTargetDistance) {
     return tRotationDegree;
 }
 
-void printPadded(uint8_t aByte, Print *aSerial) {
+void printPadded(Print *aSerial, uint8_t aByte) {
     if (aByte < 10) {
         aSerial->print(' ');
     }
@@ -714,7 +713,7 @@ void printForwardDistanceInfo(Print *aSerial) {
 
     uint8_t tDegree = 70;
     for (uint_fast8_t i = 0; i < sizeof(sRawForwardDistancesArray); ++i) {
-        printPadded(sRawForwardDistancesArray[i], aSerial);
+        printPadded(aSerial, sRawForwardDistancesArray[i]);
         aSerial->print(F("cm@"));
         aSerial->print(tDegree);
         aSerial->print(' ');
@@ -736,7 +735,7 @@ distance_range_t getDistanceRange(uint8_t aCentimeter) {
 }
 
 const char RangeCharacterArray[] = { '=', '<', '>', '!' };
-void printDistanceRangeCharacter(distance_range_t aRange, Print *aSerial) {
+void printDistanceRangeCharacter(Print *aSerial, distance_range_t aRange) {
     aSerial->print(RangeCharacterArray[aRange]);
 }
 

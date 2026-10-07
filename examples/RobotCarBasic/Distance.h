@@ -4,7 +4,6 @@
  *  Contains all distance measurement functions.
  *
  *  Copyright (C) 2016-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -74,7 +73,7 @@ typedef enum distance_range {
 } distance_range_t;
 distance_range_t getDistanceRange(uint8_t aCentimeter);
 extern const char RangeCharacterArray[];
-void printDistanceRangeCharacter(distance_range_t aRange, Print *aSerial);
+void printDistanceRangeCharacter(Print *aSerial, distance_range_t aRange);
 
 /*
  * Constants for uint8_t sDistanceFeedbackMode

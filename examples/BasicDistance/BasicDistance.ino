@@ -5,7 +5,6 @@
  *  The car tries to hold a distance between 20 and 30 cm to the target to follow.
  *
  *  Copyright (C) 2023-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

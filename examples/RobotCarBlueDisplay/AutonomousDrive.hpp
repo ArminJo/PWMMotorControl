@@ -8,7 +8,6 @@
  * driveAutonomousOneStep(): The loop which handles the start/stop, single step and path output functionality.
  *
  *  Copyright (C) 2016-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *

@@ -6,8 +6,7 @@
  *
  *  Requires EncoderMotor.hpp
  *
- *  Copyright (C) 2019-2022  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
+ *  Copyright (C) 2019-2026  Armin Joachimsmeyer
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -28,11 +27,16 @@
 #ifndef _CAR_PWM_MOTOR_CONTROL_HPP
 #define _CAR_PWM_MOTOR_CONTROL_HPP
 
+char sTurnDirectionCharArray[3] = { 'P', 'F', 'B' };
+const char *sTurnDirectionStringArray[4] = { "inplace", "forward", "backward", "unknown" };
+
+#include "PWMDcMotor.hpp"
+
 /*
  * The Car Control instance to be used by the main program
  */
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
-#include "MecanumWheelCarPWMMotorControl.hpp"
+#include "MecanumWheelCarPWMMotorControl.hpp" // must be after #include "PWMDcMotor.hpp", because of referencing sDirectionCharArray
 MecanumWheelCarPWMMotorControl RobotCar;
 #else
 #include "CarPWMMotorControl.h"
@@ -46,8 +50,6 @@ CarPWMMotorControl RobotCar;
 #if defined(USE_ENCODER_MOTOR_CONTROL)
 #include "EncoderMotor.hpp"
 #endif
-
-#include "PWMDcMotor.hpp"
 
 // This block must be located after the includes of other *.hpp files
 //#define LOCAL_DEBUG // This enables debug output only for this file - only for development
@@ -245,10 +247,11 @@ bool CarPWMMotorControl::checkAndHandleDirectionChange(uint8_t aRequestedDirecti
             tReturnValue = true;
         }
 #if defined(LOCAL_DEBUG)
-        Serial.print(F("Change car mode from "));
-        Serial.print(sDirectionCharArray[CarDirection]);
+        Serial.print(F("Change direction from "));
+        printDirectionChar(&Serial, CarDirection);
         Serial.print(F(" to "));
-        Serial.println(sDirectionCharArray[aRequestedDirection]);
+        printDirectionChar(&Serial, aRequestedDirection);
+        Serial.println();
 #endif
         CarDirection = aRequestedDirection; // The only statement which changes CarDirection to DIRECTION_FORWARD or DIRECTION_BACKWARD
     }
@@ -611,7 +614,8 @@ void CarPWMMotorControl::goDistanceMillimeter(int aRequestedDistanceMillimeter, 
     waitUntilStopped(aLoopCallback);
 }
 
-void CarPWMMotorControl::goDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter, void (*aLoopCallback)(void)) {
+void CarPWMMotorControl::goDistanceMillimeterWithSpeed(uint8_t aRequestedSpeedPWM, int aRequestedDistanceMillimeter,
+        void (*aLoopCallback)(void)) {
     startGoDistanceMillimeterWithSpeed(aRequestedSpeedPWM, aRequestedDistanceMillimeter);
     waitUntilStopped(aLoopCallback);
 }
@@ -704,7 +708,6 @@ void CarPWMMotorControl::setMillimeterPer256DegreeInPlace(uint16_t aMillimeterPe
  * @param  aTurnDirection direction of turn TURN_FORWARD, TURN_BACKWARD or TURN_IN_PLACE
  * @param  aUseSlowSpeed true -> use slower DEFAULT_START_SPEED_PWM instead of DriveSpeedPWM for rotation to be more exact. Not suitable for 4WD cars.
  */
-char sTurnDirectionCharArray[3] = { 'P', 'F', 'B' };
 void CarPWMMotorControl::startRotate(int aRotationDegrees, turn_direction_t aTurnDirection, bool aUseSlowSpeed) {
     /*
      * We have 6 cases
@@ -955,16 +958,21 @@ uint8_t CarPWMMotorControl::getTurnDistanceHalfDegree() {
 
 #endif // defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
 
+void CarPWMMotorControl::printDirectionChar(Print *aSerial, uint8_t aDirection) {
+    aSerial->print(sDirectionCharArray[aDirection & DIRECTION_FORWARD_BACKWARD_MASK]);
+}
+
 void CarPWMMotorControl::printCalibrationValues(Print *aSerial) {
     aSerial->println(F("Calibration values:"));
     aSerial->print(RobotCar.MillimeterPer256Degree);
     aSerial->print(F(" mm per 256 deg, "));
     aSerial->print(RobotCar.MillimeterPer256DegreeInPlace);
     aSerial->println(F(" mm for inPlace"));
-    aSerial->print(F("PWM for 2 volt: right="));
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
+    aSerial->print(F("PWM for 2 volt = "));
     aSerial->println(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
 #else
+    aSerial->print(F("PWM for 2 volt: right="));
     aSerial->print(RobotCar.rightCarMotor.DriveSpeedPWMFor2Volt);
     aSerial->print(F(", left="));
     aSerial->println(RobotCar.leftCarMotor.DriveSpeedPWMFor2Volt);

@@ -4,7 +4,6 @@
  *  Contains functions for control of the 4 motors of a mecanum wheel car.
  *
  *  Copyright (C) 2022-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -83,7 +82,8 @@ public:
     void goDistanceMillimeter(unsigned int aRequestedDistanceMillimeter, uint8_t aRequestedDirection,
             void (*aLoopCallback)(void) = nullptr); // Blocking function, uses waitUntilStopped
 
-    bool checkAndHandleDirectionChange(uint8_t aRequestedDirection); // used internally
+    void printDirectionChars(Print *aSerial, uint8_t aRequestedDirection);
+    bool stopMotorsIfDirectionChanged(uint8_t aRequestedDirection); // used internally
 
     /*
      * Functions for rotation
@@ -130,6 +130,7 @@ public:
     void setSpeedPWMAndDirectionAndDelay(uint8_t aRequestedSpeedPWM, uint8_t aRequestedDirection, unsigned long aDelay);
 
     void moveStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
+    void moveCross(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveFullStar(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveCenteredSqare(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
@@ -142,7 +143,14 @@ public:
     void moveTrapezium(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
     void moveThreeDirectionsForManualCalibration(uint8_t aRequestedSpeedPWM, unsigned int aMillisforOneMove, unsigned int aDelayBetweenMoves = 0);
 
-    void doDemo();
+#define DEMO_MOVE_STAR              0
+#define DEMO_MOVE_CROSS             1
+#define DEMO_MOVE_CENTERED_SQUARE   2
+#define DEMO_MOVE_TURN_RIGHT        3
+#define DEMO_MOVE_TURN_LEFT         4
+#define DEMO_MOVE_MAX_VALUE         4
+    void doDemoMove(uint8_t aIndexOfDemoMove, turn_direction aTurnModifier = TURN_IN_PLACE);
+    void doDemo(bool aDoLongDemo);
 
     PWMDcMotor backRightCarMotor;
     PWMDcMotor backLeftCarMotor;

@@ -9,7 +9,6 @@
  *  Requires BlueDisplay library.
  *
  *  Copyright (C) 2019-2023  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -202,7 +201,7 @@ void initAutonomousDrivePage(void) {
             FLAG_BUTTON_DO_BEEP_ON_TOUCH, 0, &doSingleScan);
 
     TouchButtonScanSpeed.init(0, BUTTON_HEIGHT_6_LINE_4, BUTTON_WIDTH_3_5, BUTTON_HEIGHT_8, COLOR16_BLACK, F("Scan slow"), TEXT_SIZE_14,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, false, &doChangeScanSpeed);
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, false, &doChangeScanSpeed);
     TouchButtonScanSpeed.setTextForValueTrue("Scan fast");
 
 #if defined(ENABLE_PATH_INFO_PAGE)
@@ -215,7 +214,7 @@ void initAutonomousDrivePage(void) {
 #if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
     TouchButtonStartStopUserAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
     BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, F("Start User"), TEXT_SIZE_14,
-            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN, (sDriveMode == MODE_COLLISION_AVOIDING_USER),
+            FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, (sDriveMode == MODE_COLLISION_AVOIDING_USER),
             &doStartStopTestUser);
     TouchButtonStartStopUserAutonomousDrive.setTextForValueTrue(F("Stop User"));
 #endif
@@ -236,12 +235,12 @@ void initAutonomousDrivePage(void) {
     // bottom line
     // use sDriveMode to support reconnect during demo mode
     TouchButtonStartStopBuiltInAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
-            F("Start\nBuiltin"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
+            F("Start\nBuiltin"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
             (sDriveMode == MODE_COLLISION_AVOIDING_BUILTIN), &doStartStopAutomomousDrive);
     TouchButtonStartStopBuiltInAutonomousDrive.setTextForValueTrue(F("Stop"));
 
     TouchButtonFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-    COLOR16_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE_RED_GREEN,
+    COLOR16_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
             (sDriveMode == MODE_FOLLOWER), &doStartStopFollowerMode);
     TouchButtonFollower.setTextForValueTrue(F("Stop\nFollow"));
 }
@@ -323,12 +322,12 @@ void loopAutonomousDrivePage(void) {
 
 void stopAutonomousDrivePage(void) {
 #if defined(US_DISTANCE_SLIDER_IS_SMALL)
-    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_Y_POSITON);
 #else
-    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+    SliderUSDistance.setPosition(POS_X_US_DISTANCE_SLIDER - BUTTON_WIDTH_10, SLIDER_Y_POSITON);
 #endif
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
-    SliderIROrTofDistance.setPosition(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_TOP_MARGIN + BUTTON_HEIGHT_8);
+    SliderIROrTofDistance.setPosition(POS_X_THIRD_SLIDER - ((BUTTON_WIDTH_10 / 2) - 2), SLIDER_Y_POSITON);
 #endif
     sDoStep = false; // To enable display of distance
 }

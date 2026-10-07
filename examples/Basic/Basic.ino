@@ -4,7 +4,6 @@
  *  Implements forward and backward movement for each 300 ms.
  *
  *  Copyright (C) 2023-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *

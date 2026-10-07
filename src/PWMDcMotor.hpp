@@ -19,8 +19,7 @@
  * A fixed speed compensation PWM value to be subtracted can be specified.
  *
  *
- *  Copyright (C) 2019-2024  Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmail.com
+ *  Copyright (C) 2019-2026  Armin Joachimsmeyer
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *
@@ -52,12 +51,10 @@
 #  endif // defined(USE_SOFT_I2C_MASTER)
 #endif // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 
-//#define TRACE
-#if defined(DEBUG)
-#define LOCAL_DEBUG
-#else
-//#define LOCAL_DEBUG // This enables debug output only for this file - only for development
-#endif
+// This block must be located after the includes of other *.hpp files
+//#define BD_LOCAL_DEBUG // This enables debug output only for this file - only for development
+//#define BD_LOCAL_TRACE // This enables trace output only for this file - only for development
+#include "LocalDebugLevelStart.h"
 
 char sDirectionCharArray[3] = { 'S', 'F', 'B' };
 const char *sDirectionStringArray[4] = { "stop", "forward", "backward", "unknown" };
@@ -147,7 +144,7 @@ void PWMDcMotor::init(uint8_t aMotorNumber) {
 #      endif
 #    endif
 
-#if defined(TRACE)
+#if defined(LOCAL_TRACE)
     Serial.print(PWMPin);
     Serial.print(F(" MotorNumber="));
     Serial.println(aMotorNumber);
@@ -315,7 +312,7 @@ void PWMDcMotor::setSpeedPWM(uint8_t aRequestedSpeedPWM) {
     } else {
         tCompensatedSpeedPWM = 0; // no stop mode here
     }
-#if defined(TRACE)
+#if defined(LOCAL_TRACE)
         Serial.print(PWMPin);
         Serial.print(F(" RequestedSpeedPWM="));
         Serial.print(aRequestedSpeedPWM);
@@ -623,7 +620,7 @@ void PWMDcMotor::startRampDown() {
         tNewSpeedPWM = RAMP_VALUE_MIN_SPEED_PWM;
     }
 
-#  if defined(TRACE)
+#  if defined(LOCAL_TRACE)
     Serial.print(PWMPin);
     Serial.print(F(" St="));
     Serial.print(MotorRampState);
@@ -1012,7 +1009,7 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
 
     aSerial->println(F("DEFAULT_MILLIS_FOR_FIRST_CENTIMETER=" STR(DEFAULT_MILLIS_FOR_FIRST_CENTIMETER)));
 
-    aSerial->print(F("DEFAULT_MILLIS_PER_MILLIMETER="));
+    aSerial->print(F("DEFAULT_MILLIS_PER_CENTIMETER="));
     aSerial->println(DEFAULT_MILLIS_PER_CENTIMETER);
     aSerial->println();
 }
@@ -1026,7 +1023,6 @@ void PWMDcMotor::printCompileOptions(Print *aSerial) {
 //    }
 //}
 
-#if defined(LOCAL_DEBUG)
-#undef LOCAL_DEBUG
-#endif
+#include "LocalDebugLevelEnd.h"
+
 #endif // _PWM_DC_MOTOR_HPP
