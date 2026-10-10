@@ -70,7 +70,11 @@ struct EepromCarInfoStruct {
     uint8_t ValidMarker; // must be A5
 };
 
-// turn directions
+/*
+ * Turn directions
+ * TURN_IN_PLACE one side of car wheels runs forward, while the other side runs backward
+ * TURN_FORWARD or TURN_BACKWARD one side of car wheels run forward or backward
+ */
 typedef enum turn_direction {
     TURN_IN_PLACE = DIRECTION_STOP, TURN_FORWARD = DIRECTION_FORWARD, TURN_BACKWARD = DIRECTION_BACKWARD
 } turn_direction_t;

@@ -50,7 +50,6 @@ uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Constant
 #endif
 
 void driveAutonomousOneStep() {
-
     if (sDriveMode != MODE_MANUAL_DRIVE) {
         if (sDriveMode == MODE_FOLLOWER) {
             driveFollowerModeOneStep();

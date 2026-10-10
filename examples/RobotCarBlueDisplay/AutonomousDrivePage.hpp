@@ -8,7 +8,7 @@
  *
  *  Requires BlueDisplay library.
  *
- *  Copyright (C) 2019-2023  Armin Joachimsmeyer
+ *  Copyright (C) 2019-2026  Armin Joachimsmeyer
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -21,7 +21,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
 
 #ifndef _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
 #define _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
@@ -380,4 +380,4 @@ void drawCollisionDecision(int aDegreeToTurn, uint8_t aLengthOfVector, bool aDoC
     }
 }
 #endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_PAGE_HPP
-#endif // defined(ENABLE_AUTONOMOUS_DRIVE)
+#endif // defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)

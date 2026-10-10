@@ -44,13 +44,13 @@
  * Motor Control
  * PIN  I/O Function
  *   2  I   Right motor encoder interrupt input | Force use of US distance sensor if IR distance sensor is available | Line follower sensor left
- *   3  I   Left motor encoder interrupt input  | Distance tone feedback enable pin | Line follower sensor middle
+ *   3  I   Left motor encoder interrupt input  | Distance tone feedback enable | Line follower sensor middle
  *   4  O   Right motor fwd     | Line follower sensor left
  *   5  O   Right motor PWM     | Line follower sensor middle
  *   6  O   Left motor PWM      | Line follower sensor right
- *   7  O   Right motor back    | Force use of US distance sensor enable pin
- *   8  O   Left motor fwd      | Distance tone feedback enable pin
- *   9  O/I Left motor back     | IR remote control signal in - on Adafruit Motor Shield marked as Servo Nr. 2
+ *   7  O   Right motor back    | Force use of US distance sensor if IR distance sensor is available, LOW = Use US distance
+ *   8  O   Left motor fwd      | Distance tone feedback enable, LOW = enabled
+ *   9  O/I Left motor back     | IR remote control signal in | AUX pin for demo - on Adafruit Motor Shield marked as Servo Nr. 2 PWM
  *
  * PIN  I/O Function
  *  10  O   Servo for distance sensor - on Adafruit Motor Shield marked as Servo Nr. 1 | Line follower sensor right
@@ -62,9 +62,9 @@
  *  A0  O   US trigger (and echo in 1 pin US sensor mode) "URF 01 +" connector on the Arduino Sensor Shield
  *  A1  I   US echo on "URF 01 +" connector | IR distance if motor shield; requires no or 1 pin ultrasonic sensor if motor shield
  *  A2  I   VIN/11, 1MOhm to VIN, 100kOhm to ground - required for readVINVoltage(), camera supply control on NANO, IR in on Mecanum
- *  A3  I   IR distance | Buzzer on NANO
- *  A4  SDA I2C for motor shield | VL35L1X TOF sensor | MPU6050 accelerator and gyroscope
- *  A5  SCL I2C for motor shield | VL35L1X TOF sensor | MPU6050 accelerator and gyroscope
+ *  A3  I   IR distance | Buzzer on NANO | AUX pin for demo (mecanum car)
+ *  A4  SDA I2C for motor shield, VL35L1X TOF sensor, MPU6050 accelerator and gyroscope
+ *  A5  SCL I2C for motor shield, VL35L1X TOF sensor,r MPU6050 accelerator and gyroscope
  *  A6  O   Only on NANO - IR distance
  *  A7  O   Only on NANO - VIN/11, 1MOhm to VIN, 100kOhm to ground
  */

@@ -123,9 +123,6 @@
 #if !defined(VOLTAGE_TWO_LI_ION_LOW_THRESHOLD)
 #define VOLTAGE_TWO_LI_ION_LOW_THRESHOLD    6.9 // Formula: 2 * 3.5 volt - voltage loss: 25 mV GND + 45 mV VIN + 35 mV Battery holder internal
 #endif
-#if !defined(VOLTAGE_USB_THRESHOLD)
-#define VOLTAGE_USB_THRESHOLD               5.5
-#endif
 
 /********************************************
  * Car and motor driver characteristics

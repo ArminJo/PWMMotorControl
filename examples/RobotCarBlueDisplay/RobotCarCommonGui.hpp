@@ -196,7 +196,7 @@ void startStopRobotCar(bool aDoStart) {
         /*
          * Stop car
          */
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
         DistanceServoWriteAndWaitForStop(90);
         sDriveMode = MODE_MANUAL_DRIVE;
 #endif
@@ -345,7 +345,7 @@ void startCurrentPage() {
     case PAGE_TEST:
         startTestPage();
         break;
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
     case PAGE_AUTOMATIC_CONTROL:
         startAutonomousDrivePage();
         break;
@@ -396,7 +396,7 @@ void GUISwitchPages(BDButton *aTheTouchedButton, int16_t aValue) {
     case PAGE_TEST:
         stopTestPage();
         break;
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
     case PAGE_AUTOMATIC_CONTROL:
         stopAutonomousDrivePage();
         if(aValue != PAGE_SHOW_PATH){
@@ -713,11 +713,13 @@ void printMotorValuesPeriodically() {
         if (sShowInfo) {
 #if defined(USE_ENCODER_MOTOR_CONTROL) || defined(USE_MPU6050_IMU)
             if (PWMDcMotor::SensorValuesHaveChanged) {
-                printMotorSpeedSensorValues();
+                printMotorSpeedSensorValues(); // "cnt.  21  24" or "   33cm  34°"
+
             }
 #endif
             /*
              * Print speed value
+             * "PWM   62  62"
              */
             if (PWMDcMotor::MotorPWMHasChanged) {
                 PWMDcMotor::MotorPWMHasChanged = false;
@@ -729,10 +731,11 @@ void printMotorValuesPeriodically() {
 
                 /*
                  * print voltage for left motor PWM
+                 * " 2.23V 2.23V"
                  */
-                char tPWMVoltageString[6];
-                tPWMVoltageString[5] = '\0';
-                tPWMVoltageString[4] = 'V';
+                char tPWMVoltageString[7];
+                tPWMVoltageString[6] = '\0';
+                tPWMVoltageString[5] = 'V';
                 if (RobotCar.leftCarMotor.CurrentCompensatedSpeedPWM != 0) {
 #if defined(MONITOR_VIN_VOLTAGE_ON_DISPLAY)
             // use current voltage minus bridge loss instead of a constant value
@@ -761,10 +764,11 @@ void printMotorValuesPeriodically() {
 
                 /*
                  * Print target distance millimeter or computed millis for distance
+                 * "t mm 40  40"
                  */
                 if (sCurrentPage != PAGE_BT_SENSOR_CONTROL) {
 #if defined(USE_ENCODER_MOTOR_CONTROL)
-                    snprintf_P(sBDStringBuffer, sizeof(sBDStringBuffer), PSTR("tcnt %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
+                    snprintf_P(sBDStringBuffer, sizeof(sBDStringBuffer), PSTR("t mm %3d %3d"), RobotCar.leftCarMotor.LastTargetDistanceMillimeter,
                             RobotCar.rightCarMotor.LastTargetDistanceMillimeter);
                     BlueDisplay1.drawText(MOTOR_INFO_START_X, MOTOR_INFO_START_Y + (3 * TEXT_SIZE_11), sBDStringBuffer);
 #else
@@ -782,6 +786,7 @@ void printMotorValuesPeriodically() {
 
             /*
              * Print motor compensation values (if != 0 => manual set to 0,0 is not displayed with this condition)
+             * "comp   0    0"
              */
             if (PWMDcMotor::MotorControlValuesHaveChanged) {
                 PWMDcMotor::MotorControlValuesHaveChanged = false;
@@ -828,7 +833,9 @@ void displayMotorSpeedSliderValues() {
 /**
  * Print speed slider + speed values
  * In the next line, print encoder count or IMU distance and rotation
- *
+ * "cnt.  21  24"
+ * or
+ * "   33cm  34°"
  * Encoder speed has precedence over IMU speed
  */
 void printMotorSpeedSensorValues() {

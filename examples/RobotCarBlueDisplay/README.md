@@ -2,7 +2,8 @@
 <div align = center>
 
 # [Autonomous driving robot car](https://github.com/ArminJo/Arduino-RobotCar)
-Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.
+Enables autonomous driving of a 2 or 4 wheel car controlled by an Arduino.<br/>
+The car can be remotely controlled using the BlueDisplay library and the Android app.
 
 [![Badge License: GPLv3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](https://www.gnu.org/licenses/gpl-3.0)
  &nbsp; &nbsp;

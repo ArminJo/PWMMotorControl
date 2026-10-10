@@ -15,7 +15,7 @@
  * 7 - All sensors are not dark -> stop or go backward after turn
  *
  *
- *  Copyright (C) 2022-2024  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2026  Armin Joachimsmeyer
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/PWMMotorControl.
  *
@@ -77,14 +77,16 @@
  * If negative, -value is subtracted from the left speed -> the car turns slightly left.
  */
 #define SPEED_PWM_COMPENSATION_RIGHT    0
+#include "CarPWMMotorControl.hpp"
+#include "RobotCarUtils.hpp"
 
 /*
  * Enable LINE_FOLLOWER_SENSORS_ARE_MOUNTED_AT_BACK_OF_CAR, if the sensors are mounted at back of your car.
  * In this case, the directions must be switched, e.g. we must specify DIRECTION_BACKWARD to go forward.
  */
 //#define LINE_FOLLOWER_SENSORS_ARE_MOUNTED_AT_BACK_OF_CAR
-#include "CarPWMMotorControl.hpp"
-#include "RobotCarUtils.hpp"
+
+
 
 #if defined(LINE_FOLLOWER_SENSORS_ARE_MOUNTED_AT_BACK_OF_CAR)
 // Here, the sensors are mounted at the back, so we must switch forward and backward directions
@@ -178,18 +180,18 @@ void loop() {
                 Serial.println(F("Forward during sharp turn"));
             } else {
                 RobotCar.stop();
-                Serial.println(F("Stop"));
+                Serial.println(F("Stop")); // we are on a T junction now
             }
             break;
         case 1:
             // Mid and right sensors are dark -> sharp right
-            RobotCar.startRotate(-180, TURN_IN_PLACE);
+            RobotCar.startRotate(-180, TURN_IN_PLACE); // LINE_FOLLOWER_TURN_FORWARD will also work
             Serial.println(F("Turn sharp right"));
             break;
         case 2:
             // Left and right sensors are dark -> panic stop, because this is unexpected
             RobotCar.stop();
-            Serial.println(F("panic stop"));
+            Serial.println(F("Panic stop"));
             break;
         case 3:
             // Only right sensor is dark -> right
@@ -198,7 +200,7 @@ void loop() {
             break;
         case 4:
             // Mid and left sensors are dark -> sharp left
-            RobotCar.startRotate(180, TURN_IN_PLACE);
+            RobotCar.startRotate(180, TURN_IN_PLACE); // LINE_FOLLOWER_TURN_FORWARD will also work
             Serial.println(F("Turn sharp left"));
             break;
         case 5:
@@ -212,10 +214,11 @@ void loop() {
             Serial.println(F("Turn left"));
             break;
         case 7:
-            // All sensors are not dark -> stop or go backward after turn
+            // All sensors are not dark
+            // We are after the end of line or we left area while turning -> stop or go backward after turn
             if (sOldSensorState == 6 || sOldSensorState == 3) {
                 RobotCar.setSpeedPWMAndDirection(DEFAULT_DRIVE_SPEED_PWM, LINE_FOLLOWER_DIRECTION_BACKWARD);
-                Serial.println(F("Forward after turn"));
+                Serial.println(F("Backward after turn"));
             } else {
                 RobotCar.stop();
                 Serial.println(F("Stop"));

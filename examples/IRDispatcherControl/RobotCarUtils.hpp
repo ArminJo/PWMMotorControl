@@ -55,7 +55,6 @@
  * CAR_HAS_4_MECANUM_WHEELS
  * FRONT_RIGHT_MOTOR_FORWARD_PIN
  *
- *
  */
 
 #if !defined(DELAY_AND_RETURN_IF_STOP) // Is defined in IRCommandDispatcher.h or eventHandler.h as "if (delayMillisAndCheckForStop(aDurationMillis)) return"
@@ -86,6 +85,7 @@ uint32_t sMillisOfLastVCCOrVINCheck;
 uint16_t sLastVCCVoltageMillivolt;
 bool sVoltageHasChanged = false;
 
+#define VIN_VOLTAGE_THRESHOLD_FOR_USB_POWERED_DETECTION     5.5 // Below this voltage at VIN, we assume to be USB powered
 uint8_t sLowVoltageCount = 0;
 #define LOW_VOLTAGE_COUNT_THRESHOLD     3
 #define isLowVoltage()  (sLowVoltageCount >= LOW_VOLTAGE_COUNT_THRESHOLD)
@@ -137,7 +137,7 @@ void printVoltage() {
 
 bool isUSBPowered() {
 #  if defined(VIN_ATTENUATED_INPUT_PIN)
-    return (sVINVoltage < 4.6); // with USB, we have around 4.5 volt at VIN
+    return (sVINVoltage < VIN_VOLTAGE_THRESHOLD_FOR_USB_POWERED_DETECTION); // with USB, we may not have any voltage at VIN
 #  elif defined(ADC_UTILS_ARE_AVAILABLE)
     return isVCCUSBPowered();
 #  else
@@ -147,7 +147,7 @@ bool isUSBPowered() {
 
 void printProgramOptions(Print *aSerial) {
     aSerial->println();
-    aSerial->println(F("Settings:"));
+    aSerial->println(F("Program settings:"));
 
 #if !defined(USE_BLUE_DISPLAY_GUI)
     aSerial->print(F("DO_NOT_USE_IR_REMOTE:"));
@@ -155,6 +155,15 @@ void printProgramOptions(Print *aSerial) {
     aSerial->print(reinterpret_cast<const __FlashStringHelper*>(StringNot));
 #  endif
     aSerial->println(reinterpret_cast<const __FlashStringHelper*>(StringDefined));
+#endif
+
+#if defined(AUX_PIN) && defined(CAR_HAS_4_MECANUM_WHEELS)
+    aSerial->print(F("Demo mode: "));
+    if(digitalRead(AUX_PIN)) {
+        aSerial->println(F("long"));
+    } else {
+        aSerial->println(F("short"));
+    }
 #endif
 
     aSerial->print(F("ENABLE_RTTTL_FOR_CAR:"));
@@ -370,10 +379,11 @@ void readVCCOrVINVoltage() {
 
 /*
  * Assumes, that voltage was read before, i.e. readVCCOrVINVoltage() was called before
+ * Undervoltage for VIN if < 2 * 3.45 V and > 5.5 V. If VIN < 5.5 V we are USB powered :-).
  */
 bool isUnderVoltage() {
 #if defined(VIN_ATTENUATED_INPUT_PIN)
-    return (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD);
+    return (VIN_VOLTAGE_THRESHOLD_FOR_USB_POWERED_DETECTION < sVINVoltage) && (sVINVoltage < VOLTAGE_TWO_LI_ION_LOW_THRESHOLD);
 #elif defined(ADC_UTILS_ARE_AVAILABLE)
     return (sVCCVoltageMillivolt < VCC_UNDERVOLTAGE_THRESHOLD_MILLIVOLT);
 #else

@@ -1,7 +1,7 @@
 /*
  * AutonomousDrive.h
  *
- *  Copyright (C) 2016-2022  Armin Joachimsmeyer
+ *  Copyright (C) 2016-2026  Armin Joachimsmeyer
  *
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
  *
@@ -14,7 +14,7 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/gpl.html>.
  */
 
-#if defined(ENABLE_AUTONOMOUS_DRIVE)
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
 #ifndef _AUTONOMOUS_DRIVE_H
 #define _AUTONOMOUS_DRIVE_H
 
@@ -60,4 +60,4 @@ void driveCollisonAvoidingOneStep();
 void driveFollowerModeOneStep();
 
 #endif // _AUTONOMOUS_DRIVE_H
-#endif // defined(ENABLE_AUTONOMOUS_DRIVE)
+#endif // defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)

@@ -607,6 +607,7 @@ void CarPWMMotorControl::startGoDistanceMillimeterWithSpeed(uint8_t aRequestedSp
 }
 /**
  * Wait until distance is reached
+ * Call with (..., &loopGUI)
  * @param  aLoopCallback called until car has stopped to avoid blocking
  */
 void CarPWMMotorControl::goDistanceMillimeter(int aRequestedDistanceMillimeter, void (*aLoopCallback)(void)) {

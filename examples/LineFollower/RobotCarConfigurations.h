@@ -3,7 +3,7 @@
  *
  *  Contains a few predefined set of car configurations
  *
- *  Copyright (C) 2022  Armin Joachimsmeyer
+ *  Copyright (C) 2022-2026  Armin Joachimsmeyer
  *
  *  This file is part of PWMMotorControl https://github.com/ArminJo/PWMMotorControl.
  *  This file is part of Arduino-RobotCar https://github.com/ArminJo/Arduino-RobotCar.
@@ -311,7 +311,7 @@
 #define CAR_HAS_VIN_VOLTAGE_DIVIDER     // VIN/11 at A2, e.g. 1MOhm to VIN, 100kOhm to ground. Required to show and monitor (for undervoltage) VIN voltage.
 #define BASIC_CONFIG_NAME   "Breadboard TB6612  + 2 Li-ion + VIN divider + 4 mecanum wheels"
 #define BUZZER_PIN                      A5
-#define AUX_PIN                         A3
+#define AUX_PIN                         A3 // to switch demo modes
 #endif
 
 /*
@@ -339,6 +339,7 @@
 #define CAR_HAS_4_WHEELS
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION // Use further settings of this configuration
 #define BASIC_CONFIG_NAME   "4WD + Motor shield,TB6612  + 2 Li-ion + VIN divider + servo head down"
+#define AUX_PIN             9 // to switch demo modes
 #endif
 
 /*
@@ -501,6 +502,10 @@
 
 #if defined(CAR_HAS_DISTANCE_SERVO) || defined(CAR_HAS_PAN_SERVO) || defined(CAR_HAS_TILT_SERVO)
 #define CAR_HAS_SERVO                   // At least one servo is mounted on the car
+#endif
+
+#if defined(CAR_HAS_DISTANCE_SENSOR) && defined(CAR_HAS_DISTANCE_SERVO)
+#define CAR_SUPPORTS_AUTONOMOUS_DRIVE
 #endif
 
 #endif // _ROBOT_CAR_CONFIGURATIONS_H
