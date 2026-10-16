@@ -25,6 +25,10 @@
 #ifndef _ROBOT_CAR_DISTANCE_HPP
 #define _ROBOT_CAR_DISTANCE_HPP
 
+#if !defined(DISTANCE_FEEDBACK_MODE)
+#define DISTANCE_FEEDBACK_MODE  DISTANCE_FEEDBACK_CONTINUOUSLY // Mode if DISTANCE_TONE_FEEDBACK_ENABLE_PIN is LOW, DISTANCE_FEEDBACK_PENTATONIC or DISTANCE_FEEDBACK_CONTINUOUSLY
+#endif
+
 #if !defined(DISTANCE_CHANGE_THRESHOLD_CENTIMETER)
 #define DISTANCE_CHANGE_THRESHOLD_CENTIMETER    0 // set sEffectiveDistanceJustChanged to true if distance changed more than this threshold
 #endif
@@ -1166,7 +1170,7 @@ void postProcessDistances(uint8_t aDistanceThreshold) {
 
 /*
  * Evaluates the US_DISTANCE_SENSOR_ENABLE_PIN switching between IR and US sensor.
- * Evaluates the DISTANCE_TONE_FEEDBACK_ENABLE_PIN to suppress tone feedback.
+ * Evaluates the DISTANCE_TONE_FEEDBACK_ENABLE_PIN to switch between no feedback and tone feedback.
  */
 void getDistanceModesFromPins() {
 #  if defined(US_DISTANCE_SENSOR_ENABLE_PIN) && (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR))
@@ -1178,7 +1182,8 @@ void getDistanceModesFromPins() {
         sDistanceSourceMode = DISTANCE_SOURCE_MODE_IR_OR_TOF;
     }
 #  endif
-#  if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
+#  if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) && !defined(ENABLE_DISTANCE_FEEDBACK_MODE_GUI)
+    // If this pin is connected to ground, enable distance feedback. Not required, if we have a GUI for it :-).
     if (digitalRead(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) == LOW) {
         sDistanceFeedbackMode = DISTANCE_FEEDBACK_MODE;
     } else {

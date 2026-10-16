@@ -31,7 +31,7 @@
 #include "MecanumWheelCarPWMMotorControl.h"
 #include "CarPWMMotorControl.hpp"
 
-#if !defined(DELAY_AND_RETURN_IF_STOP) // Is defined in IRCommandDispatcher.h or eventHandler.h as "if (delayMillisAndCheckForStop(aDurationMillis)) return"
+#if !defined(DELAY_AND_RETURN_IF_STOP) // Is defined in IRCommandDispatcher.h or eventHandler.h as "if (delayMillisHandleEventsAndBreakIfStopButtonPressed(aDurationMillis)) return"
 #define DELAY_AND_RETURN_IF_STOP(aDurationMillis)   delay(aDurationMillis)
 #endif
 #if !defined(DELAY_UNTIL_EVENT)

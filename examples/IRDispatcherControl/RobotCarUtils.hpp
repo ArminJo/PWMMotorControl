@@ -57,7 +57,7 @@
  *
  */
 
-#if !defined(DELAY_AND_RETURN_IF_STOP) // Is defined in IRCommandDispatcher.h or eventHandler.h as "if (delayMillisAndCheckForStop(aDurationMillis)) return"
+#if !defined(DELAY_AND_RETURN_IF_STOP) // Is defined in IRCommandDispatcher.h or eventHandler.h as "if (delayMillisHandleEventsAndBreakIfStopButtonPressed(aDurationMillis)) return"
 #define DELAY_AND_RETURN_IF_STOP(aDurationMillis)   delay(aDurationMillis)
 #endif
 #if !defined(IS_STOP_REQUESTED)
@@ -192,8 +192,10 @@ void printProgramOptions(Print *aSerial) {
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
     aSerial->println(F("Run demo after " STR(TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS) " s"));
+#elif defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+    aSerial->println(F("Run line follower demo after " STR(TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS) " s"));
 #else
-    aSerial->println(F("Run follower demo after " STR(TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS) " s"));
+    aSerial->println(F("Run distance follower demo after " STR(TIMEOUT_BEFORE_DEMO_MODE_STARTS_SECONDS) " s"));
     aSerial->println(
             F(
                     "Keep distance between " STR(FOLLOWER_DISTANCE_MINIMUM_CENTIMETER) " and " STR(FOLLOWER_DISTANCE_MAXIMUM_CENTIMETER) " cm. Scan for target up to " STR(FOLLOWER_TARGET_DISTANCE_TIMEOUT_CENTIMETER) " cm"));
@@ -202,9 +204,14 @@ void printProgramOptions(Print *aSerial) {
     pinMode(US_DISTANCE_SENSOR_ENABLE_PIN, INPUT_PULLUP);
     printConfigPinInfo(aSerial, US_DISTANCE_SENSOR_ENABLE_PIN, F("US instead of IR distance input"));
 #endif
-#if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && defined(DISTANCE_FEEDBACK_MODE) // If this pin is connected to ground, enable distance feedback
+    // No pin required, if we can control it by GUI
+#if defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && !defined(ENABLE_DISTANCE_FEEDBACK_MODE_GUI)// If this pin is connected to ground, enable distance feedback
     pinMode(DISTANCE_TONE_FEEDBACK_ENABLE_PIN, INPUT_PULLUP);
     printConfigPinInfo(aSerial, DISTANCE_TONE_FEEDBACK_ENABLE_PIN, F("distance feedback"));
+#endif
+#if defined(LINE_FOLLOWER_ENABLE_WHITE_LINE_PIN) && defined(CAR_HAS_LINE_FOLLOWER_SENSOR)// If this pin is connected to ground, enable following a white line
+    pinMode(LINE_FOLLOWER_ENABLE_WHITE_LINE_PIN, INPUT_PULLUP);
+    printConfigPinInfo(aSerial, LINE_FOLLOWER_ENABLE_WHITE_LINE_PIN, F("following white line"));
 #endif
 }
 

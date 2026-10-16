@@ -80,39 +80,38 @@
 #    endif
 #    if !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)
 #define DISTANCE_TONE_FEEDBACK_ENABLE_PIN   3 // If this pin is connected to ground, enable distance feedback
-#   endif
-# endif// !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
+#    endif
+#  endif // !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
 #endif
 
-#if !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
-
-#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
-// here pin 4 to 9 are available
-#  if !defined(LINE_FOLLOWER_LEFT_SENSOR_PIN)
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+#  if defined(CAR_HAS_ENCODERS)
 #define LINE_FOLLOWER_LEFT_SENSOR_PIN   4
 #define LINE_FOLLOWER_MID_SENSOR_PIN    5
 #define LINE_FOLLOWER_RIGHT_SENSOR_PIN  6
-#  endif
-
-#  if defined(CAR_HAS_ENCODERS)             // pin 2 and 3 are already occupied by encoder interrupts
-#    if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)) && !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
-#define US_DISTANCE_SENSOR_ENABLE_PIN   7   // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
-#    endif
-#    if !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN) && !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)
-#define DISTANCE_TONE_FEEDBACK_ENABLE_PIN 8 // If this pin is connected to ground, enable distance feedback
-#    endif
-#  endif
-#  if !defined(IR_RECEIVE_PIN)
-#define IR_RECEIVE_PIN                    9   // on Adafruit Motor Shield marked as Servo Nr. 2
-#  endif
-#else // defined(USE_ADAFRUIT_MOTOR_SHIELD)
+#  else
 //2 + 3 are normally reserved for encoder input
-#  if !defined(LINE_FOLLOWER_LEFT_SENSOR_PIN)
 #define LINE_FOLLOWER_LEFT_SENSOR_PIN   2
 #define LINE_FOLLOWER_MID_SENSOR_PIN    3
 #define LINE_FOLLOWER_RIGHT_SENSOR_PIN 11
-#endif
+#  endif // defined(CAR_HAS_ENCODERS)
+#endif // defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
 
+#if defined(USE_ADAFRUIT_MOTOR_SHIELD)
+// here pin 4 to 9 are available
+#  if defined(CAR_HAS_ENCODERS)             // pin 2 and 3 are already occupied by encoder interrupts
+#    if (defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)) && !defined(US_DISTANCE_SENSOR_ENABLE_PIN)
+#define US_DISTANCE_SENSOR_ENABLE_PIN       7   // If this pin is connected to ground, use the US distance sensor instead of the IR distance sensor
+#    endif
+#    if defined(CAR_HAS_DISTANCE_SENSOR) && !defined(DISTANCE_TONE_FEEDBACK_ENABLE_PIN)
+#define DISTANCE_TONE_FEEDBACK_ENABLE_PIN   8 // If this pin is connected to ground, enable distance feedback tone
+#define LINE_FOLLOWER_ENABLE_WHITE_LINE_PIN 8 // If this pin is connected to ground, follow a white line instead of a black one
+#    endif
+#  endif
+#  if !defined(IR_RECEIVE_PIN)
+#define IR_RECEIVE_PIN                      9   // on Adafruit Motor Shield marked as Servo Nr. 2. If no IR, it is used as AUX_PIN
+#  endif
+#else // defined(USE_ADAFRUIT_MOTOR_SHIELD)
 #define RIGHT_MOTOR_FORWARD_PIN     4 // IN4 <- Label on the L298N board
 #define RIGHT_MOTOR_BACKWARD_PIN    7 // IN3
 #  if !defined(LEFT_MOTOR_PWM_PIN)
@@ -150,8 +149,6 @@
 #if defined(CAR_HAS_LASER) && !defined(LASER_OUT_PIN)
 #define LASER_OUT_PIN               LED_BUILTIN
 #endif
-
-#endif // !defined(CAR_HAS_4_MECANUM_WHEELS) && !defined(CAR_IS_ESP32_CAM_BASED)
 
 #if defined(CAR_HAS_4_MECANUM_WHEELS)
 //2 + 3 are reserved for encoder input

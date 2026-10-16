@@ -29,9 +29,10 @@
  */
 #define MODE_MANUAL_DRIVE               0
 #define MODE_COLLISION_AVOIDING_BUILTIN 1
-#define MODE_FOLLOWER                   2
+#define MODE_DISTANCE_FOLLOWER          2
+#define MODE_LINE_FOLLOWER              3
 #if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
-#define MODE_COLLISION_AVOIDING_USER    3 // like MODE_COLLISION_AVOIDING_BUILTIN but use doUserCollisionAvoiding()
+#define MODE_COLLISION_AVOIDING_USER    4 // like MODE_COLLISION_AVOIDING_BUILTIN but use doUserCollisionAvoiding()
 #endif
 extern uint8_t sDriveMode;
 
@@ -39,7 +40,7 @@ extern uint8_t sDriveMode;
  * Step modes for MODE_AUTONOMOUS_DRIVE
  */
 #define MODE_CONTINUOUS         0
-#define MODE_STEP_TO_NEXT_TURN  1 // stop before a turn
+#define MODE_STEP_TO_NEXT_TURN  1 // stop before a turn. Not supported for line follower (treated as continuous)
 #define MODE_SINGLE_STEP        2 // stop after CENTIMETER_PER_RIDE_2
 extern uint8_t sStepMode;
 extern bool sDoStep;
@@ -57,7 +58,11 @@ int postProcessAndCollisionAvoidingAndDraw();
 void driveAutonomousOneStep();
 void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode = MODE_MANUAL_DRIVE);
 void driveCollisonAvoidingOneStep();
-void driveFollowerModeOneStep();
+void driveDistanceFollowerModeOneStep();
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+void driveLineFollowerModeOneStep();
+void startLineFollower();
+#endif
 
 #endif // _AUTONOMOUS_DRIVE_H
 #endif // defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)

@@ -1,4 +1,4 @@
-/*
+ /*
  *  RobotCarConfigurations.h
  *
  *  Contains a few predefined set of car configurations
@@ -51,6 +51,7 @@
 //#define MOTOR_SHIELD_2WD_FULL_CONFIGURATION           // Basic + encoder + VL53L1X TimeOfFlight sensor + MPU6050
 //#define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION          // Adafruit Motor Shield using TB6612 mosfet bridge. 2 Li-ion + VIN voltage divider + servo head down
 //#define MOTOR_SHIELD_4WD_FULL_CONFIGURATION           // Motor Shield + encoder + 2 Li-ion + servo head down + IR distance
+//#define MOTOR_SHIELD_4WD_FULL_AND_LINE_FOLLOWER_CONFIGURATION  // Motor Shield + encoder + 2 Li-ion + servo head down + IR distance + TCRT 5000 3-channel sensor
 //#define BREADBOARD_4WD_FULL_CONFIGURATION             // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge, pan/tilt servo, MPU6050, camera and laser
 //#define MECANUM_BASIC_CONFIGURATION                   // Nano Breadboard version with Arduino NANO, TB6612 mosfet bridge and 4 mecanum wheels
 //#define MECANUM_DISTANCE_CONFIGURATION                // Nano Breadboard version with Arduino NANO, 2 TB6612 mosfet bridges and 4 mecanum wheels + US distance + servo
@@ -247,6 +248,22 @@
  * Basic + IR distance + encoder
  * https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg
  */
+#if defined(MOTOR_SHIELD_4WD_FULL_AND_LINE_FOLLOWER_CONFIGURATION)
+#define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
+#define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
+#define CAR_HAS_LINE_FOLLOWER_SENSOR    // A TCRT 5000 3-channel sensor is attached at back of car
+#define LINE_FOLLOWER_SENSORS_ARE_MOUNTED_AT_BACK_OF_CAR
+#define NO_PATH_INFO_PAGE               // Saves up to 1400 bytes
+//#define NO_SERIAL_OUTPUT                // Saves up to 2886 bytes
+#define NO_RTTTL_FOR_CAR                // Saves up to 3654 bytes
+#define MOTOR_SHIELD_4WD_BASIC_CONFIGURATION
+#define CONFIG_NAME         " + encoder + IR distance + line follower"
+#endif
+
+/*
+ * Basic + IR distance + encoder
+ * https://github.com/ArminJo/Arduino-RobotCar/blob/master/pictures/RedCar.jpg
+ */
 #if defined(MOTOR_SHIELD_4WD_FULL_CONFIGURATION)
 #define CAR_HAS_ENCODERS                // Use encoder interrupts attached at pin 2 and 3 and want to use the methods of the EncoderMotor class.
 #define CAR_HAS_IR_DISTANCE_SENSOR      // Activate this if your car has an Sharp GP2Y0A21YK / 1080 IR distance sensor mounted
@@ -339,7 +356,7 @@
 #define CAR_HAS_4_WHEELS
 #define MOTOR_SHIELD_2WD_BASIC_CONFIGURATION // Use further settings of this configuration
 #define BASIC_CONFIG_NAME   "4WD + Motor shield,TB6612  + 2 Li-ion + VIN divider + servo head down"
-#define AUX_PIN             9 // to switch demo modes
+#define AUX_PIN             9 // To switch demo modes
 #endif
 
 /*
@@ -470,6 +487,7 @@
 #define RIGHT_MOTOR_PWM_PIN         5 // ENB - Must be PWM capable
 #define LEFT_MOTOR_PWM_PIN          6 // ENA - Must be PWM capable
 
+#define CAR_HAS_LINE_FOLLOWER_SENSOR
 #define LINE_FOLLOWER_LEFT_SENSOR_PIN   A0
 #define LINE_FOLLOWER_MID_SENSOR_PIN    A1
 #define LINE_FOLLOWER_RIGHT_SENSOR_PIN  A2
@@ -480,7 +498,6 @@
 #define BUZZER_PIN                 11
 
 #endif
-
 
 /*
  * Some rules

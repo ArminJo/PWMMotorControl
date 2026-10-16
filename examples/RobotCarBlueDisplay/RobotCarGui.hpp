@@ -29,6 +29,9 @@
 #include "AutonomousDrive.hpp"
 #include "AutonomousDrivePage.hpp"
 #endif
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+#include "LineFollower.hpp"
+#endif
 #if defined(ENABLE_PATH_INFO_PAGE)
 #include "PathInfoPage.hpp"
 #endif

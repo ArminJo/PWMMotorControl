@@ -27,7 +27,11 @@
 #include "AutonomousDrive.h"
 #include "Distance.h"
 
-uint8_t sDriveMode = MODE_MANUAL_DRIVE; // one of MODE_MANUAL_DRIVE, MODE_COLLISION_AVOIDING_BUILTIN, MODE_COLLISION_AVOIDING_USER or MODE_FOLLOWER
+// This block must be located after the includes of other *.hpp files
+//#define LOCAL_INFO  // This enables info output only for this file
+#include "LocalDebugLevelStart.h"
+
+uint8_t sDriveMode = MODE_MANUAL_DRIVE; // one of MODE_MANUAL_DRIVE, MODE_COLLISION_AVOIDING_BUILTIN, MODE_DISTANCE_FOLLOWER or MODE_LINE_FOLLOWER
 
 uint8_t sStepMode = MODE_CONTINUOUS; // one of MODE_CONTINUOUS,  MODE_STEP_TO_NEXT_TURN or MODE_SINGLE_STEP
 bool sDoStep = false; // if true => do one step
@@ -49,10 +53,17 @@ uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Encoder counts per U
 uint8_t sCentimetersDrivenPerScan = CENTIMETER_PER_RIDE; // Constant
 #endif
 
+/*
+ * Called by main loop
+ */
 void driveAutonomousOneStep() {
     if (sDriveMode != MODE_MANUAL_DRIVE) {
-        if (sDriveMode == MODE_FOLLOWER) {
-            driveFollowerModeOneStep();
+        if (sDriveMode == MODE_DISTANCE_FOLLOWER) {
+            driveDistanceFollowerModeOneStep();
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+        } else if (sDriveMode == MODE_LINE_FOLLOWER) {
+            driveLineFollowerModeOneStep();
+#endif
         } else {
             driveCollisonAvoidingOneStep();
         }
@@ -73,7 +84,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 #if defined(ENABLE_PATH_INFO_PAGE)
         resetPathData();
 #endif
-        clearPrintedForwardDistancesInfos(true);
+        clearPrintedForwardDistancesInfos(true); // TODO clear upper right "distance area" too
         sDoStep = true; // enable next step
         sDriveMode = aDriveMode;
 
@@ -85,7 +96,7 @@ void startStopAutomomousDrive(bool aDoStart, uint8_t aDriveMode) {
 
         } else
 #endif
-//        if (aDriveMode == MODE_FOLLOWER) {
+//        if (aDriveMode == MODE_DISTANCE_FOLLOWER) {
 //            DistanceServoWriteAndWaitForStop(90); // reset Servo
 //            TouchButtonDistanceFeedbackMode.drawButton();
 //        }
@@ -330,13 +341,13 @@ void driveCollisonAvoidingOneStep() {
 }
 
 /***************************************************
- * Code for follower mode
+ * Code for distance follower mode
  ***************************************************/
 /*
  * If mode == MODE_STEP_TO_NEXT_TURN, stop if the call of scanForTargetAndPrint() results in a turn.
  * Start at next step with the turn until the next target has been searched for and found.
  */
-void driveFollowerModeOneStep() {
+void driveDistanceFollowerModeOneStep() {
 
     if (sDoStep) { // Check if we shall do this step. Do not check for changed distance, since we might have other measurements in between.
         if (sNextRotationDegree != 0) {
@@ -353,7 +364,7 @@ void driveFollowerModeOneStep() {
          * We have NO pending turn no more, scan target at 70, 90 and 110 degree
          */
 //        clearPrintedForwardDistancesInfos(false); // clear area for next scan results
-        int8_t tNextRotationDegree = scanForTargetAndPrint(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER -1); // -1 otherwise timeout is handled as found.
+        int8_t tNextRotationDegree = scanForTargetAndPrint(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER - 1); // -1 otherwise timeout is handled as found.
         unsigned int tForwardCentimeter = sRawForwardDistancesArray[INDEX_TARGET_FORWARD]; // Values between 1 and FOLLOWER_DISTANCE_TIMEOUT_CENTIMETER
         sDistanceRange = getDistanceRange(tForwardCentimeter);
 
@@ -451,4 +462,7 @@ void driveFollowerModeOneStep() {
         }
     }
 }
+
+#include "LocalDebugLevelEnd.h"
+
 #endif // _ROBOT_CAR_AUTOMOMOUS_DRIVE_HPP

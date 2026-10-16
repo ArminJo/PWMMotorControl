@@ -96,7 +96,7 @@ void loopAutonomousDrivePage(void);
 void stopAutonomousDrivePage(void);
 
 void handleAutomomousDriveRadioButtons();
-void doStartStopFollowerMode(BDButton *aTheTouchedButton, int16_t aValue);
+void doStartStopDistanceFollowerMode(BDButton *aTheTouchedButton, int16_t aValue);
 void doStartStopAutomomousDrive(BDButton *aTheTouchedButton, int16_t aValue);
 void doStartStopTestUser(BDButton *aTheTouchedButton, int16_t aValue);
 

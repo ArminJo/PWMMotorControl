@@ -71,11 +71,14 @@ const char * const sDistanceSourceModeButtonTextStringArray[] PROGMEM = { sDista
 BDButton TouchButtonStartStopUserAutonomousDrive;
 #endif
 BDButton TouchButtonStartStopBuiltInAutonomousDrive;
-BDButton TouchButtonFollower;
+BDButton TouchButtonDistanceFollower;
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
+BDButton TouchButtonLineFollower;
+#endif
 
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
 void setDistanceFeedbackModeButtonText() {
-    TouchButtonDistanceFeedbackMode.setTextFromStringArrayPGM(sDistanceFeedbackModeButtonTextStringArray, sDistanceFeedbackMode, true);
+    TouchButtonDistanceFeedbackMode.setPGMTextFromPGMArray(sDistanceFeedbackModeButtonTextStringArray, sDistanceFeedbackMode, true);
 }
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -118,16 +121,10 @@ void doNextStepMode(BDButton *aTheTouchedButton, int16_t aValue) {
  */
 void doStep(BDButton *aTheTouchedButton, int16_t aValue) {
     if (sStepMode == MODE_CONTINUOUS) {
-        // switch to step mode MODE_SINGLE_STEP
+        // Also switch to step mode MODE_SINGLE_STEP
         setStepMode(MODE_SINGLE_STEP);
     }
     sDoStep = true;
-    /*
-     * Start if not yet done
-     */
-    if (sDriveMode == MODE_MANUAL_DRIVE) {
-        startStopAutomomousDrive(true, MODE_COLLISION_AVOIDING_BUILTIN);
-    }
 }
 
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)
@@ -138,7 +135,7 @@ void setScanModeButtonText() {
 void doDistanceSourceMode(BDButton *aTheTouchedButton, int16_t aValue) {
     sDistanceSourceMode++;
     if (sDistanceSourceMode > DISTANCE_LAST_SOURCE_MODE) {
-        sDistanceSourceMode = DISTANCE_SOURCE_MODE_MINIMUM;
+        sDistanceSourceMode = DISTANCE_SOURCE_MODE_US;
     }
     setScanModeButtonText();
     TouchButtonScanMode.drawButton();
@@ -151,7 +148,7 @@ void doChangeScanSpeed(BDButton *aTheTouchedButton, int16_t aValue) {
 }
 
 void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
-    if (sDriveMode == MODE_FOLLOWER) {
+    if (sDriveMode == MODE_DISTANCE_FOLLOWER) {
         scanForTargetAndPrint(FOLLOWER_DISPLAY_DISTANCE_TIMEOUT_CENTIMETER - 1); // -1 otherwise timeout is handled as found.
     } else {
         clearPrintedForwardDistancesInfos(true);
@@ -160,9 +157,16 @@ void doSingleScan(BDButton *aTheTouchedButton, int16_t aValue) {
     }
 }
 
-void doStartStopFollowerMode(BDButton *aTheTouchedButton, int16_t aValue) {
-    startStopAutomomousDrive(aValue, MODE_FOLLOWER);
+void doStartStopDistanceFollowerMode(BDButton *aTheTouchedButton, int16_t aValue) {
+    startStopAutomomousDrive(aValue, MODE_DISTANCE_FOLLOWER);
 }
+
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+void doStartStopLineFollowerMode(BDButton *aTheTouchedButton, int16_t aValue) {
+    startLineFollower();
+    startStopAutomomousDrive(aValue, MODE_LINE_FOLLOWER);
+}
+#endif
 
 void doStartStopAutomomousDrive(BDButton *aTheTouchedButton, int16_t aValue) {
     startStopAutomomousDrive(aValue, MODE_COLLISION_AVOIDING_BUILTIN);
@@ -175,16 +179,19 @@ void doStartStopTestUser(BDButton *aTheTouchedButton, int16_t aValue) {
 #endif
 
 /*
- * set buttons accordingly to sDriveMode
+ * Set buttons accordingly to sDriveMode
  */
 void handleAutomomousDriveRadioButtons() {
     TouchButtonStartStopBuiltInAutonomousDrive.setValue(sDriveMode == MODE_COLLISION_AVOIDING_BUILTIN,
             sCurrentPage == PAGE_AUTOMATIC_CONTROL);
+    TouchButtonDistanceFollower.setValue(sDriveMode == MODE_DISTANCE_FOLLOWER, sCurrentPage == PAGE_AUTOMATIC_CONTROL);
 #if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
     TouchButtonStartStopUserAutonomousDrive.setValue(sDriveMode == MODE_COLLISION_AVOIDING_USER,
             sCurrentPage == PAGE_AUTOMATIC_CONTROL);
 #endif
-    TouchButtonFollower.setValue(sDriveMode == MODE_FOLLOWER, sCurrentPage == PAGE_AUTOMATIC_CONTROL);
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+    TouchButtonLineFollower.setValue(sDriveMode == MODE_LINE_FOLLOWER, sCurrentPage == PAGE_AUTOMATIC_CONTROL);
+#endif
 }
 
 void initAutonomousDrivePage(void) {
@@ -213,10 +220,10 @@ void initAutonomousDrivePage(void) {
     // use sDriveMode to support reconnect during demo mode
 #if defined(ENABLE_USER_PROVIDED_COLLISION_DETECTION)
     TouchButtonStartStopUserAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4 - (TEXT_SIZE_22_HEIGHT + BUTTON_DEFAULT_SPACING_QUARTER),
-    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, F("Start User"), TEXT_SIZE_14,
+    BUTTON_WIDTH_3, TEXT_SIZE_22_HEIGHT, COLOR16_RED, F("Start\nUser"), TEXT_SIZE_14,
             FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE, (sDriveMode == MODE_COLLISION_AVOIDING_USER),
             &doStartStopTestUser);
-    TouchButtonStartStopUserAutonomousDrive.setTextForValueTrue(F("Stop User"));
+    TouchButtonStartStopUserAutonomousDrive.setTextForValueTrue(F("Stop\nUser"));
 #endif
 
 #if defined(ENABLE_DISTANCE_FEEDBACK_MODE)
@@ -235,14 +242,21 @@ void initAutonomousDrivePage(void) {
     // bottom line
     // use sDriveMode to support reconnect during demo mode
     TouchButtonStartStopBuiltInAutonomousDrive.init(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR16_RED,
-            F("Start\nBuiltin"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
+            F("Start\nObstacle\nAvoiding"), TEXT_SIZE_14, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
             (sDriveMode == MODE_COLLISION_AVOIDING_BUILTIN), &doStartStopAutomomousDrive);
     TouchButtonStartStopBuiltInAutonomousDrive.setTextForValueTrue(F("Stop"));
 
-    TouchButtonFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-    COLOR16_RED, F("Start\nFollow"), TEXT_SIZE_22, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
-            (sDriveMode == MODE_FOLLOWER), &doStartStopFollowerMode);
-    TouchButtonFollower.setTextForValueTrue(F("Stop\nFollow"));
+    TouchButtonDistanceFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+    COLOR16_RED, F("Start\nDistance\nFollower"), TEXT_SIZE_14, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
+            (sDriveMode == MODE_DISTANCE_FOLLOWER), &doStartStopDistanceFollowerMode);
+    TouchButtonDistanceFollower.setTextForValueTrue(F("Stop"));
+
+#if defined(CAR_HAS_LINE_FOLLOWER_SENSOR)
+    TouchButtonLineFollower.init(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_3 + BUTTON_DEFAULT_SPACING_THREE_QUARTER, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+    COLOR16_RED, F("Start\nLine\nFollower"), TEXT_SIZE_14, FLAG_BUTTON_DO_BEEP_ON_TOUCH | FLAG_BUTTON_TYPE_TOGGLE,
+            (sDriveMode == MODE_LINE_FOLLOWER), &doStartStopLineFollowerMode);
+    TouchButtonLineFollower.setTextForValueTrue(F("Stop"));
+#endif
 }
 
 void drawAutonomousDrivePage(void) {
@@ -274,7 +288,10 @@ void drawAutonomousDrivePage(void) {
 
     // bottom buttons line
     TouchButtonStartStopBuiltInAutonomousDrive.drawButton();
-    TouchButtonFollower.drawButton();
+    TouchButtonDistanceFollower.drawButton();
+#if defined(CAR_SUPPORTS_AUTONOMOUS_DRIVE)
+    TouchButtonLineFollower.drawButton();
+#endif
     TouchButtonBack.drawButton();
     SliderUSDistance.drawSlider(); // to show slider caption
 #if defined(CAR_HAS_IR_DISTANCE_SENSOR) || defined(CAR_HAS_TOF_DISTANCE_SENSOR)

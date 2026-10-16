@@ -98,6 +98,23 @@ void delayAndLoopGUI(unsigned long aDelayMillis) {
     } while (millis() - tStartMillis <= aDelayMillis);
 }
 
+void delayAndLoopGUIAndMotion(unsigned long aDelayMillis) {
+    uint32_t tStartMillis = millis();
+    do {
+        loopGUI();
+        loopMotion();
+    } while (millis() - tStartMillis <= aDelayMillis);
+}
+
+/*
+ * Check for undervoltage
+ * Update IMU data, they may be displayed later on
+ * If connection enabled:
+ *  - Display voltage
+ *  - Display motor values
+ *  - Display distance values
+ * checkAndHandleEvents
+ */
 void loopGUI(void) {
 
     readAndCheckVoltagePeriodically(); // sets sLowVoltageCount
@@ -688,7 +705,7 @@ void handleUnderVoltage() {
             delay(VOLTAGE_TOO_LOW_DELAY_OFFLINE_MILLIS - PRINT_VOLTAGE_PERIOD_MILLIS);
 #endif
         }
-        delayMillisWithCheckAndHandleEvents (PRINT_VOLTAGE_PERIOD_MILLIS); // and wait
+        delayMillisAndHandleEvents(PRINT_VOLTAGE_PERIOD_MILLIS); // and wait
         readAndCheckVoltagePeriodically();
 
     } while (isUnderVoltage());
